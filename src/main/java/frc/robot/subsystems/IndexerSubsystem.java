@@ -23,8 +23,7 @@ import yams.motorcontrollers.local.SparkWrapper;
 
 import static edu.wpi.first.units.Units.*;
 
-public class IndexerSubsystem extends SubsystemBase
-{
+public class IndexerSubsystem extends SubsystemBase {
     /// Hardware Constants for the Indexer Mechanism.
     public static class HardwareConstants {
         /// Motor Constants

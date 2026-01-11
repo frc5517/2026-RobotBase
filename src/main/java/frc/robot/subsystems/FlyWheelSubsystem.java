@@ -11,6 +11,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Telemetry;
+import lombok.Getter;
 import lombok.Setter;
 import yams.gearing.GearBox;
 import yams.gearing.MechanismGearing;
@@ -43,7 +44,7 @@ public class FlyWheelSubsystem extends SubsystemBase
         public static final Current                 CURRENT_LIMIT       = Amp.of(40); // Current limit, Higher for faster control.
         /// FlyWheel Constants
         public static final Distance                FLYWHEEL_DIAMETER   = Inches.of(3); // Diameter of the wheel, belt, whatever is spinning on the flywheel.
-        public static final Mass                    FLYWHEEL_MASS       = Pounds.of(1); //
+        public static final Mass                    FLYWHEEL_MASS       = Pounds.of(1); // Weight of the flywheel, just what gets spun.
         public static final AngularVelocity         FLYWHEEL_MAX_SPEED  = RPM.of(500); // Max RPM soft limits
     }
     /// Control Constants for the FlyWheel Mechanism
@@ -77,6 +78,7 @@ public class FlyWheelSubsystem extends SubsystemBase
             .withSoftLimit(HardwareConstants.FLYWHEEL_MAX_SPEED.unaryMinus(), HardwareConstants.FLYWHEEL_MAX_SPEED)
             .withSpeedometerSimulation(HardwareConstants.FLYWHEEL_MAX_SPEED);
     /// The final FlyWheel Mechanism.
+    @Getter
     private final FlyWheel                          flyWheel            = new FlyWheel(flyWheelConfig);
 
     /// Setters for different Input Selections.
@@ -117,14 +119,6 @@ public class FlyWheelSubsystem extends SubsystemBase
         return flyWheel.isNear(ControlConstants.TARGET_VELOCITY, ControlConstants.VELOCITY_TOLERANCE);
     }
 
-    /**
-     * Gets the YAMS Flywheel AKA our Indexer.
-     *
-     * @return the {@link FlyWheel} Indexer Mechanism.
-     */
-    public FlyWheel getFlyWheelMechanism() {
-        return flyWheel;
-    }
 
     @Override
     public void periodic() {

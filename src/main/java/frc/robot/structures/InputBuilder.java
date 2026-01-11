@@ -4,7 +4,6 @@ import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
-import frc.robot.subsystems.IndexerSubsystem;
 import lombok.*;
 import lombok.experimental.Accessors;
 import yams.mechanisms.swerve.utility.SwerveInputStream;
@@ -76,7 +75,7 @@ public class InputBuilder
                 .withBoostTranslation(0.1)
                 .build()
                 // Then Bind our actions.
-                .withChangeInput(InputStructure.BindingType.SINGLE_XBOX, driverXbox.a());
+                .withChangeInput(InputSelections.SINGLE_XBOX, driverXbox.a());
     }
 
     @Accessors(fluent = true, chain = true, makeFinal = false)
@@ -129,7 +128,7 @@ public class InputBuilder
         /**
          * Changes inputs to the given input selection.
          */
-        InputStream withChangeInput(InputStructure.BindingType bindingType, Trigger changeInput) {
+        InputStream withChangeInput(InputSelections bindingType, Trigger changeInput) {
             isMode.and(changeInput).onTrue(Commands.runOnce(() -> inputOverride.set(bindingType.name)));
             return this;
         }
