@@ -7,6 +7,9 @@ import edu.wpi.first.networktables.StringPublisher;
 import edu.wpi.first.networktables.StructArrayPublisher;
 import edu.wpi.first.util.sendable.Sendable;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import lombok.Getter;
+import lombok.Setter;
+import yams.motorcontrollers.SmartMotorControllerConfig;
 
 import java.util.function.Supplier;
 
@@ -43,16 +46,32 @@ public class Telemetry
     /// Telemetry Verbosity Settings
     public enum TelemetryVerbosity {
         /// No telemetry data is sent to the dashboard.
-        NONE,
+        NONE(SmartMotorControllerConfig.TelemetryVerbosity.LOW),
         /// Only basic telemetry data is sent to the dashboard.
-        LOW,
+        LOW(SmartMotorControllerConfig.TelemetryVerbosity.LOW),
         /// All telemetry data is sent to the dashboard.
-        HIGH
+        HIGH(SmartMotorControllerConfig.TelemetryVerbosity.HIGH),;
+
+        // Telemetry verbosity for YAMS at this verbosity level.
+        public final SmartMotorControllerConfig.TelemetryVerbosity yamsVerbosity;
+
+        /**
+         * Robot Telemetry Options
+         *
+         * @param yamsVerbosity Verbosity to use for YAMS at this level.
+         */
+        TelemetryVerbosity(SmartMotorControllerConfig.TelemetryVerbosity yamsVerbosity) {
+            this.yamsVerbosity = yamsVerbosity;
+        }
     }
 
-
+    /**
+     * SmartDashboard wrapper to match NT4 Publishers.
+     */
     public static class SmartDashboardPublisher
     {
+        @Setter
+        @Getter
         private Sendable value;
         private Supplier<Sendable> supplier;
         private final String path;
@@ -67,26 +86,24 @@ public class Telemetry
             this.path = path;
         }
 
-        public Sendable getValue()
-        {
-            return value;
-        }
-
-        public void set(Sendable value)
-        {
-            this.value = value;
-            SmartDashboard.putData(path, value);
-        }
-
+        /**
+         * Accepts sendable to be updated later.
+         * Also sets when ran.
+         *
+         * @param supplier the value supplier.
+         */
         public void accept(Supplier<Sendable> supplier)
         {
             this.supplier = supplier;
-            set(supplier.get());
+            setValue(supplier.get());
         }
 
+        /**
+         * Updates the published value from the current supplier.
+         */
         public void update()
         {
-            set(supplier.get());
+            setValue(supplier.get());
         }
     }
 }

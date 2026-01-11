@@ -65,7 +65,7 @@ public class InputStructure {
      */
     public void init() {
         // Send the inputSelector to the dashboard.
-        Telemetry.Publishers.Robot.inputPublisher.set(inputSelector);
+        Telemetry.Publishers.Robot.inputPublisher.setValue(inputSelector);
 
         // Initialize all standard binding configurations
         singleXboxBindings();
