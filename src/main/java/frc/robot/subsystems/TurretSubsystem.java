@@ -1,24 +1,22 @@
 package frc.robot.subsystems;
 
 
-import static edu.wpi.first.units.Units.Amps;
-import static edu.wpi.first.units.Units.Degrees;
-import static edu.wpi.first.units.Units.DegreesPerSecond;
-import static edu.wpi.first.units.Units.DegreesPerSecondPerSecond;
-import static edu.wpi.first.units.Units.Meters;
-import static edu.wpi.first.units.Units.Second;
-import static edu.wpi.first.units.Units.Seconds;
-import static edu.wpi.first.units.Units.Volts;
-import static yams.mechanisms.SmartMechanism.gearbox;
-import static yams.mechanisms.SmartMechanism.gearing;
+import static edu.wpi.first.units.Units.*;
+import static edu.wpi.first.units.Units.Amp;
+import static edu.wpi.first.units.Units.Inches;
+import static edu.wpi.first.units.Units.RPM;
+import static edu.wpi.first.units.Units.RotationsPerSecondPerSecond;
 
-import com.ctre.phoenix6.hardware.TalonFXS;
-import edu.wpi.first.math.controller.ArmFeedforward;
+import com.revrobotics.spark.SparkLowLevel;
+import com.revrobotics.spark.SparkMax;
+import edu.wpi.first.math.controller.ProfiledPIDController;
+import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.system.plant.DCMotor;
-import edu.wpi.first.units.measure.Angle;
-import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.math.trajectory.TrapezoidProfile;
+import edu.wpi.first.units.measure.*;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.Telemetry;
 import yams.gearing.GearBox;
 import yams.gearing.MechanismGearing;
 import yams.mechanisms.config.MechanismPositionConfig;
@@ -28,54 +26,79 @@ import yams.motorcontrollers.SmartMotorController;
 import yams.motorcontrollers.SmartMotorControllerConfig;
 import yams.motorcontrollers.SmartMotorControllerConfig.ControlMode;
 import yams.motorcontrollers.SmartMotorControllerConfig.MotorMode;
-import yams.motorcontrollers.SmartMotorControllerConfig.TelemetryVerbosity;
-import yams.motorcontrollers.remote.TalonFXSWrapper;
+import yams.motorcontrollers.local.SparkWrapper;
 
 public class TurretSubsystem extends SubsystemBase
 {
-  private final TalonFXS                   turretMotor = new TalonFXS(1);//, MotorType.kBrushless);
-  //  private final SmartMotorControllerTelemetryConfig motorTelemetryConfig = new SmartMotorControllerTelemetryConfig()
-//          .withMechanismPosition()
-//          .withRotorPosition()
-//          .withMechanismLowerLimit()
-//          .withMechanismUpperLimit();
-  private final SmartMotorControllerConfig motorConfig = new SmartMotorControllerConfig(this)
-      .withClosedLoopController(4, 0, 0, DegreesPerSecond.of(180), DegreesPerSecondPerSecond.of(90))
-      .withSoftLimit(Degrees.of(-30), Degrees.of(100))
-      .withGearing(new MechanismGearing(GearBox.fromReductionStages(3, 4)))
-//      .withExternalEncoder(armMotor.getAbsoluteEncoder())
-      .withIdleMode(MotorMode.BRAKE)
-      .withTelemetry("TurretMotor", TelemetryVerbosity.HIGH)
-//      .withSpecificTelemetry("TurretMotor", motorTelemetryConfig)
-      .withStatorCurrentLimit(Amps.of(40))
-//      .withVoltageCompensation(Volts.of(12))
-      .withMotorInverted(false)
-      .withClosedLoopRampRate(Seconds.of(0.25))
-      .withOpenLoopRampRate(Seconds.of(0.25))
-      .withFeedforward(new ArmFeedforward(0, 0, 0, 0))
-      .withControlMode(ControlMode.CLOSED_LOOP);
-  private final SmartMotorController       motor       = new TalonFXSWrapper(turretMotor,
-                                                                             DCMotor.getNEO(1),
-                                                                             motorConfig);
-  private final MechanismPositionConfig    robotToMechanism = new MechanismPositionConfig()
-      .withMaxRobotHeight(Meters.of(1.5))
-      .withMaxRobotLength(Meters.of(0.75))
-      .withRelativePosition(new Translation3d(Meters.of(-0.25), Meters.of(0), Meters.of(0.5)));
-  private final PivotConfig                m_config         = new PivotConfig(motor)
-      .withHardLimit(Degrees.of(-100), Degrees.of(200))
-      .withTelemetry("ArmExample", TelemetryVerbosity.HIGH)
-      .withStartingPosition(Degrees.of(0))
-      .withMechanismPositionConfig(robotToMechanism)
-      .withMOI(0.001);
-  private final Pivot                      turret           = new Pivot(m_config);
+    /// Hardware Constants for the FlyWheel Mechanism.
+    public static class HardwareConstants {
+        /// Motor Constants
+        public static final int                     MOTOR_ID            = 9; // Spark Max CAN ID
+        public static final boolean                 MOTOR_INVERTED      = false; // Inverts control direction.
+        public static final MechanismGearing        GEAR_RATIO          = new MechanismGearing(GearBox.fromReductionStages(3, 4)); // FlyWheel Gear Ratio
+        /// Motor Tuning Values
+        public static final ProfiledPIDController   PID_CONTROLLER      = new ProfiledPIDController( // Basic Trapezoidal Motion Profiling
+                                                                          1, 0, 0, // PID - Proportional, Integral, Derivative.
+                                                                          new TrapezoidProfile.Constraints( /// Trapezoid Motion Profiling Constraints.
+                                                                          DegreesPerSecond.of(5000).in(RPM), // Max Angular Velocity
+                                                                          DegreesPerSecondPerSecond.of(2500).in(RotationsPerSecondPerSecond))); // Max Angular Acceleration
+        public static final Time                    RAMP_RATE           = Seconds.of(0.25); // Time it takes to reach max speed from 0.
+        public static final SimpleMotorFeedforward  FEED_FORWARD        = new SimpleMotorFeedforward(0, 0, 0); // Feed Forwards.
+        public static final Current                 CURRENT_LIMIT       = Amp.of(40); // Current limit, Higher for faster control.
+        /// Turret Pose Constants
+        public static final Distance                MAX_ROBOT_HEIGHT    = Inches.of(22); // Max robot height for visualization.
+        public static final Distance                MAX_ROBOT_WIDTH     = Inches.of(29); // Max robot width for visualization.
+        public static final Translation3d           TURRET_POSITION     = new Translation3d( /// Turret position for visualization.
+                                                                          Inches.of(10).in(Meters),  // X-axis left positive relative to the robot center, Same as pose2d.
+                                                                          Inches.of(7).in(Meters),   // Y-axis front positive relative to the robot center, Same as pose2d.
+                                                                          Inches.of(15).in(Meters)); // Z-axis up relative to the floor.
+        public static final Angle                   HARD_LIMIT_REVERSE  = Degrees.of(-180); // The hard limit should be a metal physical stop, not the cable chain.
+        public static final Angle                   HARD_LIMIT_FORWARD  = Degrees.of(180);
+        public static final Angle                   SOFT_LIMIT_REVERSE  = Degrees.of(-175); // A soft limit so we don't constantly hit the hard limit without reason.
+        public static final Angle                   SOFT_LIMIT_FORWARD  = Degrees.of(175);
+        /// Sim Constants
+        public static final Angle                   SIM_STARTING_ANGLE  = Degrees.of(0);
+    }
+    /// Control Constants for the FlyWheel Mechanism
+    public static class ControlConstants {
 
-  public TurretSubsystem()
-  {
-    // TODO: Set the default command, if any, for this subsystem by calling setDefaultCommand(command)
-    //       in the constructor or in the robot coordination class, such as RobotContainer.
-    //       Also, you can call addChild(name, sendableChild) to associate sendables with the subsystem
-    //       such as SpeedControllers, Encoders, DigitalInputs, etc.
-  }
+    }
+    /// The Normal Rev Vendor SparkMax Object.
+    private final SparkMax                          indexerMotor        = new SparkMax(IndexerSubsystem.HardwareConstants.MOTOR_ID, SparkLowLevel.MotorType.kBrushless);
+    /// The Smart Motor Controller Configuration.
+    private final SmartMotorControllerConfig        motorConfig         = new SmartMotorControllerConfig(this)
+            .withClosedLoopController(IndexerSubsystem.HardwareConstants.PID_CONTROLLER)
+            .withGearing(IndexerSubsystem.HardwareConstants.GEAR_RATIO)
+            .withIdleMode(MotorMode.BRAKE)
+            .withTelemetry("Indexer Motor", Telemetry.telemetryVerbosity.yamsVerbosity)
+            .withStatorCurrentLimit(IndexerSubsystem.HardwareConstants.CURRENT_LIMIT)
+            .withMotorInverted(IndexerSubsystem.HardwareConstants.MOTOR_INVERTED)
+            .withClosedLoopRampRate(IndexerSubsystem.HardwareConstants.RAMP_RATE)
+            .withOpenLoopRampRate(IndexerSubsystem.HardwareConstants.RAMP_RATE)
+            .withFeedforward(IndexerSubsystem.HardwareConstants.FEED_FORWARD)
+            .withSimFeedforward(IndexerSubsystem.HardwareConstants.FEED_FORWARD)
+            .withControlMode(ControlMode.CLOSED_LOOP);
+    /// The new Smart Motor Controller
+    private final SmartMotorController              motor               = new SparkWrapper(indexerMotor, DCMotor.getNEO(1), motorConfig);
+    /// The
+    private final MechanismPositionConfig           robotToMechanism    = new MechanismPositionConfig()
+            .withMaxRobotHeight(HardwareConstants.MAX_ROBOT_HEIGHT)
+            .withMaxRobotLength(HardwareConstants.MAX_ROBOT_WIDTH)
+            .withRelativePosition(HardwareConstants.TURRET_POSITION);
+    /// The Pivot Config for the Turret
+    private final PivotConfig                       m_config            = new PivotConfig(motor)
+            .withHardLimit(HardwareConstants.HARD_LIMIT_REVERSE, HardwareConstants.HARD_LIMIT_FORWARD)
+            .withSoftLimits(HardwareConstants.SOFT_LIMIT_REVERSE, HardwareConstants.SOFT_LIMIT_FORWARD)
+            .withTelemetry("Turret", Telemetry.telemetryVerbosity.yamsVerbosity)
+            .withStartingPosition(HardwareConstants.SIM_STARTING_ANGLE)
+            .withMechanismPositionConfig(robotToMechanism)
+            .withMOI(0.001);
+    /// The final Pivot Mechanism to use as the turret.
+    private final Pivot                             turret              = new Pivot(m_config);
+
+    public TurretSubsystem()
+    {
+    }
 
   public void periodic()
   {
@@ -85,20 +108,5 @@ public class TurretSubsystem extends SubsystemBase
   public void simulationPeriodic()
   {
     turret.simIterate();
-  }
-
-  public Command turretCmd(double dutycycle)
-  {
-    return turret.set(dutycycle);
-  }
-
-  public Command sysId()
-  {
-    return turret.sysId(Volts.of(3), Volts.of(3).per(Second), Second.of(30));
-  }
-
-  public Command setAngle(Angle angle)
-  {
-    return turret.setAngle(angle);
   }
 }
