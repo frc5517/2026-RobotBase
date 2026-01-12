@@ -10,6 +10,7 @@ import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.units.measure.*;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Telemetry;
 import lombok.Getter;
 import lombok.Setter;
@@ -63,10 +64,8 @@ public class HoodSubsystem extends SubsystemBase {
         public static final double                  HOOD_SPEED          = 0.3; // Predefined duty cycle speed.
         public static final Angle                   ANGLE_TOLERANCE     = Degrees.of(.1); // How accurate the angle should be.
     }
-    /// The Normal Rev Vendor SparkMax Object.
-    private final SparkMax                          indexerMotor        = new SparkMax(HardwareConstants.MOTOR_ID, SparkLowLevel.MotorType.kBrushless);
-    /// The Smart Motor Controller Configuration.
-    private final SmartMotorControllerConfig        motorConfig         = new SmartMotorControllerConfig(this)
+    private final SparkMax                          indexerMotor        = new SparkMax(HardwareConstants.MOTOR_ID, SparkLowLevel.MotorType.kBrushless); /// The Normal Rev Vendor SparkMax Object.
+    private final SmartMotorControllerConfig        motorConfig         = new SmartMotorControllerConfig(this) /// The Smart Motor Controller Configuration.
             .withClosedLoopController(HardwareConstants.PID_CONTROLLER)
             .withGearing(HardwareConstants.GEAR_RATIO)
             .withIdleMode(SmartMotorControllerConfig.MotorMode.BRAKE)
@@ -78,15 +77,12 @@ public class HoodSubsystem extends SubsystemBase {
             .withFeedforward(HardwareConstants.FEED_FORWARD)
             .withSimFeedforward(HardwareConstants.FEED_FORWARD)
             .withControlMode(SmartMotorControllerConfig.ControlMode.CLOSED_LOOP);
-    /// The new Smart Motor Controller
-    private final SmartMotorController              motor               = new SparkWrapper(indexerMotor, DCMotor.getNEO(1), motorConfig);
-    /// The Turret Position Config
-    private final MechanismPositionConfig           robotToMechanism    = new MechanismPositionConfig()
+    private final SmartMotorController              motor               = new SparkWrapper(indexerMotor, DCMotor.getNEO(1), motorConfig); /// The new Smart Motor Controller
+    private final MechanismPositionConfig           robotToMechanism    = new MechanismPositionConfig() /// The Turret Position Config
             .withMaxRobotHeight(HardwareConstants.MAX_ROBOT_HEIGHT)
             .withMaxRobotLength(HardwareConstants.MAX_ROBOT_WIDTH)
             .withRelativePosition(HardwareConstants.HOOD_POSITION);
-    /// The Arm Config for the Hood Mechanism.
-    private final ArmConfig m_config = new ArmConfig(motor)
+    private final ArmConfig m_config = new ArmConfig(motor) /// The Arm Config for the Hood Mechanism.
             .withLength(HardwareConstants.HOOD_LENGTH)
             .withHardLimit(HardwareConstants.HARD_LIMIT_REVERSE, HardwareConstants.HARD_LIMIT_FORWARD)
             .withSoftLimits(HardwareConstants.SOFT_LIMIT_REVERSE, HardwareConstants.SOFT_LIMIT_FORWARD)
@@ -95,23 +91,40 @@ public class HoodSubsystem extends SubsystemBase {
             .withStartingPosition(HardwareConstants.SIM_STARTING_ANGLE)
             .withHorizontalZero(HardwareConstants.HORIZONTAL_OFFSET)
             .withMechanismPositionConfig(robotToMechanism);
-    /// The final Arm Mechanism to use as the hood.
     @Getter
-    private final Arm hood = new Arm(m_config);
-
-    /// Setters for different Input Selections
-    @Setter
-    private double hoodSpeed = ControlConstants.HOOD_SPEED;
+    private final Arm                               hood                = new Arm(m_config); /// The final Arm Mechanism to use as the hood.
+    /// Reports the current Hood state. To be used later in code and telemetry.
+    public static class HoodState {
+        @Setter
+        public static double    ManualSpeed     = ControlConstants.HOOD_SPEED;
+        @Setter
+        public static Angle     AngleTolerance  = ControlConstants.ANGLE_TOLERANCE;
+        @Setter
+        public static Angle     CurrentAngle    = Degrees.of(0);
+        @Setter
+        public static Angle     DesiredAngle    = Degrees.of(0);
+        @Setter
+        public static Trigger   AtDesiredAngle  = new Trigger(() -> false);
+    }
 
     public HoodSubsystem() {
-
+        HoodState.setAtDesiredAngle(atDesiredAngle());
     }
 
     /**
      * Resets the setters to default values.
      */
     public void resetSetters() {
-        this.hoodSpeed = ControlConstants.HOOD_SPEED;
+        HoodState.setManualSpeed(ControlConstants.HOOD_SPEED);
+    }
+
+    /**
+     * Whether the hood is at the desired angle.
+     *
+     * @return whether the hood is at the desired angle.
+     */
+    public Trigger atDesiredAngle() {
+        return hood.isNear(HoodState.DesiredAngle, HoodState.AngleTolerance);
     }
 
     /**
@@ -120,7 +133,7 @@ public class HoodSubsystem extends SubsystemBase {
      * @return a command to raise the hood manually.
      */
     public Command upManual() {
-        return run(() -> hood.set(hoodSpeed))
+        return run(() -> hood.set(HoodState.ManualSpeed))
                 .finallyDo(() -> hood.set(0.0));
     }
 
@@ -130,7 +143,7 @@ public class HoodSubsystem extends SubsystemBase {
      * @return a command to lower the hood manually.
      */
     public Command downManual() {
-        return run(() -> hood.set(hoodSpeed))
+        return run(() -> hood.set(HoodState.ManualSpeed))
                 .finallyDo(() -> hood.set(0.0));
     }
 
@@ -141,6 +154,7 @@ public class HoodSubsystem extends SubsystemBase {
     public void periodic() {
         // Updates the hood mechanism's telemetry data to the network tables.
         hood.updateTelemetry();
+        HoodState.setCurrentAngle(hood.getAngle());
     }
 
     /**

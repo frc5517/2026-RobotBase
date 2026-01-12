@@ -52,11 +52,8 @@ public class FlyWheelSubsystem extends SubsystemBase
         public static final AngularVelocity         VELOCITY_TOLERANCE  = DegreesPerSecond.of(10); // How accurate the velocity should be.
         public static final AngularVelocity         TARGET_VELOCITY     = DegreesPerSecond.of(500); // How fast the flywheel should spin.
     }
-
-    /// The Normal Rev Vendor SparkMax Object.
-    private final SparkMax                          indexerMotor        = new SparkMax(HardwareConstants.MOTOR_ID, MotorType.kBrushless);
-    /// The Smart Motor Controller Configuration.
-    private final SmartMotorControllerConfig        motorConfig         = new SmartMotorControllerConfig(this)
+    private final SparkMax                          indexerMotor        = new SparkMax(HardwareConstants.MOTOR_ID, MotorType.kBrushless); /// The Normal Rev Vendor SparkMax Object.
+    private final SmartMotorControllerConfig        motorConfig         = new SmartMotorControllerConfig(this) /// The Smart Motor Controller Configuration.
             .withClosedLoopController(HardwareConstants.PID_CONTROLLER)
             .withGearing(HardwareConstants.GEAR_RATIO)
             .withIdleMode(MotorMode.BRAKE)
@@ -68,32 +65,36 @@ public class FlyWheelSubsystem extends SubsystemBase
             .withFeedforward(HardwareConstants.FEED_FORWARD)
             .withSimFeedforward(HardwareConstants.FEED_FORWARD)
             .withControlMode(ControlMode.CLOSED_LOOP);
-    /// The new Smart Motor Controller
-    private final SmartMotorController              motor               = new SparkWrapper(indexerMotor, DCMotor.getNEO(1), motorConfig);
-    /// The FlyWheel config.
-    private final FlyWheelConfig                    flyWheelConfig      = new FlyWheelConfig(motor)
+    private final SmartMotorController              motor               = new SparkWrapper(indexerMotor, DCMotor.getNEO(1), motorConfig); /// The new Smart Motor Controller
+    private final FlyWheelConfig                    flyWheelConfig      = new FlyWheelConfig(motor) /// The FlyWheel config.
             .withDiameter(HardwareConstants.FLYWHEEL_DIAMETER)
             .withMass(HardwareConstants.FLYWHEEL_MASS)
             .withTelemetry("FlyWheel", Telemetry.telemetryVerbosity.yamsVerbosity)
             .withSoftLimit(HardwareConstants.FLYWHEEL_MAX_SPEED.unaryMinus(), HardwareConstants.FLYWHEEL_MAX_SPEED)
             .withSpeedometerSimulation(HardwareConstants.FLYWHEEL_MAX_SPEED);
-    /// The final FlyWheel Mechanism.
     @Getter
-    private final FlyWheel                          flyWheel            = new FlyWheel(flyWheelConfig);
-
-    /// Setters for different Input Selections.
-    @Setter
-    private AngularVelocity targetVelocity = IndexerSubsystem.ControlConstants.TARGET_VELOCITY;
+    private final FlyWheel                          flyWheel            = new FlyWheel(flyWheelConfig); /// The final FlyWheel Mechanism.
+    /// Reports the current flywheel state. To be used later in code and telemetry.
+    public static class FlyWheelState {
+        @Setter
+        public static AngularVelocity              VelocityTolerance  = ControlConstants.VELOCITY_TOLERANCE;
+        @Setter
+        public static AngularVelocity              Velocity           = DegreesPerSecond.of(0);
+        @Setter
+        public static AngularVelocity              TargetVelocity     = ControlConstants.TARGET_VELOCITY;
+        @Setter
+        public static Trigger                      IsReady            = new Trigger(() -> false);
+    }
 
     public FlyWheelSubsystem() {
-
+        FlyWheelState.setIsReady(isReady());
     }
 
     /**
      * Resets the setters to default values.
      */
     public void resetSetters() {
-        this.targetVelocity = IndexerSubsystem.ControlConstants.TARGET_VELOCITY;
+        FlyWheelState.setTargetVelocity(ControlConstants.TARGET_VELOCITY);
     }
 
     /**
@@ -104,7 +105,7 @@ public class FlyWheelSubsystem extends SubsystemBase
     public Command spinUp() {
         return run(
                 // Set target speed
-                () -> flyWheel.setSpeed(ControlConstants.TARGET_VELOCITY))
+                () -> flyWheel.setSpeed(FlyWheelState.TargetVelocity))
                 // When the command finishes, stop the flywheel.
                 .finallyDo(() -> flyWheel.set(0.0));
     }
@@ -116,17 +117,25 @@ public class FlyWheelSubsystem extends SubsystemBase
      * @return whether the flywheel is at the target velocity.
      */
     public Trigger isReady() {
-        return flyWheel.isNear(ControlConstants.TARGET_VELOCITY, ControlConstants.VELOCITY_TOLERANCE);
+        return flyWheel.isNear(FlyWheelState.TargetVelocity, FlyWheelState.VelocityTolerance);
     }
 
-
+    /**
+     * Ran continuously while the robot is on.
+     */
     @Override
     public void periodic() {
-          flyWheel.updateTelemetry();
+        // Updates the flywheel mechanism's telemetry data to the network tables.
+        flyWheel.updateTelemetry();
+        FlyWheelState.setVelocity(flyWheel.getSpeed());
     }
 
+    /**
+     * Ran continuously when the robot is in simulation.
+     */
     @Override
     public void simulationPeriodic() {
-          flyWheel.simIterate();
+        // Iterates the sim so that the sim actually works and the data sent to the network tables can be updated.
+        flyWheel.simIterate();
     }
 }

@@ -8,7 +8,9 @@ import edu.wpi.first.units.measure.*;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Telemetry;
+import lombok.Getter;
 import lombok.Setter;
 import yams.gearing.GearBox;
 import yams.gearing.MechanismGearing;
@@ -69,12 +71,19 @@ public class IndexerSubsystem extends SubsystemBase {
             .withTelemetry("Indexer", Telemetry.telemetryVerbosity.yamsVerbosity)
             .withSoftLimit(HardwareConstants.INDEXER_MAX_SPEED.unaryMinus(), HardwareConstants.INDEXER_MAX_SPEED)
             .withSpeedometerSimulation(HardwareConstants.INDEXER_MAX_SPEED);
+    @Getter
     private final FlyWheel                                      indexer         = new FlyWheel(indexerConfig); /// The final FlyWheel Mechanism to use as the smart Indexer.
-
-    /// Setters for different Input Selections.
-    @Setter
-    private AngularVelocity targetVelocity = ControlConstants.TARGET_VELOCITY;
-
+    /// Reports the current Indexer state. To be used later in code and telemetry.
+    public static class IndexerState {
+        @Setter
+        public static AngularVelocity              VelocityTolerance  = FlyWheelSubsystem.ControlConstants.VELOCITY_TOLERANCE;
+        @Setter
+        public static AngularVelocity              Velocity           = DegreesPerSecond.of(0);
+        @Setter
+        public static AngularVelocity              TargetVelocity     = FlyWheelSubsystem.ControlConstants.TARGET_VELOCITY;
+        @Setter
+        public static Trigger                      IsReady            = new Trigger(() -> false);
+    }
 
     public IndexerSubsystem() {
 
@@ -84,7 +93,7 @@ public class IndexerSubsystem extends SubsystemBase {
      * Resets the setters to default values.
      */
     public void resetSetters() {
-        this.targetVelocity = ControlConstants.TARGET_VELOCITY;
+        IndexerState.setTargetVelocity(ControlConstants.TARGET_VELOCITY);
     }
 
     /**
@@ -105,13 +114,21 @@ public class IndexerSubsystem extends SubsystemBase {
         return indexer;
     }
 
+    /**
+     * Ran continuously while the robot is on.
+     */
     @Override
     public void periodic() {
-          indexer.updateTelemetry();
+        // Updates the indexer mechanism's telemetry data to the network tables.
+        indexer.updateTelemetry();
     }
 
+    /**
+     * Ran continuously when the robot is in simulation.
+     */
     @Override
     public void simulationPeriodic() {
-          indexer.simIterate();
+        // Iterates the sim so that the sim actually works and the data sent to the network tables can be updated.
+        indexer.simIterate();
     }
 }

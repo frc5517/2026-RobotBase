@@ -99,13 +99,21 @@ public class TurretSubsystem extends SubsystemBase
     {
     }
 
-  public void periodic()
-  {
-    turret.updateTelemetry();
-  }
+    /**
+     * Ran continuously while the robot is on.
+     */
+    @Override
+    public void periodic() {
+        // Updates the turret mechanism's telemetry data to the network tables.
+        turret.updateTelemetry();
+    }
 
-  public void simulationPeriodic()
-  {
-    turret.simIterate();
-  }
+    /**
+     * Ran continuously when the robot is in simulation.
+     */
+    @Override
+    public void simulationPeriodic() {
+        // Iterates the sim so that the sim actually works and the data sent to the network tables can be updated.
+        turret.simIterate();
+    }
 }
