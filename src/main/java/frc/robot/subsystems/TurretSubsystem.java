@@ -91,7 +91,7 @@ public class TurretSubsystem extends SubsystemBase
             .withTelemetry("Turret", Telemetry.telemetryVerbosity.yamsVerbosity)
             .withStartingPosition(HardwareConstants.SIM_STARTING_ANGLE)
             .withMechanismPositionConfig(robotToMechanism)
-            .withMOI(0.001);
+            .withMOI(KilogramSquareMeters.of(0.001));
     /// The final Pivot Mechanism to use as the turret.
     private final Pivot                             turret              = new Pivot(m_config);
 

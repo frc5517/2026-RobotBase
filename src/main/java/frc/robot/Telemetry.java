@@ -9,6 +9,7 @@ import edu.wpi.first.util.sendable.Sendable;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import lombok.Getter;
 import lombok.Setter;
+import swervelib.telemetry.SwerveDriveTelemetry;
 import yams.motorcontrollers.SmartMotorControllerConfig;
 
 import java.util.function.Supplier;
@@ -46,22 +47,33 @@ public class Telemetry
     /// Telemetry Verbosity Settings
     public enum TelemetryVerbosity {
         /// No telemetry data is sent to the dashboard.
-        NONE(SmartMotorControllerConfig.TelemetryVerbosity.LOW),
+        NONE(
+                SmartMotorControllerConfig.TelemetryVerbosity.LOW,
+                SwerveDriveTelemetry.TelemetryVerbosity.NONE),
         /// Only basic telemetry data is sent to the dashboard.
-        LOW(SmartMotorControllerConfig.TelemetryVerbosity.LOW),
+        LOW(
+                SmartMotorControllerConfig.TelemetryVerbosity.LOW,
+                SwerveDriveTelemetry.TelemetryVerbosity.LOW),
         /// All telemetry data is sent to the dashboard.
-        HIGH(SmartMotorControllerConfig.TelemetryVerbosity.HIGH),;
+        HIGH(
+                SmartMotorControllerConfig.TelemetryVerbosity.HIGH,
+                SwerveDriveTelemetry.TelemetryVerbosity.HIGH),;
 
         // Telemetry verbosity for YAMS at this verbosity level.
         public final SmartMotorControllerConfig.TelemetryVerbosity yamsVerbosity;
+        // Telemetry verbosity for YAGSL at this verbosity level.
+        public final SwerveDriveTelemetry.TelemetryVerbosity yagslVerbosity;
 
         /**
          * Robot Telemetry Options
          *
          * @param yamsVerbosity Verbosity to use for YAMS at this level.
          */
-        TelemetryVerbosity(SmartMotorControllerConfig.TelemetryVerbosity yamsVerbosity) {
+        TelemetryVerbosity(
+                SmartMotorControllerConfig.TelemetryVerbosity yamsVerbosity,
+                SwerveDriveTelemetry.TelemetryVerbosity yagslVerbosity) {
             this.yamsVerbosity = yamsVerbosity;
+            this.yagslVerbosity = yagslVerbosity;
         }
     }
 

@@ -45,4 +45,8 @@ public class AllianceFlipUtil {
         return (DriverStation.getAlliance().isPresent()
                 && DriverStation.getAlliance().get() == DriverStation.Alliance.Red);
     }
+
+    public static Pose2d ifShouldFlip(Pose2d pose) {
+        return shouldFlip() ? flip(pose) : pose;
+    }
 }

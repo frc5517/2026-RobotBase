@@ -1,12 +1,15 @@
-package frc.robot.structures;
+package frc.robot;
 
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
+import frc.robot.subsystems.SwerveSubsystem;
 import lombok.*;
 import lombok.experimental.Accessors;
-import yams.mechanisms.swerve.utility.SwerveInputStream;
+import swervelib.SwerveDrive;
+import swervelib.SwerveInputStream;
 
 import java.util.function.DoubleSupplier;
 
@@ -95,7 +98,11 @@ public class InputBuilder
         @Builder.Default double elevatorSpeed = 0.5;
         @Builder.Default double armSpeed = 0.5;
         /// Stream Constants
-        private final Trigger isMode;
+        @Builder.Default private final Trigger isMode = new Trigger(() -> false);
+
+        public InputStream() {
+
+        }
 
         public static InputStreamBuilder builder(Trigger isMode)
         {
@@ -105,21 +112,29 @@ public class InputBuilder
 
         public static InputStreamBuilder builder(
                 Trigger isMode,
+                SwerveDrive swerve,
                 DoubleSupplier translationX,
                 DoubleSupplier translationY,
                 DoubleSupplier rotation)
         {
-            return builder(isMode);
-//                    .withSwerveInputStream(new SwerveInputStream(
-//                    drive,
-//                    translationX,
-//                    translationY,
-//                    rotation));
+            return builder(isMode)
+                    .withSwerveInputStream(new swervelib.SwerveInputStream(
+                    swerve,
+                    translationX,
+                    translationY,
+                    rotation));
         }
 
-        public static InputStreamBuilder driverXboxControls(Trigger isMode, CommandXboxController controller)
+        /**
+         * TODO
+         * @param isMode
+         * @param controller
+         * @return
+         */
+        public static InputStreamBuilder driverXboxControls(Trigger isMode, SwerveDrive swerve, CommandXboxController controller)
         {
             return builder(isMode,
+                    swerve,
                     () -> -1 * controller.getLeftX(),
                     () -> -1 * controller.getLeftY(),
                     () -> -1 * controller.getRightX());
@@ -128,8 +143,20 @@ public class InputBuilder
         /**
          * Changes inputs to the given input selection.
          */
-        InputStream withChangeInput(InputSelections bindingType, Trigger changeInput) {
+        public InputStream withChangeInput(InputSelections bindingType, Trigger changeInput) {
             isMode.and(changeInput).onTrue(Commands.runOnce(() -> inputOverride.set(bindingType.name)));
+            return this;
+        }
+
+        /**
+         * TODO
+         * @param swerveInputStream
+         * @return
+         */
+        public InputStream withSwerveInputStream(SwerveSubsystem swerve, SwerveInputStream swerveInputStream) {
+            this.swerveInputStream = swerveInputStream;
+            // Set the default drive command when enabled
+            isMode.and(DriverStation::isEnabled).onTrue(Commands.runOnce(() -> swerve.setDefaultCommand(swerve.drive(swerveInputStream))));
             return this;
         }
     }
