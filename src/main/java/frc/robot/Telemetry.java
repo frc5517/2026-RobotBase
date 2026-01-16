@@ -40,7 +40,7 @@ public class Telemetry
             // Table for maple sim publishers.
             private static final NetworkTable mapleTable = telemetryTable.getSubTable("MapleSim");
             // Generic Game Piece Publisher.
-            public static final StructArrayPublisher<Pose3d> elementPublisher = mapleTable.getStructArrayTopic("GameElement", Pose3d.struct).publish();
+            public static final StructArrayPublisher<Pose3d> elementPublisher = mapleTable.getStructArrayTopic("Fuel", Pose3d.struct).publish();
         }
     }
 
@@ -77,6 +77,11 @@ public class Telemetry
         }
     }
 
+    public static void updateTelemetry()
+    {
+        Publishers.Robot.inputPublisher.update();
+    }
+
     /**
      * SmartDashboard wrapper to match NT4 Publishers.
      */
@@ -96,6 +101,12 @@ public class Telemetry
         public SmartDashboardPublisher(String path)
         {
             this.path = path;
+
+        }
+
+        public void setValue(Sendable value)
+        {
+            SmartDashboard.putData(path, value);
         }
 
         /**

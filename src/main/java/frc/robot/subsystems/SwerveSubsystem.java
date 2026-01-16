@@ -37,6 +37,7 @@ import java.util.function.Supplier;
 
 import frc.robot.Telemetry;
 import frc.robot.util.math.AllianceFlipUtil;
+import lombok.Getter;
 import lombok.Setter;
 import org.json.simple.parser.ParseException;
 import swervelib.SwerveDrive;
@@ -52,7 +53,7 @@ public class SwerveSubsystem extends SubsystemBase
         /// This is the max achievable speed of the physical chassis.
         /// Do not change this. It is not an arbitrary speed limiter.
         public static final double MAX_SPEED = 14.5;
-        public static final File CONFIG_DIRECTORY = new File(Filesystem.getDeployDirectory(), "swerve/neo");
+        public static final File CONFIG_DIRECTORY = new File(Filesystem.getDeployDirectory(), "swerve");
         /// Max accelerations are calculated in the Pathplanner GUI
         public static final LinearAcceleration MAX_LINEAR_ACCELERATION = MetersPerSecondPerSecond.of(11.7);
         public static final AngularAcceleration MAX_ANGULAR_ACCELERATION = DegreesPerSecondPerSecond.of(1749);
@@ -63,13 +64,15 @@ public class SwerveSubsystem extends SubsystemBase
         // Simulation Starting Pose
         public static final Pose2d INITIAL_SIM_POSE = AllianceFlipUtil.ifShouldFlip(
                 new Pose2d(new Translation2d(
-                        Meter.of(1),
-                        Meter.of(4)),
+                        Meter.of(2),
+                        Meter.of(6)),
                         Rotation2d.fromDegrees(0)));
     }
   /// The Swerve drive object.
+  @Getter
   private final SwerveDrive swerveDrive;
   /// PhotonVision class to keep an accurate odometry.
+  @Getter
   private VisionSubsystem vision;
 
   public static class SwerveState {
@@ -260,17 +263,27 @@ public class SwerveSubsystem extends SubsystemBase
 
   }
 
-  /**
-   * Drive, according to the chassis robot-oriented velocity.
-   *
-   * @param velocity Robot oriented {@link ChassisSpeeds}
-   */
-  public Command drive(Supplier<ChassisSpeeds> velocity)
-  {
+    /**
+    * Drive, according to the chassis robot-oriented velocity.
+    *
+    * @param velocity Robot oriented {@link ChassisSpeeds}
+    */
+    public Command drive(Supplier<ChassisSpeeds> velocity) {
       return runEnd(
               () -> swerveDrive.drive(velocity.get()),
               () -> swerveDrive.drive(new ChassisSpeeds()));
-  }
+    }
+
+    /**
+     * Drive the robot given a chassis field oriented velocity.
+     *
+     * @param velocity Velocity according to the field.
+     */
+    public Command driveFieldOriented(Supplier<ChassisSpeeds> velocity) {
+        return run(() -> {
+            swerveDrive.driveFieldOriented(velocity.get());
+        });
+    }
 
   /**
    * Resets the gyro angle to zero and resets odometry to the same position, but facing toward 0.

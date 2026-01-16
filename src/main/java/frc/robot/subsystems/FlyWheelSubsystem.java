@@ -30,7 +30,7 @@ public class FlyWheelSubsystem extends SubsystemBase
     /// Hardware Constants for the FlyWheel Mechanism.
     public static class HardwareConstants {
         /// Motor Constants
-        public static final int                     MOTOR_ID            = 9; // Spark Max CAN ID
+        public static final int                     MOTOR_ID            = 25; // Spark Max CAN ID
         public static final boolean                 MOTOR_INVERTED      = false; // Inverts control direction.
         public static final MechanismGearing        GEAR_RATIO          = new MechanismGearing(GearBox.fromReductionStages(3, 4)); // FlyWheel Gear Ratio
         /// Motor Tuning Values

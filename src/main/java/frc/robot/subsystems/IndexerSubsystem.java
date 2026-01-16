@@ -29,7 +29,7 @@ public class IndexerSubsystem extends SubsystemBase {
     /// Hardware Constants for the Indexer Mechanism.
     public static class HardwareConstants {
         /// Motor Constants
-        public static final int                                 MOTOR_ID            = 9; // Spark Max CAN ID
+        public static final int                                 MOTOR_ID            = 22; // Spark Max CAN ID
         public static final boolean                             MOTOR_INVERTED      = false; // Inverts control direction.
         public static final MechanismGearing                    GEAR_RATIO          = new MechanismGearing(GearBox.fromReductionStages(3, 4)); // Indexer Gear Ratio
         /// Motor Tuning Values

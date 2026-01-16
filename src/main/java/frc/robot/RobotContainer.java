@@ -18,8 +18,14 @@ public class RobotContainer {
     /// Loading System
     private final IndexerSubsystem indexer = new IndexerSubsystem();
     /// Make our input builder, thus creating all of our inputs.
-    private final InputBuilder inputBuilder = new InputBuilder();
+    private final InputBuilder inputBuilder = new InputBuilder(
+            swerve, turret);
   public RobotContainer() {
+  }
+
+  public void periodic()
+  {
+      Telemetry.updateTelemetry();
   }
 
   public Command getAutonomousCommand() {

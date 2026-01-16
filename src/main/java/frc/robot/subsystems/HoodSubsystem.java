@@ -29,7 +29,7 @@ public class HoodSubsystem extends SubsystemBase {
     /// The Hardware Constants for the Hood Mechanism.
     public static final class HardwareConstants {
         /// Motor Constants
-        public static final int                     MOTOR_ID            = 9; // Spark Max CAN ID
+        public static final int                     MOTOR_ID            = 24; // Spark Max CAN ID
         public static final boolean                 MOTOR_INVERTED      = false; // Inverts control direction.
         public static final MechanismGearing        GEAR_RATIO          = new MechanismGearing(GearBox.fromReductionStages(3, 4)); // FlyWheel Gear Ratio
         /// Motor Tuning Values
@@ -89,7 +89,7 @@ public class HoodSubsystem extends SubsystemBase {
             .withTelemetry("Hood", Telemetry.telemetryVerbosity.yamsVerbosity)
             .withMass(HardwareConstants.HOOD_MASS)
             .withStartingPosition(HardwareConstants.SIM_STARTING_ANGLE)
-            .withHorizontalZero(HardwareConstants.HORIZONTAL_OFFSET)
+            //.withHorizontalZero(HardwareConstants.HORIZONTAL_OFFSET)
             .withMechanismPositionConfig(robotToMechanism);
     @Getter
     private final Arm                               hood                = new Arm(m_config); /// The final Arm Mechanism to use as the hood.
