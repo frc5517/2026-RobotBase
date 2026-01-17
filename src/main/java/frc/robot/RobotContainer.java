@@ -8,6 +8,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.subsystems.*;
 import swervelib.simulation.ironmaple.simulation.SimulatedArena;
+import swervelib.simulation.ironmaple.simulation.seasonspecific.rebuilt2026.Arena2026Rebuilt;
 
 public class RobotContainer {
     /// Drive Base
@@ -21,16 +22,18 @@ public class RobotContainer {
     /// Make our input builder, thus creating all of our inputs.
     private final InputBuilder inputBuilder = new InputBuilder(
             swerve, turret);
-  public RobotContainer() {
-      SimulatedArena.getInstance().resetFieldForAuto();
-  }
 
-  public void periodic()
-  {
-      Telemetry.updateTelemetry();
-  }
+    public RobotContainer() {
+        SimulatedArena.getInstance().resetFieldForAuto();
+        ((Arena2026Rebuilt) SimulatedArena.getInstance()).setEfficiencyMode(false);
+    }
 
-  public Command getAutonomousCommand() {
+    public void periodic()
+    {
+        Telemetry.updateTelemetry();
+    }
+
+    public Command getAutonomousCommand() {
     return Commands.print("No autonomous command configured");
   }
 }
