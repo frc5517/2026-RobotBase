@@ -5,16 +5,19 @@ import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.subsystems.SwerveSubsystem;
 import frc.robot.subsystems.TurretSubsystem;
 import lombok.*;
 import lombok.experimental.Accessors;
 import swervelib.SwerveInputStream;
+import swervelib.simulation.ironmaple.simulation.SimulatedArena;
 
 import java.util.function.DoubleSupplier;
 
 import static frc.robot.Telemetry.Publishers.Robot.inputOverride;
+import static lombok.AccessLevel.PRIVATE;
 
 
 public class InputBuilder
@@ -84,144 +87,87 @@ public class InputBuilder
 
     public void testing() {
         // Define constants first, like speeds.
-        InputStream.builder(InputSelections.TESTING.isMode)
+        InputStream.builder().withIsMode(InputSelections.TESTING.isMode)
+                .withNormalRotation(1)
+                .withNormalTranslation(1)
                 .withSwerve(swerve)
-                .withSwerveInputStream(new SwerveInputStream(
-                        swerve.getSwerveDrive(),
-                        () -> driverXbox.getLeftX() * -1,
-                        () -> driverXbox.getLeftY() * -1,
-                        () -> driverXbox.getRightX() * 1))
-                .withBoostTranslation(1)
+                .build()
+                .withXboxDrive(swerve, driverXbox)
                 .withChangeInput(InputSelections.SINGLE_XBOX, driverXbox.a())
-                .withTestMessage(driverXbox.b())
-                .build();
+                .resetField(driverXbox.start());
     }
 
-    @Accessors(fluent = true, chain = true, makeFinal = false)
-    @Builder(setterPrefix = "with")
+    @Accessors(fluent = true, chain = true, makeFinal = true)
+    @Builder(setterPrefix = "with", toBuilder = true)
     public static class InputStream {
         /// Stream Constants
-        @Builder.Default private final Trigger isMode = new Trigger(() -> false);
+        private final Trigger isMode;
         /// Drive Constants
-        @Builder.Default private final SwerveSubsystem swerve = null;
-        @Builder.Default double driveSpeed = 1;
+        @Builder.Default double deadzone = 0.05;
         @Builder.Default double slowTranslation = 0.3;
         @Builder.Default double slowRotation = 0.2;
         @Builder.Default double normalTranslation = 0.8;
-        @Builder.Default double normalRotation = 0.6;
+        @Builder.Default double normalRotation = 1.0;
         @Builder.Default double boostTranslation = 1.0;
         @Builder.Default double boostRotation = 0.75;
-        @Builder.Default SwerveInputStream swerveInputStream = null;
-        @Builder.Default Command driveCommand = null;
-        /// Elevator Constants
+        @Getter SwerveInputStream swerveInputStream;
+        private SwerveSubsystem swerve;
+        private Command driveCommand;
 
-        public static InputStreamBuilder builder(Trigger isMode) {
-            return new InputStreamBuilder()
-                    .withIsMode(isMode);
+        /**
+         * Defaults to regular xbox driver control.
+         *
+         * @param swerve
+         * @param driverXbox
+         * @return
+         */
+        public InputStream withXboxDrive(
+                SwerveSubsystem swerve,
+                CommandXboxController driverXbox) {
+            if (swerve != null) {
+                return withSwerveInputStream(swerve, new SwerveInputStream(
+                        swerve.getSwerveDrive(),
+                        () -> driverXbox.getLeftY() * -1,
+                        () -> driverXbox.getLeftX() * -1,
+                        () -> driverXbox.getRightX() * -1)
+                        .robotRelative(true)
+                        .allianceRelativeControl(false));
+            }
+            return this;
         }
 
-        public static class InputStreamBuilder {
-            /**
-             * Builds.
-             * TODO
-             *
-             * @return
-             */
-            public InputStream build() {
-                if (driveCommand$set) {
-                    isMode$value.and(DriverStation::isEnabled).onTrue(
-                            Commands.runOnce(() -> swerve$value.setDefaultCommand(driveCommand$value)));
-                }
-                return new InputStream(
-                        isMode$value,
-                        swerve$value,
-                        driveSpeed$value,
-                        slowTranslation$value,
-                        slowRotation$value,
-                        normalTranslation$value,
-                        normalRotation$value,
-                        boostTranslation$value,
-                        boostRotation$value,
-                        swerveInputStream$value,
-                        driveCommand$value);
-            }
+        /**
+         * Adds all the builder values.
+         *
+         * @param swerve
+         * @param swerveInputStream
+         * @return
+         */
+        public InputStream withSwerveInputStream(SwerveSubsystem swerve, SwerveInputStream swerveInputStream) {
+            var updated = this.toBuilder()
+                    .withSwerve(swerve)
+                    .withSwerveInputStream(swerveInputStream
+                            .deadband(deadzone)
+                            .scaleTranslation(normalTranslation)
+                            .scaleRotation(normalRotation))
+                    .withDriveCommand(swerve.driveFieldOriented(swerveInputStream))
+                    .build(); // set here just in case it was set out of order.
+            updated.isMode.and(DriverStation::isEnabled).onTrue(Commands.runOnce(() -> swerve.setDefaultCommand(updated.driveCommand)));
+            return updated;
+        }
 
-            /**
-             * Builds with drive controls.
-             * TODO
-             *
-             * @return
-             */
-            public InputStream build(
-                    SwerveSubsystem swerve,
-                    DoubleSupplier translationX,
-                    DoubleSupplier translationY,
-                    DoubleSupplier rotation) {
-                if (!swerveInputStream$set) {
-                    withSwerve(swerve)
-                            .withSwerveInputStream(new SwerveInputStream(
-                                    swerve.getSwerveDrive(), translationX, translationY, rotation)
-                            .scaleTranslation(normalTranslation$value)
-                            .scaleRotation(normalRotation$value)
-                    );
-                }
-                return build();
-            }
+        /**
+         * Changes inputs to the given input selection.
+         */
+        public InputStream withChangeInput(InputSelections bindingType, Trigger changeInput) {
+            isMode.and(changeInput).onTrue(Commands.runOnce(() -> inputOverride.set(bindingType.name)));
+            return this;
+        }
 
-            /**
-             * Defaults to regular xbox driver control.
-             *
-             * @param swerve
-             * @param driverXbox
-             * @return
-             */
-            public InputStreamBuilder withXboxDrive(
-                    SwerveSubsystem swerve,
-                    CommandXboxController driverXbox) {
-                if (!swerveInputStream$set) {
-                    withSwerveInputStream(new SwerveInputStream(
-                            swerve.getSwerveDrive(),
-                            () -> driverXbox.getLeftX() * -1,
-                            () -> driverXbox.getLeftY() * -1,
-                            () -> driverXbox.getRightX() * 1)
-                            .scaleTranslation(normalTranslation$value)
-                            .scaleRotation(normalRotation$value)
-                    );
-                }
-                return this;
-            }
-
-
-
-            public InputStreamBuilder withSwerve(SwerveSubsystem swerve) {
-                if (swerveInputStream$set) {
-                    withDriveCommand(swerve$value.driveFieldOriented(swerveInputStream$value));
-                }
-                return this;
-            }
-
-            public InputStreamBuilder withSwerveInputStream(SwerveInputStream swerveInputStream) {
-                if (swerve$set) {
-                    withDriveCommand(swerve$value.driveFieldOriented(swerveInputStream));
-                }
-                return this;
-            }
-
-            /**
-             * Changes inputs to the given input selection.
-             */
-            public InputStreamBuilder withChangeInput(InputSelections bindingType, Trigger changeInput) {
-                isMode$value.and(changeInput).onTrue(Commands.runOnce(() -> inputOverride.set(bindingType.name)));
-                return this;
-            }
-
-            public InputStreamBuilder withTestMessage(Trigger sendMessage) {
-                isMode$value.and(sendMessage).onTrue(Commands.runOnce(() ->
-                        System.out.printf(
-                            "Input Builder Test - SwerveSubsystem: %s - %s\n SwerveStream: %s - %s\n SwerveCommand: %s - %s\n",
-                                swerve$set, swerve$value, swerveInputStream$set, swerveInputStream$value,  driveCommand$set, driveCommand$value)));
-                return this;
-            }
+        public InputStream resetField(Trigger sendMessage) {
+            isMode.and(sendMessage).onTrue(Commands.runOnce(() ->
+                    SimulatedArena.getInstance().resetFieldForAuto()));
+            return this;
         }
         /// External from builder, just in case we need to set things after the builder.
     }

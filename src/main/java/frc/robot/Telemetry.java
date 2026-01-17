@@ -8,7 +8,7 @@ import edu.wpi.first.networktables.StructArrayPublisher;
 import edu.wpi.first.util.sendable.Sendable;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import lombok.Getter;
-import lombok.Setter;
+import swervelib.simulation.ironmaple.simulation.SimulatedArena;
 import swervelib.telemetry.SwerveDriveTelemetry;
 import yams.motorcontrollers.SmartMotorControllerConfig;
 
@@ -38,7 +38,7 @@ public class Telemetry
         public static class MapleSim
         {
             // Table for maple sim publishers.
-            private static final NetworkTable mapleTable = telemetryTable.getSubTable("MapleSim");
+            private static final NetworkTable mapleTable = NetworkTableInstance.getDefault().getTable("SmartDashboard/MapleSim");
             // Generic Game Piece Publisher.
             public static final StructArrayPublisher<Pose3d> elementPublisher = mapleTable.getStructArrayTopic("Fuel", Pose3d.struct).publish();
         }
@@ -77,9 +77,17 @@ public class Telemetry
         }
     }
 
+    /// Initializes any need data. Called statically.
+    Telemetry() {
+        // Add all the default pieces.
+        //SimulatedArena.getInstance().resetFieldForAuto();
+    }
+
+    /// Updates all of our custom telemetry
     public static void updateTelemetry()
     {
         Publishers.Robot.inputPublisher.update();
+        Publishers.MapleSim.elementPublisher.accept(SimulatedArena.getInstance().getGamePiecesArrayByType("Fuel"));
     }
 
     /**
@@ -87,7 +95,6 @@ public class Telemetry
      */
     public static class SmartDashboardPublisher
     {
-        @Setter
         @Getter
         private Sendable value;
         private Supplier<Sendable> supplier;
@@ -106,6 +113,7 @@ public class Telemetry
 
         public void setValue(Sendable value)
         {
+            this.value = value;
             SmartDashboard.putData(path, value);
         }
 
