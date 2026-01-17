@@ -52,6 +52,7 @@ public class FlyWheelSubsystem extends SubsystemBase
         public static final AngularVelocity         VELOCITY_TOLERANCE  = DegreesPerSecond.of(10); // How accurate the velocity should be.
         public static final AngularVelocity         TARGET_VELOCITY     = DegreesPerSecond.of(500); // How fast the flywheel should spin.
     }
+    /// Initialize the FlyWheel
     private final SparkMax                          indexerMotor        = new SparkMax(HardwareConstants.MOTOR_ID, MotorType.kBrushless); /// The Normal Rev Vendor SparkMax Object.
     private final SmartMotorControllerConfig        motorConfig         = new SmartMotorControllerConfig(this) /// The Smart Motor Controller Configuration.
             .withClosedLoopController(HardwareConstants.PID_CONTROLLER)
