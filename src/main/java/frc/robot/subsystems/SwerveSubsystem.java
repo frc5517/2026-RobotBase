@@ -35,6 +35,7 @@ import java.io.IOException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
+import frc.robot.Robot;
 import frc.robot.Telemetry;
 import frc.robot.util.math.AllianceFlipUtil;
 import lombok.Getter;
@@ -46,6 +47,8 @@ import swervelib.parser.SwerveParser;
 import swervelib.telemetry.SwerveDriveTelemetry;
 
 import static edu.wpi.first.units.Units.*;
+import static frc.robot.subsystems.SwerveSubsystem.HardwareConstants.*;
+import static frc.robot.subsystems.SwerveSubsystem.ControlConstants.*;
 
 public class SwerveSubsystem extends SubsystemBase
 {
@@ -60,7 +63,7 @@ public class SwerveSubsystem extends SubsystemBase
     }
     public static class ControlConstants {
         /// Enable vision odometry updates while driving.
-        public static final boolean RUN_VISION = false;
+        public static final boolean RUN_VISION = Robot.isSimulation(); // Run only in sim until real vision is ready.
         // Simulation Starting Pose
         public static final Pose2d INITIAL_SIM_POSE = AllianceFlipUtil.ifShouldFlip(
                 new Pose2d(new Translation2d(
@@ -77,7 +80,11 @@ public class SwerveSubsystem extends SubsystemBase
 
   public static class SwerveState {
       @Setter
-      public static double DriveSpeed = 1;
+      public static Supplier<SwerveDrive> swerveDrive = () -> null;
+      @Setter
+      public static Pose2d CurrentPose = Pose2d.kZero;
+      @Setter
+      public static ChassisSpeeds CurrentSpeeds = new ChassisSpeeds();
   }
 
   /**
@@ -88,7 +95,7 @@ public class SwerveSubsystem extends SubsystemBase
     SwerveDriveTelemetry.verbosity = Telemetry.telemetryVerbosity.yagslVerbosity;
     try
     {
-      swerveDrive = new SwerveParser(HardwareConstants.CONFIG_DIRECTORY).createSwerveDrive(HardwareConstants.MAX_SPEED, ControlConstants.INITIAL_SIM_POSE);
+      swerveDrive = new SwerveParser(CONFIG_DIRECTORY).createSwerveDrive(MAX_SPEED, INITIAL_SIM_POSE);
       // Alternative method if you don't want to supply the conversion factor via JSON files.
       // swerveDrive = new SwerveParser(directory).createSwerveDrive(maximumSpeed, angleConversionFactor, driveConversionFactor);
     } catch (Exception e)
@@ -100,13 +107,16 @@ public class SwerveSubsystem extends SubsystemBase
                                                0.1); //Correct for skew that gets worse as angular velocity increases. Start with a coefficient of 0.1.
     swerveDrive.setModuleEncoderAutoSynchronize(false,
                                                 1); // Enable if you want to resynchronize your absolute encoders and motor encoders periodically when they are not moving.
-    if (ControlConstants.RUN_VISION)
+    if (RUN_VISION)
     {
       setupPhotonVision();
       // Stop the odometry thread if we are using vision that way, we can synchronize updates better.
       swerveDrive.stopOdometryThread();
     }
     setupPathPlanner();
+
+    /// Set our SwerveState Suppliers
+    SwerveState.setSwerveDrive(this::getSwerveDrive);
   }
 
   /**
@@ -121,11 +131,13 @@ public class SwerveSubsystem extends SubsystemBase
   public void periodic()
   {
     // When vision is enabled we must manually update odometry in SwerveDrive
-    if (ControlConstants.RUN_VISION)
+    if (RUN_VISION)
     {
       swerveDrive.updateOdometry();
       vision.updatePoseEstimation(swerveDrive);
     }
+    SwerveState.setCurrentPose(swerveDrive.getPose());
+    SwerveState.setCurrentSpeeds(swerveDrive.getRobotVelocity());
   }
 
   @Override
@@ -140,7 +152,6 @@ public class SwerveSubsystem extends SubsystemBase
   {
     // Load the RobotConfig from the GUI settings. You should probably
     // store this in your Constants file
-    RobotConfig config;
     try
     {
       // Configure AutoBuilder last

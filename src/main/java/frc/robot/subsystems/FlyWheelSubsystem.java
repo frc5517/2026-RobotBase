@@ -32,25 +32,25 @@ public class FlyWheelSubsystem extends SubsystemBase
         /// Motor Constants
         public static final int                     MOTOR_ID            = 25; // Spark Max CAN ID
         public static final boolean                 MOTOR_INVERTED      = false; // Inverts control direction.
-        public static final MechanismGearing        GEAR_RATIO          = new MechanismGearing(GearBox.fromReductionStages(3, 4)); // FlyWheel Gear Ratio
+        public static final MechanismGearing        GEAR_RATIO          = new MechanismGearing(GearBox.fromReductionStages(1)); // FlyWheel Gear Ratio
         /// Motor Tuning Values
         public static final ProfiledPIDController   PID_CONTROLLER      = new ProfiledPIDController(
                                                                       1, 0, 0, // PID - Proportional, Integral, Derivative.
                                                                           new TrapezoidProfile.Constraints( /// Trapezoid Motion Profiling Constraints.
-                                                                          DegreesPerSecond.of(5000).in(RPM), // Max Angular Velocity
+                                                                          RPM.of(5000).in(RPM), // Max Angular Velocity
                                                                           DegreesPerSecondPerSecond.of(2500).in(RotationsPerSecondPerSecond))); // Max Angular Acceleration
         public static final Time                    RAMP_RATE           = Seconds.of(0.25); // Time it takes to reach max speed from 0.
         public static final SimpleMotorFeedforward  FEED_FORWARD        = new SimpleMotorFeedforward(0, 0, 0); // Feed Forwards.
         public static final Current                 CURRENT_LIMIT       = Amp.of(40); // Current limit, Higher for faster control.
         /// FlyWheel Constants
-        public static final Distance                FLYWHEEL_DIAMETER   = Inches.of(3); // Diameter of the wheel, belt, whatever is spinning on the flywheel.
+        public static final Distance                FLYWHEEL_DIAMETER   = Inches.of(4); // Diameter of the wheel, belt, whatever is spinning on the flywheel.
         public static final Mass                    FLYWHEEL_MASS       = Pounds.of(1); // Weight of the flywheel, just what gets spun.
-        public static final AngularVelocity         FLYWHEEL_MAX_SPEED  = RPM.of(500); // Max RPM soft limits
+        public static final AngularVelocity         FLYWHEEL_MAX_SPEED  = RPM.of(8000); // Max RPM soft limits
     }
     /// Control Constants for the FlyWheel Mechanism
     public static class ControlConstants {
-        public static final AngularVelocity         VELOCITY_TOLERANCE  = DegreesPerSecond.of(10); // How accurate the velocity should be.
-        public static final AngularVelocity         TARGET_VELOCITY     = DegreesPerSecond.of(500); // How fast the flywheel should spin.
+        public static final AngularVelocity         VELOCITY_TOLERANCE  = RPM.of(10); // How accurate the velocity should be.
+        public static final AngularVelocity         TARGET_VELOCITY     = RPM.of(5000); // How fast the flywheel should spin.
     }
     /// Initialize the FlyWheel
     private final SparkMax                          indexerMotor        = new SparkMax(HardwareConstants.MOTOR_ID, MotorType.kBrushless); /// The Normal Rev Vendor SparkMax Object.
