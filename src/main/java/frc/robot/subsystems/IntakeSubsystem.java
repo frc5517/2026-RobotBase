@@ -107,10 +107,10 @@ public class IntakeSubsystem extends SubsystemBase {
             // Create our intake at runtime.
             intakeSim = IntakeSimulation.InTheFrameIntake( /// The MapleSim Intake Simulation.
                     "Fuel",
-                    swerve.getSwerveDrive().getMapleSimDrive().get(), // We know the driveSim exists.
+                    SwerveSubsystem.SwerveState.swerveDrive.get().getMapleSimDrive().get(), // We know the driveSim exists.
                     Inches.of(12),
                     IntakeSimulation.IntakeSide.FRONT,
-                    35);
+                    MAX_FUEL_CAPACITY);
             // Register our intake sim for updates.
             intakeSim.register();
         } else {
@@ -126,13 +126,7 @@ public class IntakeSubsystem extends SubsystemBase {
     }
     
     public Command runSimIntake() {
-        return Commands.startRun(intakeSim::startIntake, // Start our intake at once.
-                () -> {
-                    if (INFINITE_SIM_INTAKE) { // If Infinite GOBBLE
-                        intakeSim.setGamePiecesCount(MAX_FUEL_CAPACITY - 3); // Hold only enough to keep collecting while still being able to score.
-                    }
-                } // Finally, stop our intake.
-                ).finallyDo(intakeSim::stopIntake);
+        return Commands.run(intakeSim::startIntake).alongWith(Commands.run(() -> intakeSim.setGamePiecesCount(MAX_FUEL_CAPACITY - 10))).finallyDo(intakeSim::stopIntake);
     }
 
     /**
@@ -141,9 +135,8 @@ public class IntakeSubsystem extends SubsystemBase {
      * @return a command to run the intake at commanded velocity.
      */
     public Command runIntake() {
-        System.out.println("***** RUNNING INTAKE *****");
         return Robot.isReal() // If real run the intake
-                ? intake.setSpeed(TargetVelocity).finallyDo(intakeSim::stopIntake)
+                ? intake.setSpeed(TargetVelocity).finallyDo(() -> intake.set(0))
                 : runSimIntake(); // If in sim run the sim intake.
     }
 

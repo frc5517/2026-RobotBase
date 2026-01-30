@@ -4,6 +4,8 @@ import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
+import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.units.measure.*;
@@ -13,6 +15,10 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Telemetry;
 import lombok.Getter;
 import lombok.Setter;
+import swervelib.simulation.ironmaple.simulation.SimulatedArena;
+import swervelib.simulation.ironmaple.simulation.gamepieces.GamePieceProjectile;
+import swervelib.simulation.ironmaple.simulation.seasonspecific.rebuilt2026.Arena2026Rebuilt;
+import swervelib.simulation.ironmaple.simulation.seasonspecific.rebuilt2026.RebuiltFuelOnFly;
 import yams.gearing.GearBox;
 import yams.gearing.MechanismGearing;
 import yams.mechanisms.config.FlyWheelConfig;
@@ -109,6 +115,21 @@ public class FlyWheelSubsystem extends SubsystemBase
                 () -> flyWheel.setSpeed(FlyWheelState.TargetVelocity))
                 // When the command finishes, stop the flywheel.
                 .finallyDo(() -> flyWheel.set(0.0));
+    }
+
+    // TODO
+    public Command simShoot() {
+        return runOnce(() -> {
+            SimulatedArena.getInstance().addGamePieceProjectile(new RebuiltFuelOnFly(
+                    SwerveSubsystem.SwerveState.CurrentPose.getTranslation(),
+                    new Translation2d(Inches.of(-10), Inches.of(0)),
+                    SwerveSubsystem.SwerveState.CurrentSpeeds,
+                    SwerveSubsystem.SwerveState.CurrentPose.getRotation(),
+                    Inches.of(20),
+                    MetersPerSecond.of(6),
+                    Degrees.of(65)
+            ));
+        });
     }
 
     /**

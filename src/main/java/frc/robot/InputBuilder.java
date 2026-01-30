@@ -4,6 +4,7 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.subsystems.*;
@@ -84,28 +85,31 @@ public class InputBuilder
         var stream =
                 new InputStream(SINGLE_XBOX.isMode)
                         .deadzone(0.01)
-                        .withXboxDrive(driverXbox)
                         .withResetSimOdometry(driverXbox.start());
     }
 
     public void testing() {
         // Define constants first, like speeds.
         var stream =
-                new InputStream(TESTING.isMode)
+                new InputStream() // Dumb constructor to load a different one.
+                        .headingXboxDrive(TESTING.isMode, driverXbox)
                         .normalRotation(1)
-                        .normalTranslation(.4)
+                        .normalTranslation(1)
                         .slowRotation(.4)
-                        .slowTranslation(1)
-                        .withXboxDrive(driverXbox)
+                        .slowTranslation(.4)
+                        .updateSwerveStream() // Update our stream after making default drive speed changes.
                         .withSlowDrive(driverXbox.rightBumper())
                         .withRunIntake(driverXbox.leftBumper())
+                        .withSimShoot(driverXbox.rightTrigger())
                         .withToggleCentricity(driverXbox.back(), true)
                         .withChangeInput(SINGLE_XBOX, driverXbox.a())
-                        .resetField(driverXbox.start())
-                        .updateDriveCommand();
+                        .withResetSimOdometry(driverXbox.start())
+                        .resetField(driverXbox.start());
     }
 
-    @Accessors(fluent = true, chain = true, makeFinal = true)
+    /// ***** Input Stream Below ***** ///
+
+    @Accessors(fluent = true, chain = true)
     private class InputStream {
         /// Stream Constants
         @Setter private Trigger isMode;
@@ -113,72 +117,95 @@ public class InputBuilder
         @Setter private double deadzone = 0.05;
         @Setter private double slowTranslation = 0.3;
         @Setter private double slowRotation = 0.2;
-        @Setter private double normalTranslation = 1;
-        @Setter private double normalRotation = 1.0;
+        @Setter private double normalTranslation = .8;
+        @Setter private double normalRotation = .8;
         @Setter private double boostTranslation = 1.0;
         @Setter private double boostRotation = 0.75;
-        @Setter private SwerveInputStream swerveInputStream;
-        @Setter private Command driveCommand;
+        @Setter @Getter private Supplier<Command> driveCommand; // Default drive command.
 
+        private SwerveInputStream swerveInputStream;
+
+        /// Dumb Constructor to pass into default constructors, without static Access.
+        InputStream() {
+        }
+
+        /// Default Constructor with no drive.
         InputStream(Trigger isMode) {
             this.isMode = isMode;
         }
 
-        /**
-         * Defaults to regular xbox driver control.
-         *
-         * @param driverXbox
-         * @return
-         */
-        public InputStream withXboxDrive(CommandXboxController driverXbox) {
-            return withSwerveInputStream(new SwerveInputStream(
-                    subsystems.swerve.getSwerveDrive(),
-                    () -> driverXbox.getLeftY() * -1,
-                    () -> driverXbox.getLeftX() * -1,
-                    () -> driverXbox.getRightX() * -1)
+        /// Default Basic Drive Constructor
+        InputStream(Trigger isMode,
+                    DoubleSupplier x,
+                    DoubleSupplier y) {
+            this.isMode = isMode;
+            this.swerveInputStream = SwerveInputStream.of(
+                    subsystems.swerve.getSwerveDrive(), x, y) // Make the input stream.
+                    .cubeTranslationControllerAxis(true)
+                    .cubeRotationControllerAxis(true)
+                    .scaleTranslation(normalTranslation)
+                    .scaleRotation(normalRotation)
+                    .deadband(deadzone)
                     .robotRelative(true)
-                    .allianceRelativeControl(false));
+                    .allianceRelativeControl(false);
+            this.driveCommand = () -> subsystems.swerve.driveFieldOriented(() -> swerveInputStream.get());
+            isMode.and(DriverStation::isEnabled).onTrue(Commands.runOnce(() -> subsystems.swerve.setDefaultCommand(driveCommand().get())));
         }
 
         /**
-         * Adds all the builder values.
+         * Default Xbox Drive Constructor with regular rotation.
+         * WARNING: Creates a new stream, DO NOT use inline.
          *
-         * @param swerveInputStream
-         * @return
+         * @param isMode The trigger telling the stream we are in the Input Selection.
+         * @param driverXbox the {@link CommandXboxController} to bind to.
          */
-        public InputStream withSwerveInputStream(SwerveInputStream swerveInputStream) {
-            swerveInputStream(swerveInputStream
-                            .deadband(deadzone)
-                            .scaleTranslation(normalTranslation)
-                            .scaleRotation(normalRotation));
-            updateDriveCommand();
-            return this;
+        public InputStream defaultXboxDrive(Trigger isMode, CommandXboxController driverXbox) {
+            // Load default drive constructor.
+            var xboxDrive = new InputStream(isMode,
+                    () -> driverXbox.getLeftY() * -1,
+                    () -> driverXbox.getLeftX() * -1);
+            // Set heading drive.
+            xboxDrive.swerveInputStream.withControllerRotationAxis(() -> driverXbox.getRightX() * -1);
+            // Return our new stream.
+            return xboxDrive;
         }
 
-        //TODO
-        public InputStream withSnakeDrive(
-                DoubleSupplier transX, DoubleSupplier transY,
-                DoubleSupplier headingX, DoubleSupplier headingY, double inputThreshold) {
-            // When input is greater than the threshold override heading.
-            final Trigger xTrigger = new Trigger(() -> headingY.getAsDouble() > inputThreshold);
-            final Trigger yTrigger = new Trigger(() -> headingX.getAsDouble() > inputThreshold);
-
-            withSwerveInputStream(new SwerveInputStream(
-                    subsystems.swerve.getSwerveDrive(), transX, transY, transX, transY)
-                    //.cubeRotationControllerAxis(true)
-                    //.cubeTranslationControllerAxis(true)
-                    .robotRelative(false)
-                    .allianceRelativeControl(true)
-                    .headingWhile(true));
-
-            isMode.and(xTrigger.or(yTrigger)).onTrue(Commands.runOnce(
-                    () -> swerveInputStream.withControllerHeadingAxis(headingX, headingY)))
-                    .onFalse(Commands.runOnce(
-                            () -> swerveInputStream.withControllerHeadingAxis(
-                                    () -> transY.getAsDouble() * -1, () -> transX.getAsDouble() * -1)));
-
-            return this;
+        /**
+         * Default Xbox Drive Constructor with heading rotation.
+         * WARNING: Creates a new stream, DO NOT use inline.
+         *
+         * @param isMode The trigger telling the stream we are in the Input Selection.
+         * @param driverXbox the {@link CommandXboxController} to bind to.
+         */
+        private InputStream headingXboxDrive(Trigger isMode, CommandXboxController driverXbox) {
+            // Load default drive constructor.
+            var headingDrive = new InputStream(isMode,
+                    () -> driverXbox.getLeftY() * -1,
+                    () -> driverXbox.getLeftX() * -1);
+            // Set heading rotation.
+            headingDrive.swerveInputStream
+                    .cubeRotationControllerAxis(false)
+                    .withControllerHeadingAxis(driverXbox::getRightX, driverXbox::getRightY)
+                    .headingWhile(true);
+            // Return our new stream.
+            return headingDrive;
         }
+
+        /**
+         * Default Xbox Drive Constructor with heading control rotation.
+         * This takes both right stick X and Y axes moving the robot angle to where ever it points to in Field Relative.
+         *
+         * @param isMode The trigger telling the stream we are in the Input Selection.
+         * @param driverXbox the {@link CommandXboxController} to bind to.
+         */
+        InputStream(Trigger isMode, CommandXboxController driverXbox) {
+            this(isMode,
+                    () -> driverXbox.getLeftY() * -1,
+                    () -> driverXbox.getLeftX() * -1);
+            swerveInputStream.withControllerRotationAxis(() -> driverXbox.getRightX() * -1);
+        }
+
+        ///  ***** INTAKE ***** ///
 
         /**
          * Runs the intake.
@@ -191,83 +218,114 @@ public class InputBuilder
             return this;
         }
 
+        /// ***** FLYWHEEL ***** ///
+
+        public InputStream withSimShoot(Trigger shoot) {
+            isMode.and(shoot).onTrue(subsystems.flywheel.simShoot());
+            return this;
+        }
+
+
+        /// ***** SWERVE DRIVE ***** ///
+
         /**
          * Changes inputs to the given input selection.
          */
         public InputStream withToggleCentricity(Trigger toggleCentricity, boolean fieldDefault) {
-            isMode.and(toggleCentricity).onTrue(Commands.runOnce(() -> swerveInputStream.robotRelative(!fieldDefault).allianceRelativeControl(fieldDefault)))
-                    .onFalse(Commands.runOnce(() -> swerveInputStream.robotRelative(fieldDefault).allianceRelativeControl(!fieldDefault)));
+            // Set our default.
+            swerveInputStream.robotRelative(!fieldDefault).allianceRelativeControl(fieldDefault);
+            // Toggle when pressed.
+            isMode.and(toggleCentricity).toggleOnTrue(Commands.runEnd(
+                    () -> swerveInputStream.robotRelative(fieldDefault).allianceRelativeControl(!fieldDefault),
+                    () -> swerveInputStream.robotRelative(!fieldDefault).allianceRelativeControl(fieldDefault)));
             return this;
         }
 
         /**
-         * TODO
-         * @param slowDrive
-         * @return
+         * Holding the button slows the drive.
+         *
+         * @param slowDrive the button to map.
+         * @return this, for chaining.
          */
         public InputStream withSlowDrive(Trigger slowDrive) {
-            isMode.and(slowDrive).whileTrue(Commands.runEnd(
-                    () -> {
-                        System.out.println("Slow Drive");
-                        swerveInputStream.scaleTranslation(slowTranslation).scaleRotation(slowRotation);
-                    },
-                    () -> swerveInputStream.scaleTranslation(normalTranslation).scaleRotation(normalRotation)));
+            isMode.and(slowDrive)
+                    .onTrue(Commands.runOnce(() -> swerveInputStream.scaleTranslation(slowTranslation).scaleRotation(slowRotation)))
+                    .onFalse(Commands.runOnce(() -> swerveInputStream.scaleTranslation(normalTranslation).scaleRotation(normalRotation)));
             return this;
         }
+
+        /**
+         * Resets the robot odometry. Zeros the gyro. Updates pose to real pose in sim.
+         *
+         * @param resetOdometry the button to map.
+         * @return this, for chaining.
+         */
+        public InputStream withResetSimOdometry(Trigger resetOdometry) {
+            isMode.and(resetOdometry).onTrue(Commands.runOnce(() -> subsystems.swerve.getSwerveDrive().resetOdometry(subsystems.swerve.getSwerveDrive().getSimulationDriveTrainPose().get())));
+            return this;
+        }
+
+        /**
+         * Resets the simulated field.
+         *
+         * @param resetField button to map.
+         * @return this, for chaining.
+         */
+        public InputStream resetField(Trigger resetField) {
+            isMode.and(resetField).onTrue(
+                    Commands.runOnce(() -> SimulatedArena.getInstance().resetFieldForAuto()));
+            return this;
+        }
+
+        /**
+         * Updates the {@link SwerveInputStream} with the latest values.
+         *
+         * @return this, for chaining.
+         */
+        public InputStream updateSwerveStream() {
+            swerveInputStream
+                    .scaleTranslation(normalTranslation)
+                    .scaleRotation(normalRotation)
+                    .deadband(deadzone);
+            return this;
+        }
+
+        /// ***** Misc ***** ///
 
         /**
          * Changes inputs to the given input selection.
+         *
+         * @param bindingType The input to change to.
+         * @param changeInput button to map.
+         * @return this, for chaining.
          */
         public InputStream withChangeInput(InputSelections bindingType, Trigger changeInput) {
             isMode.and(changeInput).onTrue(Commands.runOnce(() -> inputOverride.set(bindingType.name)));
             return this;
         }
 
-        public InputStream withResetSimOdometry(Trigger resetOdometry) {
-            isMode.and(resetOdometry).onTrue(Commands.runOnce(() -> subsystems.swerve.getSwerveDrive().resetOdometry(subsystems.swerve.getSwerveDrive().getSimulationDriveTrainPose().get())));
+        /**
+         * Sets a default command for this input selection.
+         *
+         * @param subsystem the subsystem to apply the default command to.
+         * @param defaultCommand the default command to set.
+         * @return this, for chaining.
+         */
+        public InputStream withDefaultCommand(SubsystemBase subsystem, Supplier<Command> defaultCommand) {
+            isMode.and(DriverStation::isEnabled).onTrue(Commands.runOnce(() -> subsystem.setDefaultCommand(defaultCommand.get())));
             return this;
         }
 
-        public InputStream resetField(Trigger sendMessage) {
-            isMode.and(sendMessage).onTrue(Commands.runOnce(() ->
-                    SimulatedArena.getInstance().resetFieldForAuto()));
-            return this;
-        }
-
-        // TODO
-        public InputStream updateDriveCommand() {
-            driveCommand(subsystems.swerve.driveFieldOriented(swerveInputStream));
-            subsystems.swerve.setDefaultCommand(driveCommand);
-            isMode.and(DriverStation::isEnabled).onTrue(Commands.runOnce(() -> subsystems.swerve.setDefaultCommand(driveCommand)));
-            return this;
-        }
     }
 
     /**
-     * Just a small helper to group the subsystem parameters together.
+     * Neatly packs our subsystems into a bite size struct.
      */
-    public static class Subsystems {
-        public final FlyWheelSubsystem flywheel;
-        public final HoodSubsystem hood;
-        public final IndexerSubsystem indexer;
-        public final IntakeSubsystem intake;
-        public final SwerveSubsystem swerve;
-        public final TurretSubsystem turret;
-
-        Subsystems(
-                FlyWheelSubsystem flywheel,
-                HoodSubsystem hood,
-                IndexerSubsystem indexer,
-                IntakeSubsystem intake,
-                SwerveSubsystem swerve,
-                TurretSubsystem turret
-        ) {
-            this.flywheel = flywheel;
-            this.hood = hood;
-            this.indexer = indexer;
-            this.intake = intake;
-            this.swerve = swerve;
-            this.turret = turret;
-        }
-    }
+    public record Subsystems(
+            FlyWheelSubsystem flywheel,
+            HoodSubsystem hood,
+            IndexerSubsystem indexer,
+            IntakeSubsystem intake,
+            SwerveSubsystem swerve,
+            TurretSubsystem turret) {}
 }
