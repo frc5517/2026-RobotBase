@@ -7,7 +7,6 @@ import static edu.wpi.first.units.Units.Inches;
 import static edu.wpi.first.units.Units.RPM;
 import static edu.wpi.first.units.Units.RotationsPerSecondPerSecond;
 import static frc.robot.subsystems.HoodSubsystem.ControlConstants.ANGLE_TOLERANCE;
-import static frc.robot.subsystems.HoodSubsystem.ControlConstants.HOOD_SPEED;
 import static frc.robot.subsystems.TurretSubsystem.HardwareConstants.*;
 import static yams.motorcontrollers.SmartMotorControllerConfig.MotorMode.BRAKE;
 
@@ -67,6 +66,8 @@ public class TurretSubsystem extends SubsystemBase
     /// Control Constants for the Turret Mechanism
     public static class ControlConstants {
 
+        public static final Angle                   ANGLE_TOLERANCE     = Degrees.of(1);
+
     }
     /// The Normal Rev Vendor SparkMax Object.
     private final SparkMax                          indexerMotor        = new SparkMax(MOTOR_ID, SparkLowLevel.MotorType.kBrushless);
@@ -92,7 +93,7 @@ public class TurretSubsystem extends SubsystemBase
             .withMaxRobotLength(MAX_ROBOT_WIDTH)
             .withRelativePosition(TURRET_POSITION);
     /// The Pivot Config for the Turret
-    private final PivotConfig                       m_config            = new PivotConfig(motor)
+    private final PivotConfig                       config            = new PivotConfig(motor)
             .withHardLimit(HARD_LIMIT_REVERSE, HARD_LIMIT_FORWARD)
             .withSoftLimits(SOFT_LIMIT_REVERSE, SOFT_LIMIT_FORWARD)
             .withTelemetry("Turret", Telemetry.telemetryVerbosity.yamsVerbosity)
@@ -101,16 +102,16 @@ public class TurretSubsystem extends SubsystemBase
             .withMOI(KilogramSquareMeters.of(0.001));
     /// The final Pivot Mechanism to use as the turret.
     @Getter
-    private final Pivot                             turret              = new Pivot(m_config);
+    private final Pivot                             turret              = new Pivot(config);
     public static class TurretState {
-        @Setter
-        public static Angle     CurrentAngle    = Degrees.of(0);
-        @Setter
-        public static Trigger AtDesiredAngle  = new Trigger(() -> false);
+        @Getter private static Angle                CurrentAngle        = Degrees.of(0); // Set in periodic
+        @Setter @Getter private static Angle        DesiredAngle        = Degrees.of(0); // Set externally.
+        @Getter public static Trigger               AtDesiredAngle      = new Trigger(() -> false); // Set at construction.
     }
 
     public TurretSubsystem()
     {
+        TurretState.AtDesiredAngle = turret.isNear(TurretState.DesiredAngle, ANGLE_TOLERANCE); // Set our atDesiredAngle trigger.
     }
 
     /**
@@ -118,9 +119,8 @@ public class TurretSubsystem extends SubsystemBase
      */
     @Override
     public void periodic() {
-        // Updates the turret mechanism's telemetry data to the network tables.
-        turret.updateTelemetry();
-        TurretState.setCurrentAngle(turret.getAngle());
+        turret.updateTelemetry(); // Updates the turret mechanism's telemetry data to the network tables.
+        TurretState.CurrentAngle = turret.getAngle(); // Update our current angle state.
     }
 
     /**

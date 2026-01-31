@@ -1,18 +1,19 @@
 package frc.robot;
 
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
-import edu.wpi.first.networktables.NetworkTable;
-import edu.wpi.first.networktables.NetworkTableInstance;
-import edu.wpi.first.networktables.StringPublisher;
-import edu.wpi.first.networktables.StructArrayPublisher;
+import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.networktables.*;
 import edu.wpi.first.util.sendable.Sendable;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.subsystems.HoodSubsystem;
+import frc.robot.systems.ScoringSystem;
 import lombok.Getter;
 import swervelib.simulation.ironmaple.simulation.SimulatedArena;
 import swervelib.telemetry.SwerveDriveTelemetry;
 import yams.motorcontrollers.SmartMotorControllerConfig;
 
+import java.awt.geom.Rectangle2D;
 import java.util.function.Supplier;
 
 public class Telemetry
@@ -30,10 +31,20 @@ public class Telemetry
         /// Robot Publishers
         public static class Robot
         {
+            /// Telemetry Paths
             private static final NetworkTable robotTable = telemetryTable.getSubTable("RobotTelemetry");
+            // Zones
+            private static final NetworkTable zoneTable = robotTable.getSubTable("Zones");
+            private static final NetworkTable zoneTriggerTable = zoneTable.getSubTable("Triggers");
             private static final String smartDashboardRobotPath = smartDashboardPath + "RobotTelemetry/";
+            // Input Selection
             public static final SmartDashboardPublisher inputPublisher = new SmartDashboardPublisher(smartDashboardRobotPath + "Input Selector");
             public static final StringPublisher inputOverride = robotTable.getSubTable("Input Selector").getStringTopic("selected").publish();
+            // Zone Trigger Bounding Boxes
+            public static final StructArrayPublisher<Pose2d> scoringZonePublisher = zoneTable.getStructArrayTopic("Scoring Zone", Pose2d.struct).publish();
+            // Zone Trigger Publishers
+            public static final BooleanPublisher scoringZoneTriggerPublisher = zoneTriggerTable.getBooleanTopic("In Scoring Zone").publish();
+
         }
         /// MapleSim Publishers
         public static class MapleSim
@@ -87,7 +98,11 @@ public class Telemetry
     /// Updates all of our custom telemetry
     public static void updateTelemetry()
     {
+        // Input
         Publishers.Robot.inputPublisher.update();
+        // Zone Triggers
+        Publishers.Robot.scoringZoneTriggerPublisher.accept(ScoringSystem.ControlConstants.SCORING_ZONE_TRIGGER.getAsBoolean());
+        // MapleSim
         Publishers.MapleSim.elementPublisher.accept(SimulatedArena.getInstance().getGamePiecesArrayByType("Fuel"));
     }
 

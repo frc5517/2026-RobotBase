@@ -68,7 +68,6 @@ public class HoodSubsystem extends SubsystemBase {
     public static final class ControlConstants {
         public static final double                              HOOD_SPEED          = 0.3; // Predefined duty cycle speed.
         public static final Angle                               ANGLE_TOLERANCE     = Degrees.of(.1); // How accurate the angle should be.
-        public static final Angle                               FUEL_ENTRY_ANGLE    = Degrees.of(40);
     }
     public static final class MathConstants {
         public static final LinearVelocity                      kExitVelocity       = MetersPerSecond.of(20);
