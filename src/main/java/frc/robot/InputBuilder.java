@@ -93,7 +93,7 @@ public class InputBuilder
         // Define constants first, like speeds.
         var stream =
                 new InputStream() // Dumb constructor to load a different one.
-                        .headingXboxDrive(TESTING.isMode, driverXbox)
+                        .defaultXboxDrive(TESTING.isMode, driverXbox)
                         .normalRotation(1)
                         .normalTranslation(1)
                         .slowRotation(.4)

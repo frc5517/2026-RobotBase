@@ -103,6 +103,8 @@ public class Telemetry
         Publishers.Robot.inputPublisher.update();
         // Zone Triggers
         Publishers.Robot.scoringZoneTriggerPublisher.accept(ScoringSystem.ControlConstants.SCORING_ZONE_TRIGGER.getAsBoolean());
+
+
         if (RobotBase.isSimulation()) {
             // MapleSim
         Publishers.MapleSim.elementPublisher.accept(SimulatedArena.getInstance().getGamePiecesArrayByType("Fuel"));
