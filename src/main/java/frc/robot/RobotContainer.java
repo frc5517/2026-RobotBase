@@ -15,13 +15,13 @@ import swervelib.simulation.ironmaple.simulation.seasonspecific.rebuilt2026.Aren
 public class RobotContainer {
     /// Subsystems
     private final SwerveSubsystem swerve = new SwerveSubsystem();
-    //private final FlyWheelSubsystem  flyWheel = new FlyWheelSubsystem();
+    private final FlyWheelSubsystem  flyWheel = new FlyWheelSubsystem();
     //private final HoodSubsystem hood = new HoodSubsystem();
     //private final IndexerSubsystem indexer = new IndexerSubsystem();
-    //private final IntakeSubsystem intake = new IntakeSubsystem(swerve);
+    private final IntakeSubsystem intake = new IntakeSubsystem(swerve);
     //private final TurretSubsystem turret = new TurretSubsystem();
     /// Bite-sized Subsystems record class for easy packaging of all the subsystems.
-    private final InputBuilder.Subsystems subsystems = new InputBuilder.Subsystems(null, null, null, null, swerve, null);
+    private final InputBuilder.Subsystems subsystems = new InputBuilder.Subsystems(flyWheel, null, null, intake, swerve, null);
     /// Our Systems
     private final ScoringSystem scoring = new ScoringSystem();
     /// Input Builder

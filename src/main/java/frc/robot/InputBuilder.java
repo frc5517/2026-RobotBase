@@ -93,7 +93,7 @@ public class InputBuilder
         // Define constants first, like speeds.
         var stream =
                 new InputStream() // Dumb constructor to load a different one.
-                        .defaultXboxDrive(TESTING.isMode, driverXbox)
+                        .headingXboxDrive(TESTING.isMode, driverXbox)
                         .normalRotation(1)
                         .normalTranslation(1)
                         .slowRotation(.4)
@@ -215,14 +215,14 @@ public class InputBuilder
          * @return this, for chaining.
          */
         public InputStream withRunIntake(Trigger runIntake) {
-            //isMode.and(runIntake).whileTrue(subsystems.intake.runIntake());
+            isMode.and(runIntake).whileTrue(subsystems.intake.runIntake());
             return this;
         }
 
         /// ***** FLYWHEEL ***** ///
 
         public InputStream withSimShoot(Trigger shoot) {
-            //isMode.and(shoot).onTrue(subsystems.flywheel.simShoot());
+            isMode.and(shoot).onTrue(subsystems.flywheel.simShoot());
             return this;
         }
 
