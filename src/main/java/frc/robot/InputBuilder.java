@@ -1,6 +1,7 @@
 package frc.robot;
 
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
@@ -214,14 +215,14 @@ public class InputBuilder
          * @return this, for chaining.
          */
         public InputStream withRunIntake(Trigger runIntake) {
-            isMode.and(runIntake).whileTrue(subsystems.intake.runIntake());
+            //isMode.and(runIntake).whileTrue(subsystems.intake.runIntake());
             return this;
         }
 
         /// ***** FLYWHEEL ***** ///
 
         public InputStream withSimShoot(Trigger shoot) {
-            isMode.and(shoot).onTrue(subsystems.flywheel.simShoot());
+            //isMode.and(shoot).onTrue(subsystems.flywheel.simShoot());
             return this;
         }
 
@@ -272,7 +273,7 @@ public class InputBuilder
          * @return this, for chaining.
          */
         public InputStream resetField(Trigger resetField) {
-            isMode.and(resetField).onTrue(
+            isMode.and(() -> RobotBase.isSimulation()).and(resetField).onTrue(
                     Commands.runOnce(() -> SimulatedArena.getInstance().resetFieldForAuto()));
             return this;
         }

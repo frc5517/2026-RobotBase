@@ -5,6 +5,7 @@ import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.networktables.*;
 import edu.wpi.first.util.sendable.Sendable;
+import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.subsystems.HoodSubsystem;
 import frc.robot.systems.ScoringSystem;
@@ -102,8 +103,10 @@ public class Telemetry
         Publishers.Robot.inputPublisher.update();
         // Zone Triggers
         Publishers.Robot.scoringZoneTriggerPublisher.accept(ScoringSystem.ControlConstants.SCORING_ZONE_TRIGGER.getAsBoolean());
-        // MapleSim
+        if (RobotBase.isSimulation()) {
+            // MapleSim
         Publishers.MapleSim.elementPublisher.accept(SimulatedArena.getInstance().getGamePiecesArrayByType("Fuel"));
+        }
     }
 
     /**

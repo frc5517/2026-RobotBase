@@ -4,6 +4,7 @@
 
 package frc.robot;
 
+import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.subsystems.*;
@@ -14,13 +15,13 @@ import swervelib.simulation.ironmaple.simulation.seasonspecific.rebuilt2026.Aren
 public class RobotContainer {
     /// Subsystems
     private final SwerveSubsystem swerve = new SwerveSubsystem();
-    private final FlyWheelSubsystem  flyWheel = new FlyWheelSubsystem();
-    private final HoodSubsystem hood = new HoodSubsystem();
-    private final IndexerSubsystem indexer = new IndexerSubsystem();
-    private final IntakeSubsystem intake = new IntakeSubsystem(swerve);
-    private final TurretSubsystem turret = new TurretSubsystem();
+    //private final FlyWheelSubsystem  flyWheel = new FlyWheelSubsystem();
+    //private final HoodSubsystem hood = new HoodSubsystem();
+    //private final IndexerSubsystem indexer = new IndexerSubsystem();
+    //private final IntakeSubsystem intake = new IntakeSubsystem(swerve);
+    //private final TurretSubsystem turret = new TurretSubsystem();
     /// Bite-sized Subsystems record class for easy packaging of all the subsystems.
-    private final InputBuilder.Subsystems subsystems = new InputBuilder.Subsystems(flyWheel, hood, indexer, intake, swerve, turret);
+    private final InputBuilder.Subsystems subsystems = new InputBuilder.Subsystems(null, null, null, null, swerve, null);
     /// Our Systems
     private final ScoringSystem scoring = new ScoringSystem();
     /// Input Builder
@@ -32,8 +33,10 @@ public class RobotContainer {
      * This allows creation, manipulation, selection, and layered complexity of bindings with ease.
      */
     public RobotContainer() {
-        SimulatedArena.getInstance().resetFieldForAuto();
-        ((Arena2026Rebuilt) SimulatedArena.getInstance()).setEfficiencyMode(true);
+        if (RobotBase.isSimulation()) {
+            SimulatedArena.getInstance().resetFieldForAuto();
+            ((Arena2026Rebuilt) SimulatedArena.getInstance()).setEfficiencyMode(true);
+        }
     }
 
     public void periodic()

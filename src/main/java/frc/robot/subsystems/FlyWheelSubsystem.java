@@ -9,6 +9,7 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.units.measure.*;
+import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
@@ -118,7 +119,8 @@ public class FlyWheelSubsystem extends SubsystemBase
     // TODO
     public Command simShoot() {
         return runOnce(() -> {
-            SimulatedArena.getInstance().addGamePieceProjectile(new RebuiltFuelOnFly(
+            if (RobotBase.isSimulation()) {
+                SimulatedArena.getInstance().addGamePieceProjectile(new RebuiltFuelOnFly(
                     SwerveSubsystem.SwerveState.CurrentPose.getTranslation(),
                     new Translation2d(Inches.of(-10), Inches.of(0)),
                     SwerveSubsystem.SwerveState.CurrentSpeeds,
@@ -126,7 +128,8 @@ public class FlyWheelSubsystem extends SubsystemBase
                     Inches.of(20),
                     MetersPerSecond.of(6),
                     Degrees.of(65)
-            ));
+            ));   
+            }
         });
     }
 
