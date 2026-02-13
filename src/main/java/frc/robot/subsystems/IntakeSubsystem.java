@@ -124,6 +124,26 @@ public class IntakeSubsystem extends SubsystemBase {
     }
 
     /**
+     * Runs the intake at the given speed.
+     *
+     * @param intakeSpeed the DutyCycle speed to run at.
+     * @param isIn whether to spin in or out.
+     * @return a command.
+     */
+    public Command runIntake(double intakeSpeed, boolean isIn) {
+        return intake.set(isIn ? intakeSpeed : -intakeSpeed);
+    }
+
+    /**
+     * Stops all power to the intake.
+     *
+     * @return a command that stops the intake.
+     */
+    public Command stopIntake() {
+        return intake.set(0.0);
+    }
+
+    /**
      * Resets the setters to default values.
      */
     public void resetSetters() {
@@ -135,13 +155,16 @@ public class IntakeSubsystem extends SubsystemBase {
     }
 
     /**
-     * Runs the intake at the {@link frc.robot.subsystems.IntakeSubsystem.IntakeState} TargetVelocity.
-     * 
-     * @return a command to run the intake at commanded velocity.
+     * Runs the intake at the given speed.
+     * If in sim runs SimIntake
+     *
+     * @param intakeSpeed the DutyCycle speed to run at.
+     * @param isIn whether to spin in or out.
+     * @return a command.
      */
-    public Command runIntake() {
+    public Command intake(double intakeSpeed, boolean isIn) {
         return Robot.isReal() // If real run the intake
-                ? intake.setSpeed(TargetVelocity).finallyDo(() -> intake.set(0))
+                ? runIntake(intakeSpeed, isIn)
                 : runSimIntake(); // If in sim run the sim intake.
     }
 

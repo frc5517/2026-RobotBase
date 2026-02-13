@@ -11,7 +11,6 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.subsystems.*;
 import lombok.*;
 import lombok.experimental.Accessors;
-import lombok.experimental.UtilityClass;
 import swervelib.SwerveInputStream;
 import swervelib.simulation.ironmaple.simulation.SimulatedArena;
 
@@ -104,10 +103,14 @@ public class InputBuilder
                         .withRunHood(                   driverXbox.pov(0), true)
                         .withRunHood(                   driverXbox.pov(180), false)
                         .back().TurretBindings          /// Turret
-                        .withRunTurret(                driverXbox.pov(270), true)
-                        .withRunTurret(                driverXbox.pov(90), false)
+                        .withRunTurret(                 driverXbox.pov(270), true)
+                        .withRunTurret(                 driverXbox.pov(90), false)
+                        .back().IndexerBindings
+                        .withRunIndexer(                driverXbox.leftBumper(), true)
+                        .withRunIndexer(                driverXbox.rightBumper(), false)
                         .back().IntakeBindings          /// Intake
-                        .withRunIntake(                 driverXbox.leftBumper())
+                        .withRunIntake(                 driverXbox.leftBumper(), true)
+                        .withRunIntake(                 driverXbox.rightBumper(), false)
                         .back().FlyWheelBindings        /// Flywheel
                         .withSimShoot(                  driverXbox.rightTrigger())
                         .back().MiscBindings            /// Misc Bindings
@@ -130,6 +133,12 @@ public class InputBuilder
         @Setter private double boostTranslation = 1.0;
         @Setter private double boostRotation = 0.75;
         @Setter @Getter private Supplier<Command> driveCommand; // Default drive command.
+        /// Intake Constants
+        @Setter private double intakeSpeed = 0.5;
+        /// Indexer Constants
+        @Setter private double indexSpeed = 0.5;
+        /// FlyWheel Constants
+        @Setter private double flyWheelSpeed = 0.5;
         /// Hood Constants
         @Setter private double hoodSpeed = 0.5;
         /// Turret Constants
@@ -138,7 +147,10 @@ public class InputBuilder
 
         /// Inner Config Namespaces
         public final StartingMethods StartingMethod = new StartingMethods();
+        public final SmartBindings SmartBindings = new SmartBindings();
         public final IntakeBindings IntakeBindings = new IntakeBindings();
+        public final IndexerBindings IndexerBindings = new IndexerBindings();
+        public final KickerBindings KickerBindings = new KickerBindings();
         public final FlyWheelBindings FlyWheelBindings = new FlyWheelBindings();
         public final HoodBindings HoodBindings = new HoodBindings();
         public final TurretBindings TurretBindings = new TurretBindings();
@@ -147,12 +159,13 @@ public class InputBuilder
 
         private SwerveInputStream swerveInputStream;
 
-        /// Dumb Constructor to pass into default constructors, without static Access.
+        /// Initialize our binding options only when the subsystem is not null.
         InputStream() {
         }
 
         /// Default Constructor with no drive.
         InputStream(Trigger isMode) {
+            this();
             this.isMode = isMode;
         }
 
@@ -160,7 +173,7 @@ public class InputBuilder
         InputStream(Trigger isMode,
                     DoubleSupplier x,
                     DoubleSupplier y) {
-            this.isMode = isMode;
+            this(isMode);
             this.swerveInputStream = SwerveInputStream.of(
                     subsystems.swerve.getSwerveDrive(), x, y) // Make the input stream.
                     .cubeTranslationControllerAxis(true)
@@ -218,18 +231,39 @@ public class InputBuilder
             }
         }
 
+        /// ***** Auto Bindings ***** ///
+
+        /**
+         * Smart controls that make use of automatic sequencing controls.
+         */
+        public class SmartBindings {
+
+        }
+
+
+        /// ***** Separate Bindings ***** ///
+
         /**
          * Intake button bindings.
          */
         private class IntakeBindings {
+            private final boolean isPresent;
+
+            private IntakeBindings() {
+                this.isPresent = subsystems.intake != null;
+            }
+
             /**
-             * Runs the intake.
+             * Runs the intake at preset speed, stopping when finished.
              *
-             * @param runIntake the button to bind to.
+             * @param runIntake then button to map.
+             * @param isIn whether to spin in or out.
              * @return this, for chaining.
              */
-            public IntakeBindings withRunIntake(Trigger runIntake) {
-                isMode.and(runIntake).whileTrue(subsystems.intake.runIntake());
+            public IntakeBindings withRunIntake(Trigger runIntake, boolean isIn) {
+                if (!isPresent) {return this;}
+                isMode.and(runIntake).whileTrue(subsystems.intake.intake(intakeSpeed, isIn))
+                        .onFalse(subsystems.intake.stopIntake());
                 return this;
             }
 
@@ -243,10 +277,57 @@ public class InputBuilder
             }
         }
 
+
+        private class IndexerBindings {
+            private final boolean isPresent;
+
+            private IndexerBindings() {
+                this.isPresent = subsystems.indexer != null;
+            }
+
+            /**
+             * Runs the indexer at preset speed, stopping when finished.
+             *
+             * @param runIndexer then button to map.
+             * @param isIn whether to spin in or out.
+             * @return this, for chaining.
+             */
+            public IndexerBindings withRunIndexer(Trigger runIndexer, boolean isIn) {
+                if (!isPresent) {return this;}
+                isMode.and(runIndexer).whileTrue(subsystems.indexer.runIndexer(hoodSpeed, isIn))
+                        .onFalse(subsystems.indexer.stopIndexer());
+                return this;
+            }
+
+            /**
+             * Leaves IndexerBindings going back to the InputStream.
+             *
+             * @return this InputStream.
+             */
+            public InputStream back() {
+                return InputStream.this;
+            }
+        }
+
+        private class KickerBindings {
+            private final boolean isPresent;
+            private KickerBindings() {
+                this.isPresent = subsystems.kicker != null;
+            }
+
+        }
+
+        /// ***** Scoring Mechanisms ***** ///
+
         /**
          * FlyWheel Button Bindings
          */
         private class FlyWheelBindings {
+            private final boolean isPresent;
+
+            private FlyWheelBindings() {
+                this.isPresent = subsystems.flywheel != null;
+            }
             /**
              * Simulates the turret shooting fuel.
              *
@@ -254,6 +335,7 @@ public class InputBuilder
              * @return this, for chaining.
              */
             public FlyWheelBindings withSimShoot(Trigger shoot) {
+                if (!isPresent) {return this;}
                 isMode.and(shoot).onTrue(subsystems.flywheel.simShoot());
                 return this;
             }
@@ -272,6 +354,11 @@ public class InputBuilder
          * Hood Button Bindings
          */
         private class HoodBindings {
+            private final boolean isPresent;
+
+            private HoodBindings() {
+                this.isPresent = subsystems.hood != null;
+            }
 
             /**
              * Runs the hood at preset speed, using PID to hold the angle when finished.
@@ -281,6 +368,7 @@ public class InputBuilder
              * @return this, for chaining.
              */
             public HoodBindings withRunHood(Trigger runHood, boolean isUp) {
+                if (!isPresent) {return this;}
                 isMode.and(runHood).whileTrue(subsystems.hood.runHood(hoodSpeed, isUp))
                         .onFalse(subsystems.hood.stopHood());
                 return this;
@@ -300,6 +388,10 @@ public class InputBuilder
          * Turret Button Bindings
          */
         private class TurretBindings {
+            private final boolean isPresent;
+            private TurretBindings() {
+                this.isPresent = subsystems.turret != null;
+            }
 
             /**
              * Runs the turret at preset speed, using PID to hold the angle when finished.
@@ -309,6 +401,7 @@ public class InputBuilder
              * @return this, for chaining.
              */
             public TurretBindings withRunTurret(Trigger runTurret, boolean isCCW) {
+                if (!isPresent) {return this;}
                 isMode.and(runTurret).whileTrue(subsystems.turret.runTurret(hoodSpeed, isCCW))
                         .onFalse(subsystems.turret.stopTurret());
                 return this;
@@ -328,6 +421,10 @@ public class InputBuilder
          * Swerve Drive Button Bindings
          */
         private class SwerveBindings {
+            private final boolean isPresent;
+            private SwerveBindings() {
+                this.isPresent = subsystems.swerve != null;
+            }
             /**
              * Changes inputs to the given input selection.
              */
@@ -361,6 +458,7 @@ public class InputBuilder
              * @return this, for chaining.
              */
             public SwerveBindings withResetSimOdometry(Trigger resetOdometry) {
+                if (!isPresent) {return this;}
                 isMode.and(resetOdometry).onTrue(Commands.runOnce(() -> subsystems.swerve.getSwerveDrive().resetOdometry(subsystems.swerve.getSwerveDrive().getSimulationDriveTrainPose().get())));
                 return this;
             }
@@ -447,6 +545,7 @@ public class InputBuilder
             HoodSubsystem hood,
             IndexerSubsystem indexer,
             IntakeSubsystem intake,
+            SubsystemBase kicker,
             SwerveSubsystem swerve,
             TurretSubsystem turret) {}
 }

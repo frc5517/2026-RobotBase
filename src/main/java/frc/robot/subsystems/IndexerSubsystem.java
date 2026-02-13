@@ -94,6 +94,26 @@ public class IndexerSubsystem extends SubsystemBase {
     }
 
     /**
+     * Runs the indexer at the given speed.
+     *
+     * @param indexSpeed the DutyCycle speed to run at.
+     * @param isIn whether to spin in or out.
+     * @return a command.
+     */
+    public Command runIndexer(double indexSpeed, boolean isIn) {
+        return indexer.set(isIn ? indexSpeed : -indexSpeed);
+    }
+
+    /**
+     * Stops all power to the indexer.
+     *
+     * @return a command that stops the indexer.
+     */
+    public Command stopIndexer() {
+        return indexer.set(0.0);
+    }
+
+    /**
      * Resets the setters to default values.
      */
     public void resetSetters() {

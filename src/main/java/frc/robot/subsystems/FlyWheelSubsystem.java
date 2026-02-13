@@ -99,6 +99,26 @@ public class FlyWheelSubsystem extends SubsystemBase
     }
 
     /**
+     * Runs the flywheel at the given speed.
+     *
+     * @param flywheelSpeed the DutyCycle speed to run at.
+     * @param isOut whether to spin out or in.
+     * @return a command.
+     */
+    public Command runFlyWheel(double flywheelSpeed, boolean isOut) {
+        return flyWheel.set(isOut ? flywheelSpeed : -flywheelSpeed);
+    }
+
+    /**
+     * Stops all power to the flywheel.
+     *
+     * @return a command that stops the flywheel.
+     */
+    public Command stopFlyWheel() {
+        return flyWheel.set(0.0);
+    }
+
+    /**
      * Resets the setters to default values.
      */
     public void resetSetters() {

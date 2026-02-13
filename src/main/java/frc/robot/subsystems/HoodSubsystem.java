@@ -126,7 +126,7 @@ public class HoodSubsystem extends SubsystemBase {
     }
 
     /**
-     * Runs the hood at the given speed, using PID to hold the angle when finished.
+     * Runs the hood at the given speed.
      *
      * @param hoodSpeed the DutyCycle speed to run at.
      * @param isUp whether to go up.

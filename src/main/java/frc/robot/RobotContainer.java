@@ -21,7 +21,7 @@ public class RobotContainer {
     private final TurretSubsystem turret = new TurretSubsystem();
     private final HoodSubsystem hood = new HoodSubsystem();
     /// Bite-sized Subsystems record class for easy packaging of all the subsystems.
-    private final InputBuilder.Subsystems subsystems = new InputBuilder.Subsystems(flyWheel, hood, null, intake, swerve, turret);
+    private final InputBuilder.Subsystems subsystems = new InputBuilder.Subsystems(flyWheel, hood, indexer, intake, null, swerve, turret);
     /// Our Systems
     private final ScoringSystem scoring = new ScoringSystem();
     /// Input Builder
