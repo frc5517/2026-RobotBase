@@ -11,6 +11,7 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Telemetry;
+import frc.robot.util.BrushedSparkWrapper;
 import lombok.Getter;
 import lombok.Setter;
 import yams.gearing.GearBox;
@@ -54,29 +55,30 @@ public class IndexerSubsystem extends SubsystemBase {
         public static final AngularVelocity                     VELOCITY_TOLERANCE  = DegreesPerSecond.of(1); // How accurate the velocity should be.
         public static final AngularVelocity                     TARGET_VELOCITY     = DegreesPerSecond.of(60); // How fast the flywheel should spin.
     }
-    private final SparkMax                                      indexerMotor    = new SparkMax(HardwareConstants.MOTOR_ID, MotorType.kBrushless); /// The Normal Rev Vendor SparkMax Object.
-    private final SmartMotorControllerConfig                    motorConfig     = new SmartMotorControllerConfig(this) /// The Smart Motor Controller Configuration.
-            .withExponentialProfile(Profiling.MAX_CONTROL_VOLTAGE, Profiling.MAX_ANGULAR_VELOCITY, Profiling.MAX_ANGULAR_ACCELERATION)
-            .withClosedLoopController(PID_CONTROLLER)
-            .withGearing(HardwareConstants.GEAR_RATIO)
-            .withIdleMode(MotorMode.BRAKE)
-            .withTelemetry("Indexer Motor", Telemetry.telemetryVerbosity.yamsVerbosity)
-            .withStatorCurrentLimit(HardwareConstants.CURRENT_LIMIT)
-            .withMotorInverted(HardwareConstants.MOTOR_INVERTED)
-            .withClosedLoopRampRate(HardwareConstants.RAMP_RATE)
-            .withOpenLoopRampRate(HardwareConstants.RAMP_RATE)
-            .withFeedforward(HardwareConstants.FEED_FORWARD)
-            .withSimFeedforward(HardwareConstants.FEED_FORWARD)
-            .withControlMode(ControlMode.CLOSED_LOOP);
-    private final SmartMotorController                          motor           = new SparkWrapper(indexerMotor, DCMotor.getNEO(1), motorConfig); /// The new Smart Motor Controller
-    private final FlyWheelConfig                                indexerConfig   = new FlyWheelConfig(motor) /// The FlyWheel config for the Indexer.
-            .withDiameter(HardwareConstants.INDEXER_DIAMETER)
-            .withMass(Pounds.of(1)) // Indexer Doesn't need to specify weight.
-            .withTelemetry("Indexer", Telemetry.telemetryVerbosity.yamsVerbosity)
-            .withSoftLimit(HardwareConstants.INDEXER_MAX_SPEED.unaryMinus(), HardwareConstants.INDEXER_MAX_SPEED)
-            .withSpeedometerSimulation(HardwareConstants.INDEXER_MAX_SPEED);
-    @Getter
-    private final FlyWheel                                      indexer         = new FlyWheel(indexerConfig); /// The final FlyWheel Mechanism to use as the smart Indexer.
+//    private final SparkMax                                      indexerMotor    = new SparkMax(HardwareConstants.MOTOR_ID, MotorType.kBrushless); /// The Normal Rev Vendor SparkMax Object.
+//    private final SmartMotorControllerConfig                    motorConfig     = new SmartMotorControllerConfig(this) /// The Smart Motor Controller Configuration.
+//            .withExponentialProfile(Profiling.MAX_CONTROL_VOLTAGE, Profiling.MAX_ANGULAR_VELOCITY, Profiling.MAX_ANGULAR_ACCELERATION)
+//            .withClosedLoopController(PID_CONTROLLER)
+//            .withGearing(HardwareConstants.GEAR_RATIO)
+//            .withIdleMode(MotorMode.BRAKE)
+//            .withTelemetry("Indexer Motor", Telemetry.telemetryVerbosity.yamsVerbosity)
+//            .withStatorCurrentLimit(HardwareConstants.CURRENT_LIMIT)
+//            .withMotorInverted(HardwareConstants.MOTOR_INVERTED)
+//            .withClosedLoopRampRate(HardwareConstants.RAMP_RATE)
+//            .withOpenLoopRampRate(HardwareConstants.RAMP_RATE)
+//            .withFeedforward(HardwareConstants.FEED_FORWARD)
+//            .withSimFeedforward(HardwareConstants.FEED_FORWARD)
+//            .withControlMode(ControlMode.CLOSED_LOOP);
+//    private final SmartMotorController                          motor           = new SparkWrapper(indexerMotor, DCMotor.getNEO(1), motorConfig); /// The new Smart Motor Controller
+//    private final FlyWheelConfig                                indexerConfig   = new FlyWheelConfig(motor) /// The FlyWheel config for the Indexer.
+//            .withDiameter(HardwareConstants.INDEXER_DIAMETER)
+//            .withMass(Pounds.of(1)) // Indexer Doesn't need to specify weight.
+//            .withTelemetry("Indexer", Telemetry.telemetryVerbosity.yamsVerbosity)
+//            .withSoftLimit(HardwareConstants.INDEXER_MAX_SPEED.unaryMinus(), HardwareConstants.INDEXER_MAX_SPEED)
+//            .withSpeedometerSimulation(HardwareConstants.INDEXER_MAX_SPEED);
+//    @Getter
+//    private final FlyWheel                                      indexer         = new FlyWheel(indexerConfig); /// The final FlyWheel Mechanism to use as the smart Indexer.
+    private final BrushedSparkWrapper indexer = new  BrushedSparkWrapper(MOTOR_ID);
     /// Reports the current Indexer state. To be used later in code and telemetry.
     public static class IndexerState {
         @Setter
@@ -90,7 +92,6 @@ public class IndexerSubsystem extends SubsystemBase {
     }
 
     public IndexerSubsystem() {
-        indexer.run(DegreesPerSecond.of(0));
     }
 
     /**
@@ -134,9 +135,9 @@ public class IndexerSubsystem extends SubsystemBase {
      *
      * @return the {@link FlyWheel} Indexer Mechanism.
      */
-    public FlyWheel getIndexerMechanism() {
-        return indexer;
-    }
+//    public FlyWheel getIndexerMechanism() {
+//        return indexer;
+//    }
 
     /**
      * Ran continuously while the robot is on.
@@ -144,7 +145,7 @@ public class IndexerSubsystem extends SubsystemBase {
     @Override
     public void periodic() {
         // Updates the indexer mechanism's telemetry data to the network tables.
-        indexer.updateTelemetry();
+        //indexer.updateTelemetry();
     }
 
     /**
@@ -153,6 +154,6 @@ public class IndexerSubsystem extends SubsystemBase {
     @Override
     public void simulationPeriodic() {
         // Iterates the sim so that the sim actually works and the data sent to the network tables can be updated.
-        indexer.simIterate();
+        //indexer.simIterate();
     }
 }
