@@ -16,12 +16,12 @@ public class RobotContainer {
     /// Subsystems
     private final SwerveSubsystem swerve = new SwerveSubsystem();
     private final FlyWheelSubsystem  flyWheel = new FlyWheelSubsystem();
-    //private final HoodSubsystem hood = new HoodSubsystem();
-    //private final IndexerSubsystem indexer = new IndexerSubsystem();
+    private final IndexerSubsystem indexer = new IndexerSubsystem();
     private final IntakeSubsystem intake = new IntakeSubsystem(swerve);
-    //private final TurretSubsystem turret = new TurretSubsystem();
+    private final TurretSubsystem turret = new TurretSubsystem();
+    private final HoodSubsystem hood = new HoodSubsystem();
     /// Bite-sized Subsystems record class for easy packaging of all the subsystems.
-    private final InputBuilder.Subsystems subsystems = new InputBuilder.Subsystems(flyWheel, null, null, intake, swerve, null);
+    private final InputBuilder.Subsystems subsystems = new InputBuilder.Subsystems(flyWheel, hood, null, intake, swerve, turret);
     /// Our Systems
     private final ScoringSystem scoring = new ScoringSystem();
     /// Input Builder

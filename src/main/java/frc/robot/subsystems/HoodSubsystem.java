@@ -7,8 +7,10 @@ import edu.wpi.first.math.geometry.*;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.units.measure.*;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
+import frc.robot.InputBuilder;
 import frc.robot.Telemetry;
 import lombok.Getter;
 import lombok.Setter;
@@ -33,7 +35,7 @@ public class HoodSubsystem extends SubsystemBase {
         /// Motor Constants
         public static final int                                 MOTOR_ID            = 24; // Spark Max CAN ID
         public static final boolean                             MOTOR_INVERTED      = false; // Inverts control direction.
-        public static final MechanismGearing                    GEAR_RATIO          = new MechanismGearing(GearBox.fromReductionStages(3, 4)); // FlyWheel Gear Ratio
+        public static final MechanismGearing                    GEAR_RATIO          = new MechanismGearing(GearBox.fromReductionStages(3, 4, 5)); // FlyWheel Gear Ratio
         /// Motor Tuning Values
         public static final ExponentialProfilePIDController     PID_CONTROLLER      = new ExponentialProfilePIDController( // Exponential Motion Profiling
                                                                                       20, 0, 0.01, // PID - Proportional, Integral, Derivative.
@@ -55,12 +57,12 @@ public class HoodSubsystem extends SubsystemBase {
         /// IMPORTANT, this helps calculate the initial fuel velocity; it is the friction affecting on the ball from the hood.
         public static final double                              HOOD_COF_FACTOR     = 0.8;
         /// Sim Constants
-        public static final Angle                               SIM_STARTING_ANGLE  = Degrees.of(0); // Starting Hood angle in sim.
+        public static final Angle                               SIM_STARTING_ANGLE  = Degrees.of(30); // Starting Hood angle in sim.
         public static final Distance                            MAX_ROBOT_HEIGHT    = Inches.of(22); // Max robot height for visualization. TODO Push to swerve constants
         public static final Distance                            MAX_ROBOT_WIDTH     = Inches.of(29); // Max robot width for visualization.
         public static final Translation3d                       HOOD_POSITION       = TURRET_POSITION.plus(
                                                                                       new Translation3d( /// Hood position for visualization, relative to the turret position.
-                                                                                      Inches.of(0).in(Meters),  // X-axis left positive relative to the robot center, Same as pose2d.
+                                                                                      Inches.of(4.5).in(Meters),  // X-axis left positive relative to the robot center, Same as pose2d.
                                                                                       Inches.of(0).in(Meters),   // Y-axis front positive relative to the robot center, Same as pose2d.
                                                                                       Inches.of(0).in(Meters))); // Z-axis up relative to the floor.
     }
@@ -118,7 +120,27 @@ public class HoodSubsystem extends SubsystemBase {
 
     public HoodSubsystem() {
         HoodState.setAtDesiredAngle(atDesiredAngle());
-        this.setDefaultCommand(hood.setAngle(Degrees.of(70)));
+        //this.setDefaultCommand(hood.setAngle(Degrees.of(70)));
+    }
+
+    /**
+     * Runs the hood at the given speed, using PID to hold the angle when finished.
+     *
+     * @param hoodSpeed the DutyCycle speed to run at.
+     * @param isUp whether to go up.
+     * @return a command.
+     */
+    public Command runHood(double hoodSpeed, boolean isUp) {
+        return hood.set(isUp ? hoodSpeed : -hoodSpeed);
+    }
+
+    /**
+     * Stops all power to the hood.
+     *
+     * @return a command that stops the hood.
+     */
+    public Command stopHood() {
+        return hood.set(0.0);
     }
 
     /**
@@ -138,23 +160,18 @@ public class HoodSubsystem extends SubsystemBase {
     }
 
     /**
-     * Raise the hood manually at a predefined speed.
+     * Creates a new Pose3D built from defined position and current angle.
      *
-     * @return a command to raise the hood manually.
+     * @return the hood current 3D pose.
      */
-    public Command upManual() {
-        return run(() -> hood.set(HoodState.ManualSpeed))
-                .finallyDo(() -> hood.set(0.0));
-    }
+    public Pose3d getPose3D() {
+        var turretRotation = TurretSubsystem.TurretState.getCurrentAngle().in(Radians);
+        return new Pose3d(
+                HOOD_POSITION.rotateAround(TURRET_POSITION, new Rotation3d(0, 0, turretRotation)),
+                new Rotation3d(0.0,
+                        hood.getAngle().in(Radians), // Hood Rotation is Pitch, looking up and down.
+                        turretRotation));
 
-    /**
-     * Lower the hood manually at a predefined speed.
-     *
-     * @return a command to lower the hood manually.
-     */
-    public Command downManual() {
-        return run(() -> hood.set(HoodState.ManualSpeed))
-                .finallyDo(() -> hood.set(0.0));
     }
 
     /**
@@ -174,5 +191,8 @@ public class HoodSubsystem extends SubsystemBase {
     public void simulationPeriodic() {
         // Iterates the sim so that the sim actually works and the data sent to the network tables can be updated.
         hood.simIterate();
+
+        // Update our Mech3d Pose.
+        Telemetry.Publishers.Robot.Mech3D.hoodPose.accept(getPose3D());
     }
 }

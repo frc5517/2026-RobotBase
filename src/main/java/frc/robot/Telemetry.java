@@ -46,6 +46,14 @@ public class Telemetry
             // Zone Trigger Publishers
             public static final BooleanPublisher scoringZoneTriggerPublisher = zoneTriggerTable.getBooleanTopic("In Scoring Zone").publish();
 
+            /// Mech3d Publishers
+            public static class Mech3D
+            {
+                public static final NetworkTable mechTable = robotTable.getSubTable("Mech3DTelemetry");
+                public static final StructPublisher<Pose3d> hoodPose = mechTable.getStructTopic("Hood Pose", Pose3d.struct).publish();
+                public static final StructPublisher<Pose3d> turretPose = mechTable.getStructTopic("Turret Pose", Pose3d.struct).publish();
+            }
+
         }
         /// MapleSim Publishers
         public static class MapleSim

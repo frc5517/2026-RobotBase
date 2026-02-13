@@ -14,10 +14,14 @@ import com.revrobotics.spark.SparkLowLevel;
 import com.revrobotics.spark.SparkMax;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
+import edu.wpi.first.math.geometry.Pose3d;
+import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.units.measure.*;
+import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Telemetry;
@@ -40,7 +44,7 @@ public class TurretSubsystem extends SubsystemBase
         /// Motor Constants
         public static final int                     MOTOR_ID            = 21; // Spark Max CAN ID
         public static final boolean                 MOTOR_INVERTED      = false; // Inverts control direction.
-        public static final MechanismGearing        GEAR_RATIO          = new MechanismGearing(GearBox.fromReductionStages(3, 4)); // FlyWheel Gear Ratio
+        public static final MechanismGearing        GEAR_RATIO          = new MechanismGearing(GearBox.fromReductionStages(3, 4, 5)); // FlyWheel Gear Ratio
         /// Motor Tuning Values
         public static final ProfiledPIDController   PID_CONTROLLER      = new ProfiledPIDController( // Basic Trapezoidal Motion Profiling
                                                                           1, 0, 0, // PID - Proportional, Integral, Derivative.
@@ -50,21 +54,22 @@ public class TurretSubsystem extends SubsystemBase
         public static final Time                    RAMP_RATE           = Seconds.of(0.25); // Time it takes to reach max speed from 0.
         public static final SimpleMotorFeedforward  FEED_FORWARD        = new SimpleMotorFeedforward(0, 0, 0); // Feed Forwards.
         public static final Current                 CURRENT_LIMIT       = Amp.of(40); // Current limit, Higher for faster control.
-        public static final Angle                   HARD_LIMIT_REVERSE  = Degrees.of(-180); // The hard limit should be a metal physical stop, not the cable chain.
-        public static final Angle                   HARD_LIMIT_FORWARD  = Degrees.of(180);
-        public static final Angle                   SOFT_LIMIT_REVERSE  = Degrees.of(-175); // A soft limit so we don't constantly hit the hard limit without reason.
-        public static final Angle                   SOFT_LIMIT_FORWARD  = Degrees.of(175);
+        public static final Angle                   HARD_LIMIT_REVERSE  = Degrees.of(-75); // The hard limit should be a metal physical stop, not the cable chain.
+        public static final Angle                   HARD_LIMIT_FORWARD  = Degrees.of(80);
+        public static final Angle                   SOFT_LIMIT_REVERSE  = Degrees.of(-75); // A soft limit so we don't constantly hit the hard limit without reason.
+        public static final Angle                   SOFT_LIMIT_FORWARD  = Degrees.of(80);
         /// Sim Constants
         public static final Angle                   SIM_STARTING_ANGLE  = Degrees.of(0); // Starting turret angle in sim.
         public static final Distance                MAX_ROBOT_HEIGHT    = Inches.of(22); // Max robot height for visualization. TODO Push to swerve constants
         public static final Distance                MAX_ROBOT_WIDTH     = Inches.of(29); // Max robot width for visualization.
         public static final Translation3d           TURRET_POSITION     = new Translation3d( /// Turret position for visualization.
-                                                                          Inches.of(0).in(Meters),  // X-axis left positive relative to the robot center, Same as pose2d.
-                                                                          Inches.of(0).in(Meters),   // Y-axis front positive relative to the robot center, Same as pose2d.
-                                                                          Inches.of(10).in(Meters)); // Z-axis up relative to the floor.
+                                                                          Inches.of(-6).in(Meters),  // X-axis left positive relative to the robot center, Same as pose2d.
+                                                                          Inches.of(-.5).in(Meters),   // Y-axis front positive relative to the robot center, Same as pose2d.
+                                                                          Inches.of(19.75).in(Meters)); // Z-axis up relative to the floor.
     }
     /// Control Constants for the Turret Mechanism
     public static class ControlConstants {
+        public static final Angle                   IDLE_ANGLE          = SIM_STARTING_ANGLE;
 
         public static final Angle                   ANGLE_TOLERANCE     = Degrees.of(1);
 
@@ -109,6 +114,39 @@ public class TurretSubsystem extends SubsystemBase
         @Getter public static Trigger               AtDesiredAngle      = new Trigger(() -> false); // Set at construction.
     }
 
+    /**
+     * Runs the turret at the given speed, using PID to hold the angle when finished.
+     *
+     * @param turretSpeed the DutyCycle speed to run at.
+     * @param isCCW whether to turn CCW, aka lefty loosey.
+     * @return a command.
+     */
+    public Command runTurret(double turretSpeed, boolean isCCW) {
+        return turret.set(isCCW ? turretSpeed : -turretSpeed);
+    }
+
+    /**
+     * Stops all power to the turret.
+     *
+     * @return a command that stops the turret.
+     */
+    public Command stopTurret() {
+        return turret.set(0.0);
+    }
+
+    /**
+     * Creates a new Pose3D built from defined position and current angle.
+     *
+     * @return the turret current 3D pose.
+     */
+    public Pose3d getPose3D() {
+        return new Pose3d(
+                TURRET_POSITION,
+                new Rotation3d(0.0,
+                        0.0,
+                        turret.getAngle().in(Radians))); // Turret Rotation is Yaw, looking left and right.
+    }
+
     public TurretSubsystem()
     {
         TurretState.AtDesiredAngle = turret.isNear(TurretState.DesiredAngle, ANGLE_TOLERANCE); // Set our atDesiredAngle trigger.
@@ -130,5 +168,8 @@ public class TurretSubsystem extends SubsystemBase
     public void simulationPeriodic() {
         // Iterates the sim so that the sim actually works and the data sent to the network tables can be updated.
         turret.simIterate();
+
+        // Update our Mech3d Pose.
+        Telemetry.Publishers.Robot.Mech3D.turretPose.accept(getPose3D());
     }
 }
