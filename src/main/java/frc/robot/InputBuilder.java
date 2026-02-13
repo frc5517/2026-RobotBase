@@ -101,8 +101,8 @@ public class InputBuilder
                         .withResetSimOdometry(          driverXbox.start())
                         .updateSwerveStream()           // Update our stream after making default drive speed changes.
                         .back().HoodBindings            /// Hood
-                        //.withRunHood(                   driverXbox.pov(0), true)
-                        //.withRunHood(                   driverXbox.pov(180), false)
+                        .withRunHood(                   driverXbox.pov(0), true)
+                        .withRunHood(                   driverXbox.pov(180), false)
                         .back().TurretBindings          /// Turret
                         .withRunTurret(                driverXbox.pov(270), true)
                         .withRunTurret(                driverXbox.pov(90), false)
