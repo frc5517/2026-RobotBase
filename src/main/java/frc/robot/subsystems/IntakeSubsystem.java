@@ -36,7 +36,7 @@ public class IntakeSubsystem extends SubsystemBase {
     /// Hardware Constants for the Intake Mechanism.
     public static class HardwareConstants {
         /// Motor Constants
-        public static final int                                 MOTOR_ID            = 27; // Spark Max CAN ID
+        public static final int                                 MOTOR_ID            = 11; // Spark Max CAN ID
         public static final boolean                             MOTOR_INVERTED      = false; // Inverts control direction.
         public static final MechanismGearing                    GEAR_RATIO          = new MechanismGearing(GearBox.fromReductionStages(3, 4)); // Intake Gear Ratio
         /// Motor Tuning Values
@@ -73,7 +73,7 @@ public class IntakeSubsystem extends SubsystemBase {
                     .withMotorInverted(MOTOR_INVERTED)
                     .withClosedLoopRampRate(RAMP_RATE)
                     .withOpenLoopRampRate(RAMP_RATE)
-                    .withFeedforward(FEED_FORWARD)
+                    //.withFeedforward(FEED_FORWARD)
                     .withSimFeedforward(FEED_FORWARD)
                     .withControlMode(ControlMode.CLOSED_LOOP);
     private final SmartMotorController                          motor           = new SparkWrapper(intakeMotor, DCMotor.getNEO(1), motorConfig); /// The new Smart Motor Controller

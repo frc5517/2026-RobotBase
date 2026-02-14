@@ -87,10 +87,10 @@ public class InputBuilder
         var stream =
                 new InputStream().
                         StartingMethod // Dumb constructor to load a different one.
-                        .headingXboxDrive(TESTING.isMode, driverXbox)
+                        .defaultXboxDrive(TESTING.isMode, driverXbox)
                         /// Initial Constants
-                        .normalRotation(1)
-                        .normalTranslation(1)
+                        .normalRotation(.5)
+                        .normalTranslation(.5)
                         .slowRotation(.4)
                         .slowTranslation(.4)
                         /// Button Bindings
@@ -125,7 +125,7 @@ public class InputBuilder
         /// Stream Constants
         @Setter private Trigger isMode;
         /// Drive Constants
-        @Setter private double deadzone = 0.05;
+        @Setter private double deadzone = 0.01;
         @Setter private double slowTranslation = 0.3;
         @Setter private double slowRotation = 0.2;
         @Setter private double normalTranslation = .8;
@@ -134,7 +134,7 @@ public class InputBuilder
         @Setter private double boostRotation = 0.75;
         @Setter @Getter private Supplier<Command> driveCommand; // Default drive command.
         /// Intake Constants
-        @Setter private double intakeSpeed = 0.5;
+        @Setter private double intakeSpeed = .6;
         /// Indexer Constants
         @Setter private double indexSpeed = 0.5;
         /// FlyWheel Constants
@@ -201,10 +201,10 @@ public class InputBuilder
             public InputStream defaultXboxDrive(Trigger isMode, CommandXboxController driverXbox) {
                 // Load default drive constructor.
                 var xboxDrive = new InputStream(isMode,
-                        () -> driverXbox.getLeftY() * -1,
-                        () -> driverXbox.getLeftX() * -1);
+                        () -> driverXbox.getLeftY(),
+                        () -> driverXbox.getLeftX());
                 // Set heading drive.
-                xboxDrive.swerveInputStream.withControllerRotationAxis(() -> driverXbox.getRightX() * -1);
+                xboxDrive.swerveInputStream.withControllerRotationAxis(() -> driverXbox.getRightX());
                 // Return our new stream.
                 return xboxDrive;
             }
