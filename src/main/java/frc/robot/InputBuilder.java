@@ -1,5 +1,7 @@
 package frc.robot;
 
+import edu.wpi.first.math.Pair;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
@@ -8,12 +10,17 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
+import frc.robot.commands.ShootOnTheMoveCommand;
 import frc.robot.subsystems.*;
+import frc.robot.util.math.AllianceFlipUtil;
+import frc.robot.util.math.FieldConstants;
 import lombok.*;
 import lombok.experimental.Accessors;
 import swervelib.SwerveInputStream;
 import swervelib.simulation.ironmaple.simulation.SimulatedArena;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
@@ -32,6 +39,8 @@ public class InputBuilder
     private final CommandXboxController operatorXbox;
 
     public InputBuilder(Subsystems subsystems) {
+        /// Stop the console spam from not all buttons showing up.
+        DriverStation.silenceJoystickConnectionWarning(true);
         /// Initialize our subsystem calls
         this.subsystems = subsystems;
         /// Initialize Binding Methods here.
@@ -89,12 +98,13 @@ public class InputBuilder
                         StartingMethod // Dumb constructor to load a different one.
                         .defaultXboxDrive(TESTING.isMode, driverXbox)
                         /// Initial Constants
-                        .normalRotation(.5)
-                        .normalTranslation(.5)
+                        .normalRotation(.8)
+                        .normalTranslation(.8)
                         .slowRotation(.4)
                         .slowTranslation(.4)
                         /// Button Bindings
                         .SwerveBindings                 /// SwerveDrive Bindings
+                        .withSlowAtBump()
                         .withSlowDrive(                 driverXbox.rightBumper())
                         .withToggleCentricity(          driverXbox.back(), true)
                         .withResetSimOdometry(          driverXbox.start())
@@ -103,6 +113,7 @@ public class InputBuilder
                         .withRunHood(                   driverXbox.pov(0), true)
                         .withRunHood(                   driverXbox.pov(180), false)
                         .back().TurretBindings          /// Turret
+                        .withAimAt(                     driverXbox.y())
                         .withRunTurret(                 driverXbox.pov(270), true)
                         .withRunTurret(                 driverXbox.pov(90), false)
                         .back().IndexerBindings
@@ -393,6 +404,12 @@ public class InputBuilder
                 this.isPresent = subsystems.turret != null;
             }
 
+            public TurretBindings withAimAt(Trigger aimAt) {
+                if (!isPresent) {return this;}
+                isMode.and(aimAt).whileTrue(new ShootOnTheMoveCommand(subsystems, () -> FieldConstants.Hub.topCenterPoint));
+                return this;
+            }
+
             /**
              * Runs the turret at preset speed, using PID to hold the angle when finished.
              *
@@ -473,6 +490,18 @@ public class InputBuilder
                         .scaleTranslation(normalTranslation)
                         .scaleRotation(normalRotation)
                         .deadband(deadzone);
+                return this;
+            }
+
+            public SwerveBindings withSlowAtBump() {
+                final Telemetry.ZoneTrigger bumpZones = new Telemetry.ZoneTrigger(
+                        Telemetry.Publishers.Robot.bumpZonePublisher,
+                        Pair.of(new Translation2d(3.75, 1.5), new Translation2d(5.5, 3.5)),
+                        Pair.of(new Translation2d(3.75, 4.5), new Translation2d(5.5, 6.5)),
+                        Pair.of(new Translation2d(11, 4.5), new Translation2d(12.75, 6.5)),
+                        Pair.of(new Translation2d(11, 1.5), new Translation2d(12.75, 3.5)));
+
+                withSlowDrive(isMode.and(bumpZones.getTrigger()));
                 return this;
             }
 

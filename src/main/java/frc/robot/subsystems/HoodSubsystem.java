@@ -51,13 +51,13 @@ public class HoodSubsystem extends SubsystemBase {
         public static final Distance                            HOOD_LENGTH                 = Inches.of(8); // Hood Length, used in calculations and to visualize in sim.
         public static final Angle                               HORIZONTAL_OFFSET           = Degrees.of(0); // Offset required making angle 0 horizontal and parallel to the ground.
         public static final Angle                               HARD_LIMIT_REVERSE          = Degrees.of(30); // The hard limit should be a metal physical stop.
-        public static final Angle                               HARD_LIMIT_FORWARD          = Degrees.of(135);
+        public static final Angle                               HARD_LIMIT_FORWARD          = Degrees.of(160);
         public static final Angle                               SOFT_LIMIT_REVERSE          = Degrees.of(35); // A soft limit so we don't constantly hit the hard limit without reason.
-        public static final Angle                               SOFT_LIMIT_FORWARD          = Degrees.of(130);
+        public static final Angle                               SOFT_LIMIT_FORWARD          = Degrees.of(160);
         /// IMPORTANT, this helps calculate the initial fuel velocity; it is the friction affecting on the ball from the hood.
         public static final double                              HOOD_COF_FACTOR             = 0.8;
         /// Sim Constants
-        public static final Angle                               SIM_STARTING_ANGLE          = Degrees.of(30); // Starting Hood angle in sim.
+        public static final Angle                               SIM_STARTING_ANGLE          = Degrees.of(160); // Starting Hood angle in sim.
         public static final Distance                            MAX_ROBOT_HEIGHT            = Inches.of(22); // Max robot height for visualization. TODO Push to swerve constants
         public static final Distance                            MAX_ROBOT_WIDTH             = Inches.of(29); // Max robot width for visualization.
         public static final Translation3d                       HOOD_POSITION               = TURRET_POSITION.plus(
@@ -108,21 +108,10 @@ public class HoodSubsystem extends SubsystemBase {
     /// Reports the current Hood state. To be used later in code and telemetry.
     public static class HoodState {
         @Setter
-        public static double    ManualSpeed     = HOOD_SPEED;
-        @Setter
-        public static Angle     AngleTolerance  = ANGLE_TOLERANCE;
-        @Setter
         public static Angle     CurrentAngle    = Degrees.of(0);
-        @Setter
-        public static Angle     DesiredAngle    = Degrees.of(0);
-        @Setter
-        public static Trigger   AtDesiredAngle  = new Trigger(() -> false);
     }
 
     public HoodSubsystem() {
-        HoodState.setAtDesiredAngle(atDesiredAngle());
-        //this.setDefaultCommand(hood.setAngle(Degrees.of(70)));
-        hood.run(SIM_STARTING_ANGLE);
     }
 
     /**
@@ -143,22 +132,6 @@ public class HoodSubsystem extends SubsystemBase {
      */
     public Command stopHood() {
         return hood.set(0.0);
-    }
-
-    /**
-     * Resets the setters to default values.
-     */
-    public void resetSetters() {
-        HoodState.setManualSpeed(HOOD_SPEED);
-    }
-
-    /**
-     * Whether the hood is at the desired angle.
-     *
-     * @return whether the hood is at the desired angle.
-     */
-    public Trigger atDesiredAngle() {
-        return hood.isNear(HoodState.DesiredAngle, HoodState.AngleTolerance);
     }
 
     /**
@@ -183,7 +156,7 @@ public class HoodSubsystem extends SubsystemBase {
     public void periodic() {
         // Updates the hood mechanism's telemetry data to the network tables.
         hood.updateTelemetry();
-        HoodState.setCurrentAngle(hood.getAngle());
+        HoodState.setCurrentAngle(hood.getAngle()); // Update our static hood angle.
     }
 
     /**

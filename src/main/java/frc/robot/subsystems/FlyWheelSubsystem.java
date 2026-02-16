@@ -4,6 +4,7 @@ import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.units.measure.*;
@@ -84,18 +85,8 @@ public class FlyWheelSubsystem extends SubsystemBase
             .withSpeedometerSimulation(HardwareConstants.FLYWHEEL_MAX_SPEED);
     @Getter
     private final FlyWheel                              flyWheel                    = new FlyWheel(flyWheelConfig); /// The final FlyWheel Mechanism.
-    /// Reports the current flywheel state. To be used later in code and telemetry.
-    @Accessors(fluent = true)
-    public static class FlyWheelState {
-        @Setter private static AngularVelocity          VelocityTolerance           = ControlConstants.VELOCITY_TOLERANCE;
-        @Getter private static AngularVelocity          CurrentVelocity             = DegreesPerSecond.of(0);
-        @Setter @Getter private static AngularVelocity  TargetVelocity              = ControlConstants.TARGET_VELOCITY;
-        @Getter private static Trigger                  atDesiredVelocity           = new Trigger(() -> false);
-    }
 
     public FlyWheelSubsystem() {
-        FlyWheelState.atDesiredVelocity = flyWheel.isNear(FlyWheelState.TargetVelocity, FlyWheelState.VelocityTolerance); // Set our atDesiredVelocity Trigger.
-        flyWheel.run(DegreesPerSecond.of(0));
     }
 
     /**
@@ -119,40 +110,20 @@ public class FlyWheelSubsystem extends SubsystemBase
     }
 
     /**
-     * Resets the setters to default values.
+     * @return a {@link Command} that launches sim fuel.
      */
-    public void resetSetters() {
-        FlyWheelState.TargetVelocity(ControlConstants.TARGET_VELOCITY);
-    }
-
-    /**
-     * Spins the flywheel up to the predefined target velocity.
-     *
-     * @return a command that runs the flywheel.
-     */
-    public Command spinUp() {
-        return run(
-                // Set target speed
-                () -> flyWheel.setSpeed(FlyWheelState.TargetVelocity))
-                // When the command finishes, stop the flywheel.
-                .finallyDo(() -> flyWheel.set(0.0));
-    }
-
-    // TODO
     public Command simShoot() {
         return runOnce(() -> {
             if (RobotBase.isSimulation()) {
                 SimulatedArena.getInstance().addGamePieceProjectile(new RebuiltFuelOnFly(
                     SwerveSubsystem.SwerveState.CurrentPose.getTranslation(),
-                    new Translation2d(Inches.of(-10), Inches.of(0)),
+                    new Translation2d(Inches.of(5.5), Inches.of(0)),
                     SwerveSubsystem.SwerveState.CurrentSpeeds,
-                    SwerveSubsystem.SwerveState.CurrentPose.getRotation(),
-                    Inches.of(20),
-                    MetersPerSecond.of(6),
-                    Degrees.of(65)
-            ));   
-            }
-        });
+                    TurretSubsystem.TurretState.getCurrentHeading().rotateBy(Rotation2d.k180deg),
+                    Inches.of(22),
+                    MetersPerSecond.of(8),
+                    HoodSubsystem.HoodState.CurrentAngle.plus(Degrees.of(-90).unaryMinus())));
+            }});
     }
 
     /**
@@ -162,7 +133,6 @@ public class FlyWheelSubsystem extends SubsystemBase
     public void periodic() {
         // Updates the flywheel mechanism's telemetry data to the network tables.
         flyWheel.updateTelemetry();
-        FlyWheelState.CurrentVelocity = flyWheel.getSpeed(); // Update our current velocity.
     }
 
     /**

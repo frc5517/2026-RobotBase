@@ -15,12 +15,11 @@ import com.revrobotics.spark.SparkMax;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
-import edu.wpi.first.math.geometry.Pose3d;
-import edu.wpi.first.math.geometry.Rotation3d;
-import edu.wpi.first.math.geometry.Translation3d;
+import edu.wpi.first.math.geometry.*;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.units.measure.*;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -37,6 +36,8 @@ import yams.motorcontrollers.SmartMotorController;
 import yams.motorcontrollers.SmartMotorControllerConfig;
 import yams.motorcontrollers.SmartMotorControllerConfig.ControlMode;
 import yams.motorcontrollers.local.SparkWrapper;
+
+import java.util.function.Supplier;
 
 public class TurretSubsystem extends SubsystemBase
 {
@@ -115,8 +116,19 @@ public class TurretSubsystem extends SubsystemBase
     private final Pivot                             turret              = new Pivot(config);
     public static class TurretState {
         @Getter private static Angle                CurrentAngle        = Degrees.of(0); // Set in periodic
-        @Setter @Getter private static Angle        DesiredAngle        = Degrees.of(0); // Set externally.
-        @Getter public static Trigger               AtDesiredAngle      = new Trigger(() -> false); // Set at construction.
+        @Getter private static Rotation2d           CurrentHeading      = Rotation2d.kZero; // Set in periodic
+    }
+
+    public TurretSubsystem()
+    {
+    }
+
+    public Supplier<Angle> angleToPose(Pose2d swervePose, Translation2d position) {
+        // Find the error between the turret and goal.
+        DriverStation.reportWarning(swervePose.toString(), false);
+        Translation2d error = position.minus(swervePose.getTranslation());
+        Rotation2d robotToTarget = new Rotation2d(error.getX(), error.getY()); // Makes a new angle based on the error between the 2 poses.
+        return () -> robotToTarget.minus(swervePose.getRotation()).getMeasure();
     }
 
     /**
@@ -152,12 +164,6 @@ public class TurretSubsystem extends SubsystemBase
                         turret.getAngle().in(Radians))); // Turret Rotation is Yaw, looking left and right.
     }
 
-    public TurretSubsystem()
-    {
-        turret.run(SIM_STARTING_ANGLE);
-        TurretState.AtDesiredAngle = turret.isNear(TurretState.DesiredAngle, ANGLE_TOLERANCE); // Set our atDesiredAngle trigger.
-    }
-
     /**
      * Ran continuously while the robot is on.
      */
@@ -165,6 +171,7 @@ public class TurretSubsystem extends SubsystemBase
     public void periodic() {
         turret.updateTelemetry(); // Updates the turret mechanism's telemetry data to the network tables.
         TurretState.CurrentAngle = turret.getAngle(); // Update our current angle state.
+        TurretState.CurrentHeading = SwerveSubsystem.SwerveState.CurrentPose.getRotation().plus(new Rotation2d(TurretState.CurrentAngle));
     }
 
     /**
