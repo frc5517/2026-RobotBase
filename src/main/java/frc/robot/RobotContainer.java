@@ -12,6 +12,8 @@ import frc.robot.systems.ScoringSystem;
 import swervelib.simulation.ironmaple.simulation.SimulatedArena;
 import swervelib.simulation.ironmaple.simulation.seasonspecific.rebuilt2026.Arena2026Rebuilt;
 
+import java.io.InputStream;
+
 public class RobotContainer {
     /// Subsystems
     private final SwerveSubsystem swerve = new SwerveSubsystem();
@@ -33,6 +35,7 @@ public class RobotContainer {
      * This allows creation, manipulation, selection, and layered complexity of bindings with ease.
      */
     public RobotContainer() {
+        inputBuilder.configureBindings();
     }
 
     public void periodic()

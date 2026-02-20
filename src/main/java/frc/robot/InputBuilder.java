@@ -12,15 +12,13 @@ import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.commands.ShootOnTheMoveCommand;
 import frc.robot.subsystems.*;
-import frc.robot.util.math.AllianceFlipUtil;
-import frc.robot.util.math.FieldConstants;
+import frc.robot.util.ZoneTrigger;
+import frc.robot.util.borrowed.math.FieldConstants;
 import lombok.*;
 import lombok.experimental.Accessors;
 import swervelib.SwerveInputStream;
 import swervelib.simulation.ironmaple.simulation.SimulatedArena;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
@@ -41,15 +39,96 @@ public class InputBuilder
     public InputBuilder(Subsystems subsystems) {
         /// Stop the console spam from not all buttons showing up.
         DriverStation.silenceJoystickConnectionWarning(true);
-        /// Initialize our subsystem calls
+        /// Initialize our subsystem record
         this.subsystems = subsystems;
-        /// Initialize Binding Methods here.
+        /// Initialize Controllers here.
         this.driverXbox = new CommandXboxController(0);
         this.operatorXbox = new CommandXboxController(1);
         /// Initialize input publisher
         Telemetry.Publishers.Robot.inputPublisher.accept(() -> inputSelector);
+    }
 
-        testing();
+    /**
+     * Method used to construct input streams
+     */
+    public void configureBindings() {
+        /// Testing control, gets randomly changed all the time.
+        final InputStream testing = new InputStream().
+                StartingMethods // Dumb constructor to load a different one.
+                        .defaultXboxDrive(TESTING.isMode, driverXbox)
+                        .SmartBindings
+                        .withAimAt(                     driverXbox.y())
+                        .back().SwerveBindings                 /// SwerveDrive Bindings
+                        .setNormalRotation(.8)
+                        .setNormalTranslation(.8)
+                        .setSlowRotation(.4)
+                        .setSlowTranslation(.4)
+                        .withSlowDrive(                 CustomTriggers.bumpZone.getTrigger()) // Slows the drive when within the bump zone.
+                        .withSlowDrive(                 driverXbox.rightBumper())
+                        .withToggleCentricity(          driverXbox.back(), true)
+                        .withResetSimOdometry(          driverXbox.start())
+                        .updateSwerveStream()           // Update our stream after making default drive speed changes.
+                        .back().HoodBindings            /// Hood
+                        .withRunHood(                   driverXbox.pov(0), true)
+                        .withRunHood(                   driverXbox.pov(180), false)
+                        .back().TurretBindings          /// Turret
+                        .withRunTurret(                 driverXbox.pov(270), true)
+                        .withRunTurret(                 driverXbox.pov(90), false)
+                        .back().IndexerBindings
+                        .withRunIndexer(                driverXbox.leftBumper(), true)
+                        .withRunIndexer(                driverXbox.rightBumper(), false)
+                        .back().IntakeBindings          /// Intake
+                        .withRunIntake(                 driverXbox.leftBumper(), true)
+                        .withRunIntake(                 driverXbox.rightBumper(), false)
+                        .back().FlyWheelBindings        /// Flywheel
+                        .withSimShoot(                  driverXbox.rightTrigger())
+                        .back().MiscBindings            /// Misc Bindings
+                        .withChangeInput(MANUAL_CONTROL,   driverXbox.a().and(driverXbox.back()).debounce(1)) // Change to manual control when a() and back() are held for 1 second.
+                        .resetField(                    driverXbox.start())
+                .back();
+        /// Single xbox controller with manual duty cycle control of all the subsystems.
+        final InputStream singleManual = new InputStream()
+                // A starting method should be set first.
+                .StartingMethods
+                .defaultXboxDrive(MANUAL_CONTROL.isMode, driverXbox)
+                // Now we can set .with our controller bindings.
+                .SwerveBindings /// Swerve Controller Bindings.
+                // When in the subsystem, set our desired constants with .set methods.
+                .setNormalRotation(.8)
+                .setNormalTranslation(.8)
+                .setSlowRotation(.4)
+                .setSlowTranslation(.4)
+                .setBoostRotation(1)
+                .setBoostTranslation(1)
+                // After any changes are made, we can then use .with methods to bind actions.
+                .withSlowDrive(         driverXbox.b())
+                .withToggleCentricity(  driverXbox.back(), true)
+                .withResetSimOdometry(  driverXbox.start())
+                .back().IntakeBindings /// Intake Controller Bindings.
+                .setIntakeSpeed(0.5)
+                .withRunIntake(         driverXbox.leftBumper(), true)
+                .withRunIntake(         driverXbox.rightBumper(), false)
+                .back().IndexerBindings /// Indexer Controller Bindings
+                .setIndexSpeed(0.5)
+                .withRunIndexer(        driverXbox.x(), true)
+                .withRunIndexer(        driverXbox.y(), false)
+                .back().KickerBindings /// Kicker Controller Bindings
+                .back().TurretBindings /// Turret Controller Bindings
+                .setTurretSpeed(0.5)
+                .withRunTurret(         driverXbox.pov(90), true)
+                .withRunTurret(         driverXbox.pov(270), false)
+                .back().HoodBindings /// Hood Controller Bindings
+                .setHoodSpeed(0.5)
+                .withRunHood(           driverXbox.pov(0), true)
+                .withRunHood(           driverXbox.pov(180), false)
+                .back().FlyWheelBindings /// Turret Controller Bindings
+                .setFlyWheelSpeed(0.5)
+                //.withRunFlyWheel(         driverXbox.rightTrigger(), true)
+                //.withRunFlyWheel(         driverXbox.leftTrigger(), false)
+                .back().FlyWheelBindings
+                .back().MiscBindings /// Miscellaneous Controller Bindings
+                .resetField(            driverXbox.start())
+                .back(); // Return to our InputStream.
     }
 
     // Control binding type enum
@@ -58,6 +137,7 @@ public class InputBuilder
         SINGLE_XBOX("Single Xbox", false),
         DUAL_XBOX("Dual Xbox"),
         TESTING("Testing", true),
+        MANUAL_CONTROL("Manual Control", false),
 
         /**  Define Student Input Selections here  */
 
@@ -91,73 +171,37 @@ public class InputBuilder
         }
     }
 
-    public void testing() {
-        // Define constants first, like speeds.
-        var stream =
-                new InputStream().
-                        StartingMethod // Dumb constructor to load a different one.
-                        .defaultXboxDrive(TESTING.isMode, driverXbox)
-                        /// Initial Constants
-                        .normalRotation(.8)
-                        .normalTranslation(.8)
-                        .slowRotation(.4)
-                        .slowTranslation(.4)
-                        /// Button Bindings
-                        .SwerveBindings                 /// SwerveDrive Bindings
-                        .withSlowAtBump()
-                        .withSlowDrive(                 driverXbox.rightBumper())
-                        .withToggleCentricity(          driverXbox.back(), true)
-                        .withResetSimOdometry(          driverXbox.start())
-                        .updateSwerveStream()           // Update our stream after making default drive speed changes.
-                        .back().HoodBindings            /// Hood
-                        .withRunHood(                   driverXbox.pov(0), true)
-                        .withRunHood(                   driverXbox.pov(180), false)
-                        .back().TurretBindings          /// Turret
-                        .withAimAt(                     driverXbox.y())
-                        .withRunTurret(                 driverXbox.pov(270), true)
-                        .withRunTurret(                 driverXbox.pov(90), false)
-                        .back().IndexerBindings
-                        .withRunIndexer(                driverXbox.leftBumper(), true)
-                        .withRunIndexer(                driverXbox.rightBumper(), false)
-                        .back().IntakeBindings          /// Intake
-                        .withRunIntake(                 driverXbox.leftBumper(), true)
-                        .withRunIntake(                 driverXbox.rightBumper(), false)
-                        .back().FlyWheelBindings        /// Flywheel
-                        .withSimShoot(                  driverXbox.rightTrigger())
-                        .back().MiscBindings            /// Misc Bindings
-                        .withChangeInput(SINGLE_XBOX,   driverXbox.a())
-                        .resetField(                    driverXbox.start());
+    /**
+     *
+     *  A class that holds various triggers for control logic.
+     *
+     */
+    public static class CustomTriggers {
+        public static ZoneTrigger bumpZone = new ZoneTrigger("Bump",
+                Pair.of(new Translation2d(3.75, 1.5), new Translation2d(5.5, 3.5)),
+                Pair.of(new Translation2d(3.75, 4.5), new Translation2d(5.5, 6.5)),
+                Pair.of(new Translation2d(11, 4.5), new Translation2d(12.75, 6.5)),
+                Pair.of(new Translation2d(11, 1.5), new Translation2d(12.75, 3.5)));
+
+        public static ZoneTrigger scoringZone = new ZoneTrigger("Scoring",
+                Pair.of(new Translation2d(1.5, 0.5), new Translation2d(3.5, 7.5)));
     }
 
-    /// ***** Input Stream Below ***** ///
-
-    @Accessors(fluent = true, chain = true)
+    /**
+     *
+     *  Input Stream Class
+     *
+     *
+     */
+    @Accessors(chain = true)
     private class InputStream {
-        /// Stream Constants
+        /**
+         * Trigger used to determine when this InputStream is in control.
+         */
         @Setter private Trigger isMode;
-        /// Drive Constants
-        @Setter private double deadzone = 0.01;
-        @Setter private double slowTranslation = 0.3;
-        @Setter private double slowRotation = 0.2;
-        @Setter private double normalTranslation = .8;
-        @Setter private double normalRotation = .8;
-        @Setter private double boostTranslation = 1.0;
-        @Setter private double boostRotation = 0.75;
-        @Setter @Getter private Supplier<Command> driveCommand; // Default drive command.
-        /// Intake Constants
-        @Setter private double intakeSpeed = .6;
-        /// Indexer Constants
-        @Setter private double indexSpeed = 0.5;
-        /// FlyWheel Constants
-        @Setter private double flyWheelSpeed = 0.5;
-        /// Hood Constants
-        @Setter private double hoodSpeed = 0.5;
-        /// Turret Constants
-        @Setter private double turretSpeed = 0.5;
-        //@Setter private Command turretDefaultCommand = subsystems.turret.getTurret().runTo(TurretSubsystem.ControlConstants.ANGLE_TOLERANCE)
 
         /// Inner Config Namespaces
-        public final StartingMethods StartingMethod = new StartingMethods();
+        public final StartingMethods StartingMethods = new StartingMethods();
         public final SmartBindings SmartBindings = new SmartBindings();
         public final IntakeBindings IntakeBindings = new IntakeBindings();
         public final IndexerBindings IndexerBindings = new IndexerBindings();
@@ -189,13 +233,13 @@ public class InputBuilder
                     subsystems.swerve.getSwerveDrive(), x, y) // Make the input stream.
                     .cubeTranslationControllerAxis(true)
                     .cubeRotationControllerAxis(true)
-                    .scaleTranslation(normalTranslation)
-                    .scaleRotation(normalRotation)
-                    .deadband(deadzone)
+                    .scaleTranslation(SwerveBindings.normalTranslation)
+                    .scaleRotation(SwerveBindings.normalRotation)
+                    .deadband(SwerveBindings.deadzone)
                     .robotRelative(true)
                     .allianceRelativeControl(false);
-            this.driveCommand = () -> subsystems.swerve.driveFieldOriented(() -> swerveInputStream.get());
-            isMode.and(DriverStation::isEnabled).onTrue(Commands.runOnce(() -> subsystems.swerve.setDefaultCommand(driveCommand().get())));
+            this.SwerveBindings.driveCommand = () -> subsystems.swerve.driveFieldOriented(() -> swerveInputStream.get());
+            isMode.and(DriverStation::isEnabled).onTrue(Commands.runOnce(() -> subsystems.swerve.setDefaultCommand(SwerveBindings.driveCommand.get())));
         }
 
         /**
@@ -212,10 +256,10 @@ public class InputBuilder
             public InputStream defaultXboxDrive(Trigger isMode, CommandXboxController driverXbox) {
                 // Load default drive constructor.
                 var xboxDrive = new InputStream(isMode,
-                        () -> driverXbox.getLeftY(),
-                        () -> driverXbox.getLeftX());
+                        () -> driverXbox.getLeftY() * -1,
+                        () -> driverXbox.getLeftX() * -1);
                 // Set heading drive.
-                xboxDrive.swerveInputStream.withControllerRotationAxis(() -> driverXbox.getRightX());
+                xboxDrive.swerveInputStream.withControllerRotationAxis(() -> driverXbox.getRightX() * -1);
                 // Return our new stream.
                 return xboxDrive;
             }
@@ -249,6 +293,21 @@ public class InputBuilder
          */
         public class SmartBindings {
 
+            public SmartBindings withAimAt(Trigger aimAt) {
+                // If any required subsystems are missing, don't bind anything.
+                if (!TurretBindings.isPresent || !HoodBindings.isPresent || !FlyWheelBindings.isPresent) {return this;}
+                isMode.and(aimAt).whileTrue(new ShootOnTheMoveCommand(subsystems, () -> FieldConstants.Hub.topCenterPoint));
+                return this;
+            }
+
+            /**
+             * Leaves SmartBindings going back to the InputStream.
+             *
+             * @return this InputStream.
+             */
+            public InputStream back() {
+                return InputStream.this;
+            }
         }
 
 
@@ -258,7 +317,14 @@ public class InputBuilder
          * Intake button bindings.
          */
         private class IntakeBindings {
+            /**
+             * Checks if this subsystem is present, if not, don't bind anything.
+             */
             private final boolean isPresent;
+            /**
+             * The default duty cycle speed to run at.
+             */
+            @Setter private double intakeSpeed = 0.5;
 
             private IntakeBindings() {
                 this.isPresent = subsystems.intake != null;
@@ -290,7 +356,15 @@ public class InputBuilder
 
 
         private class IndexerBindings {
+            /**
+             * Checks if this subsystem is present, if not, don't bind anything.
+             */
             private final boolean isPresent;
+            /**
+             * The default duty cycle speed to run at.
+             */
+            @Setter private double indexSpeed = 0.5;
+
 
             private IndexerBindings() {
                 this.isPresent = subsystems.indexer != null;
@@ -305,7 +379,7 @@ public class InputBuilder
              */
             public IndexerBindings withRunIndexer(Trigger runIndexer, boolean isIn) {
                 if (!isPresent) {return this;}
-                isMode.and(runIndexer).whileTrue(subsystems.indexer.runIndexer(hoodSpeed, isIn))
+                isMode.and(runIndexer).whileTrue(subsystems.indexer.runIndexer(indexSpeed, isIn))
                         .onFalse(subsystems.indexer.stopIndexer());
                 return this;
             }
@@ -321,11 +395,23 @@ public class InputBuilder
         }
 
         private class KickerBindings {
+            /**
+             * Checks if this subsystem is present, if not, don't bind anything.
+             */
             private final boolean isPresent;
+
             private KickerBindings() {
                 this.isPresent = subsystems.kicker != null;
             }
 
+            /**
+             * Leaves KickerBindings going back to the InputStream.
+             *
+             * @return this InputStream.
+             */
+            public InputStream back() {
+                return InputStream.this;
+            }
         }
 
         /// ***** Scoring Mechanisms ***** ///
@@ -334,11 +420,33 @@ public class InputBuilder
          * FlyWheel Button Bindings
          */
         private class FlyWheelBindings {
+            /**
+             * Checks if this subsystem is present, if not, don't bind anything.
+             */
             private final boolean isPresent;
+            /**
+             * The default duty cycle speed to run at.
+             */
+            @Setter private double flyWheelSpeed = 0.5;
 
             private FlyWheelBindings() {
                 this.isPresent = subsystems.flywheel != null;
             }
+
+            /**
+             * Runs the flywheel at preset speed, stopping when finished.
+             *
+             * @param runFlyWheel then button to map.
+             * @param isOut whether to spin out.
+             * @return this, for chaining.
+             */
+            public FlyWheelBindings withRunFlyWheel(Trigger runFlyWheel, boolean isOut) {
+                if (!isPresent) {return this;}
+                isMode.and(runFlyWheel).whileTrue(subsystems.flywheel.runFlyWheel(flyWheelSpeed, isOut))
+                        .onFalse(subsystems.hood.stopHood());
+                return this;
+            }
+
             /**
              * Simulates the turret shooting fuel.
              *
@@ -365,14 +473,21 @@ public class InputBuilder
          * Hood Button Bindings
          */
         private class HoodBindings {
+            /**
+             * Checks if this subsystem is present, if not, don't bind anything.
+             */
             private final boolean isPresent;
+            /**
+             * The default duty cycle speed to run at.
+             */
+            @Setter private double hoodSpeed = 0.5;
 
             private HoodBindings() {
                 this.isPresent = subsystems.hood != null;
             }
 
             /**
-             * Runs the hood at preset speed, using PID to hold the angle when finished.
+             * Runs the hood at preset speed, stopping when finished.
              *
              * @param runHood then button to map.
              * @param isUp whether to go up.
@@ -399,19 +514,21 @@ public class InputBuilder
          * Turret Button Bindings
          */
         private class TurretBindings {
+            /**
+             * Checks if this subsystem is present, if not, don't bind anything.
+             */
             private final boolean isPresent;
+            /**
+             * The default duty cycle speed to run at.
+             */
+            @Setter private double turretSpeed = .6;
+
             private TurretBindings() {
                 this.isPresent = subsystems.turret != null;
             }
 
-            public TurretBindings withAimAt(Trigger aimAt) {
-                if (!isPresent) {return this;}
-                isMode.and(aimAt).whileTrue(new ShootOnTheMoveCommand(subsystems, () -> FieldConstants.Hub.topCenterPoint));
-                return this;
-            }
-
             /**
-             * Runs the turret at preset speed, using PID to hold the angle when finished.
+             * Runs the turret at preset speed, stopping when finished.
              *
              * @param runTurret then button to map.
              * @param isCCW whether to turn CCW, aka lefty loosey.
@@ -419,7 +536,7 @@ public class InputBuilder
              */
             public TurretBindings withRunTurret(Trigger runTurret, boolean isCCW) {
                 if (!isPresent) {return this;}
-                isMode.and(runTurret).whileTrue(subsystems.turret.runTurret(hoodSpeed, isCCW))
+                isMode.and(runTurret).whileTrue(subsystems.turret.runTurret(turretSpeed, isCCW))
                         .onFalse(subsystems.turret.stopTurret());
                 return this;
             }
@@ -438,6 +555,36 @@ public class InputBuilder
          * Swerve Drive Button Bindings
          */
         private class SwerveBindings {
+            /**
+             * Controller Dead Zone
+             */
+            @Setter private double deadzone = 0.01;
+            /**
+             * Move Speed Scalar when slowing drive speed.
+             */
+            @Setter private double slowTranslation = 0.3;
+            /**
+             * Rotation Speed Scalar when slowing drive speed.
+             */
+            @Setter private double slowRotation = 0.2;
+            /**
+             * Move Speed Scalar when driving normally.
+             */
+            @Setter private double normalTranslation = .8;
+            /**
+             * Rotation Speed Scalar when driving normally.
+             */
+            @Setter private double normalRotation = .8;
+            /**
+             * Move Speed Scalar when boosting drive speed.
+             */
+            @Setter private double boostTranslation = 1.0;
+            /**
+             * Rotation Speed Scalar when boosting drive speed.
+             */
+            @Setter private double boostRotation = 0.75;
+            @Setter @Getter private Supplier<Command> driveCommand; // Default drive command.
+
             private final boolean isPresent;
             private SwerveBindings() {
                 this.isPresent = subsystems.swerve != null;
@@ -493,18 +640,6 @@ public class InputBuilder
                 return this;
             }
 
-            public SwerveBindings withSlowAtBump() {
-                final Telemetry.ZoneTrigger bumpZones = new Telemetry.ZoneTrigger(
-                        Telemetry.Publishers.Robot.bumpZonePublisher,
-                        Pair.of(new Translation2d(3.75, 1.5), new Translation2d(5.5, 3.5)),
-                        Pair.of(new Translation2d(3.75, 4.5), new Translation2d(5.5, 6.5)),
-                        Pair.of(new Translation2d(11, 4.5), new Translation2d(12.75, 6.5)),
-                        Pair.of(new Translation2d(11, 1.5), new Translation2d(12.75, 3.5)));
-
-                withSlowDrive(isMode.and(bumpZones.getTrigger()));
-                return this;
-            }
-
             /**
              * Leaves SwerveBindings going back to the InputStream.
              *
@@ -527,7 +662,7 @@ public class InputBuilder
              * @return this, for chaining.
              */
             public MiscBindings resetField(Trigger resetField) {
-                isMode.and(() -> RobotBase.isSimulation()).and(resetField).onTrue(
+                isMode.and(RobotBase::isSimulation).and(resetField).onTrue(
                         Commands.runOnce(() -> SimulatedArena.getInstance().resetFieldForAuto()));
                 return this;
             }
@@ -554,15 +689,15 @@ public class InputBuilder
                 isMode.and(DriverStation::isEnabled).onTrue(Commands.runOnce(() -> subsystem.setDefaultCommand(defaultCommand.get())));
                 return this;
             }
-        }
 
-        /**
-         * Leaves MiscBindings going back to the InputStream.
-         *
-         * @return this InputStream.
-         */
-        public InputStream back() {
-            return InputStream.this;
+            /**
+             * Leaves MiscBindings going back to the InputStream.
+             *
+             * @return this InputStream.
+             */
+            public InputStream back() {
+                return InputStream.this;
+            }
         }
     }
 

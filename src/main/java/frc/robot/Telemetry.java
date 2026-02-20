@@ -1,6 +1,5 @@
 package frc.robot;
 
-import com.pathplanner.lib.util.FlippingUtil;
 import edu.wpi.first.math.Pair;
 import edu.wpi.first.math.geometry.*;
 import edu.wpi.first.networktables.*;
@@ -10,11 +9,11 @@ import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
-import frc.robot.subsystems.HoodSubsystem;
 import frc.robot.subsystems.SwerveSubsystem;
 import frc.robot.systems.ScoringSystem;
-import frc.robot.util.math.AllianceFlipUtil;
+import frc.robot.util.borrowed.math.AllianceFlipUtil;
 import lombok.Getter;
+import lombok.Setter;
 import swervelib.simulation.ironmaple.simulation.SimulatedArena;
 import swervelib.simulation.ironmaple.simulation.seasonspecific.rebuilt2026.Arena2026Rebuilt;
 import swervelib.telemetry.SwerveDriveTelemetry;
@@ -25,14 +24,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
 
-import static frc.robot.systems.ScoringSystem.HardwareConstants.SCORING_ZONE;
-
 public class Telemetry
 {
     /// Current Telemetry Setting
     public static TelemetryVerbosity telemetryVerbosity = TelemetryVerbosity.HIGH;
     /// Telemetry Defaults
-    public static final String telemetryPath = "SmartDashboard/Telemetry/"; // Make access public for other telemetry.
+    public static final String telemetryPath = "SmartDashboard/Telemetry"; // Make access public for other telemetry.
     public static final String smartDashboardPath = "Telemetry/";
     public static final NetworkTable telemetryTable = NetworkTableInstance.getDefault().getTable(telemetryPath);
 
@@ -45,18 +42,11 @@ public class Telemetry
             /// Telemetry Paths
             private static final NetworkTable robotTable = telemetryTable.getSubTable("RobotTelemetry");
             // Zones
-            private static final NetworkTable zoneTable = robotTable.getSubTable("Zones");
-            private static final NetworkTable zoneTriggerTable = zoneTable.getSubTable("Triggers");
+            public static final NetworkTable zoneTable = robotTable.getSubTable("Zones");
             private static final String smartDashboardRobotPath = smartDashboardPath + "RobotTelemetry/";
             // Input Selection
             public static final SmartDashboardPublisher inputPublisher = new SmartDashboardPublisher(smartDashboardRobotPath + "Input Selector");
             public static final StringPublisher inputOverride = robotTable.getSubTable("Input Selector").getStringTopic("selected").publish();
-            // Zone Trigger Bounding Boxes
-            public static final StructArrayPublisher<Translation2d> scoringZonePublisher = zoneTable.getStructArrayTopic("Scoring Zone", Translation2d.struct).publish();
-            public static final StructArrayPublisher<Translation2d> bumpZonePublisher = zoneTable.getStructArrayTopic("Bump Zone", Translation2d.struct).publish();
-            // Zone Trigger Publishers
-            public static final BooleanPublisher scoringZoneTriggerPublisher = zoneTriggerTable.getBooleanTopic("In Scoring Zone").publish();
-            public static final BooleanPublisher bumpZoneTriggerPublisher = zoneTriggerTable.getBooleanTopic("In Bump Zone").publish();
 
             /// Mech3d Publishers
             public static class Mech3D
@@ -77,39 +67,6 @@ public class Telemetry
         }
     }
 
-    /// Telemetry Verbosity Settings
-    public enum TelemetryVerbosity {
-        /// No telemetry data is sent to the dashboard.
-        NONE(
-                SmartMotorControllerConfig.TelemetryVerbosity.LOW,
-                SwerveDriveTelemetry.TelemetryVerbosity.NONE),
-        /// Only basic telemetry data is sent to the dashboard.
-        LOW(
-                SmartMotorControllerConfig.TelemetryVerbosity.LOW,
-                SwerveDriveTelemetry.TelemetryVerbosity.LOW),
-        /// All telemetry data is sent to the dashboard.
-        HIGH(
-                SmartMotorControllerConfig.TelemetryVerbosity.HIGH,
-                SwerveDriveTelemetry.TelemetryVerbosity.HIGH),;
-
-        // Telemetry verbosity for YAMS at this verbosity level.
-        public final SmartMotorControllerConfig.TelemetryVerbosity yamsVerbosity;
-        // Telemetry verbosity for YAGSL at this verbosity level.
-        public final SwerveDriveTelemetry.TelemetryVerbosity yagslVerbosity;
-
-        /**
-         * Robot Telemetry Options
-         *
-         * @param yamsVerbosity Verbosity to use for YAMS at this level.
-         */
-        TelemetryVerbosity(
-                SmartMotorControllerConfig.TelemetryVerbosity yamsVerbosity,
-                SwerveDriveTelemetry.TelemetryVerbosity yagslVerbosity) {
-            this.yamsVerbosity = yamsVerbosity;
-            this.yagslVerbosity = yagslVerbosity;
-        }
-    }
-
     /// Initializes any need data. Called statically.
     Telemetry() {
         // Add all the default pieces.
@@ -124,9 +81,6 @@ public class Telemetry
     {
         // Input
         Publishers.Robot.inputPublisher.update();
-        // Zone Triggers
-        Publishers.Robot.scoringZoneTriggerPublisher.accept(ScoringSystem.ControlConstants.SCORING_ZONE_TRIGGER.getAsBoolean());
-
 
         if (RobotBase.isSimulation()) {
             // MapleSim
@@ -135,110 +89,13 @@ public class Telemetry
     }
 
     /**
-     * Zone Helper class to handle flipping n such.
+     * Quick Helper since RobotModeTriggers only has a few triggers.
      */
-    public static class ZoneTrigger
-    {
-        private final List<Rectangle2D> rectangles;
-        private final List<Pair<Translation2d, Translation2d>> zones;
-        /**
-         * Gets the ZoneTrigger.
-         */
-        @Getter
-        private Trigger trigger;
+    public static class ModeTriggers {
+        private static final Trigger isEnabledTrigger = new Trigger(DriverStation::isEnabled);
 
-        /**
-         * Creates a new auto flipping zone trigger.
-         *
-         * @param zones all the zone bounding boxes.
-         *              The first is bottom left, Second is bottom right.
-         *              Each box is checked separately.
-         */
-        @SafeVarargs
-        public ZoneTrigger(Pair<Translation2d, Translation2d>... zones) {
-            // Setup our zones.
-            this.rectangles = new ArrayList<>();
-            this.zones = List.of(zones);
-            // Setup our trigger.
-            loadRectangles();
-            this.trigger = new Trigger(() -> containsPose(() -> SwerveSubsystem.SwerveState.CurrentPose));
-        }
-
-        /**
-         *
-         * @param zonePublisher
-         * @param zones
-         */
-        @SafeVarargs
-        public ZoneTrigger(StructArrayPublisher<Translation2d> zonePublisher, Pair<Translation2d, Translation2d>... zones) {
-            this(zones);
-            Telemetry.ModeTriggers.isEnabled().onTrue(Commands.runOnce(() -> publishZone(zonePublisher)));
-        }
-
-        /**
-         * Checks if the given pose is held within the zones.
-         *
-         * @param poseSupplier the position to check.
-         * @return whether the pose is in the defined zone.
-         */
-        public boolean containsPose(Supplier<Pose2d> poseSupplier) {
-            boolean[] contains = {false};
-            final Pose2d pose = poseSupplier.get();
-            rectangles.forEach(rect -> {
-                if (rect.contains(pose.getX(), pose.getY())) {
-                    contains[0] = true;
-                }});
-            return contains[0];
-        }
-
-        /**w
-         * Flips the pose list if robot is red alliance.
-         *
-         * @param zones the given zones.
-         * @return our zones at their expected side.
-         */
-        private List<Pair<Translation2d, Translation2d>> ifShouldFlip(List<Pair<Translation2d, Translation2d>> zones) {
-            System.out.println(DriverStation.getAlliance().toString());
-            // If should flip
-            if (AllianceFlipUtil.shouldFlip()) {
-                // Flip
-                final List<Pair<Translation2d, Translation2d>> updatedZones = new ArrayList<>();
-                zones.forEach(pair -> {
-                    updatedZones.add(Pair.of(AllianceFlipUtil.apply(pair.getSecond()), AllianceFlipUtil.apply(pair.getFirst()))); // Flip corners as well. First becomes second.
-                });
-                return updatedZones;
-            } else {
-                // Else, don't.
-                return zones;
-            }
-        }
-
-        private void loadRectangles() {
-            this.rectangles.clear(); // Clear any old alliance poses.
-            // Makes a Rect2d from the start and end poses.
-            final List<Pair<Translation2d, Translation2d>> list = ifShouldFlip(zones);
-            list.forEach(zone ->
-                    this.rectangles.add(new Rectangle2D.Double(
-                            zone.getFirst().getX(),
-                            zone.getFirst().getY(),
-                            zone.getSecond().getX() - zone.getFirst().getX(),
-                            zone.getSecond().getY() - zone.getFirst().getY())));
-        }
-
-        /**
-         * Publishes a Translation in every bounding box corner.
-         */
-        private void publishZone(StructArrayPublisher<Translation2d> zonePublisher) {
-            loadRectangles(); // Update our rectangles first.
-            final ArrayList<Translation2d> conePoses = new ArrayList<>();
-            rectangles.forEach(zone -> {
-                conePoses.add(new Translation2d(zone.getMinX(), zone.getMinY()));
-                conePoses.add(new Translation2d(zone.getMaxX(), zone.getMinY()));
-                conePoses.add(new Translation2d(zone.getMaxX(), zone.getMaxY()));
-                conePoses.add(new Translation2d(zone.getMinX(), zone.getMaxY()));
-                conePoses.add(new Translation2d(zone.getMinX(), zone.getMinY())); // Close the Box Line
-            });
-            zonePublisher.set(conePoses.toArray(Translation2d[]::new));
+        public static Trigger isEnabled() {
+            return isEnabledTrigger;
         }
     }
 
@@ -247,6 +104,9 @@ public class Telemetry
      */
     public static class SmartDashboardPublisher
     {
+        /**
+         * The value published to the NT4.
+         */
         @Getter
         private Sendable value;
         private Supplier<Sendable> supplier;
@@ -260,7 +120,6 @@ public class Telemetry
         public SmartDashboardPublisher(String path)
         {
             this.path = path;
-
         }
 
         /**
@@ -295,14 +154,36 @@ public class Telemetry
         }
     }
 
-    /**
-     * Quick Helper since RobotModeTriggers only has a few triggers.
-     */
-    public static class ModeTriggers {
-        private static final Trigger isEnabledTrigger = new Trigger(DriverStation::isEnabled);
+    /// Telemetry Verbosity Settings
+    public enum TelemetryVerbosity {
+        /// No telemetry data is sent to the dashboard.
+        NONE(
+                SmartMotorControllerConfig.TelemetryVerbosity.LOW,
+                SwerveDriveTelemetry.TelemetryVerbosity.NONE),
+        /// Only basic telemetry data is sent to the dashboard.
+        LOW(
+                SmartMotorControllerConfig.TelemetryVerbosity.LOW,
+                SwerveDriveTelemetry.TelemetryVerbosity.LOW),
+        /// All telemetry data is sent to the dashboard.
+        HIGH(
+                SmartMotorControllerConfig.TelemetryVerbosity.HIGH,
+                SwerveDriveTelemetry.TelemetryVerbosity.HIGH),;
 
-        public static Trigger isEnabled() {
-            return isEnabledTrigger;
+        // Telemetry verbosity for YAMS at this verbosity level.
+        public final SmartMotorControllerConfig.TelemetryVerbosity yamsVerbosity;
+        // Telemetry verbosity for YAGSL at this verbosity level.
+        public final SwerveDriveTelemetry.TelemetryVerbosity yagslVerbosity;
+
+        /**
+         * Robot Telemetry Options
+         *
+         * @param yamsVerbosity Verbosity to use for YAMS at this level.
+         */
+        TelemetryVerbosity(
+                SmartMotorControllerConfig.TelemetryVerbosity yamsVerbosity,
+                SwerveDriveTelemetry.TelemetryVerbosity yagslVerbosity) {
+            this.yamsVerbosity = yamsVerbosity;
+            this.yagslVerbosity = yagslVerbosity;
         }
     }
 }

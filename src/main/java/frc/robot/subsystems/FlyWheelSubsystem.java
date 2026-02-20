@@ -117,12 +117,12 @@ public class FlyWheelSubsystem extends SubsystemBase
             if (RobotBase.isSimulation()) {
                 SimulatedArena.getInstance().addGamePieceProjectile(new RebuiltFuelOnFly(
                     SwerveSubsystem.SwerveState.CurrentPose.getTranslation(),
-                    new Translation2d(Inches.of(5.5), Inches.of(0)),
+                    new Translation2d(Inches.of(5), Inches.of(0)),
                     SwerveSubsystem.SwerveState.CurrentSpeeds,
                     TurretSubsystem.TurretState.getCurrentHeading().rotateBy(Rotation2d.k180deg),
-                    Inches.of(22),
+                    Inches.of(23),
                     MetersPerSecond.of(8),
-                    HoodSubsystem.HoodState.CurrentAngle.plus(Degrees.of(-90).unaryMinus())));
+                    HoodSubsystem.HoodState.CurrentAngle.plus(Degrees.of(90))));
             }});
     }
 

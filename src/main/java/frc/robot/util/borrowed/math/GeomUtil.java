@@ -1,4 +1,4 @@
-package frc.robot.util.math;
+package frc.robot.util.borrowed.math;
 
 // Copyright (c) 2025-2026 Littleton Robotics
 // http://github.com/Mechanical-Advantage
