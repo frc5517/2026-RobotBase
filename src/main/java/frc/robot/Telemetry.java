@@ -1,20 +1,27 @@
 package frc.robot;
 
-import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Pose3d;
-import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.Pair;
+import edu.wpi.first.math.geometry.*;
 import edu.wpi.first.networktables.*;
 import edu.wpi.first.util.sendable.Sendable;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import frc.robot.subsystems.HoodSubsystem;
+import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.button.Trigger;
+import frc.robot.subsystems.SwerveSubsystem;
 import frc.robot.systems.ScoringSystem;
+import frc.robot.util.borrowed.math.AllianceFlipUtil;
 import lombok.Getter;
+import lombok.Setter;
 import swervelib.simulation.ironmaple.simulation.SimulatedArena;
+import swervelib.simulation.ironmaple.simulation.seasonspecific.rebuilt2026.Arena2026Rebuilt;
 import swervelib.telemetry.SwerveDriveTelemetry;
 import yams.motorcontrollers.SmartMotorControllerConfig;
 
 import java.awt.geom.Rectangle2D;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Supplier;
 
 public class Telemetry
@@ -22,7 +29,7 @@ public class Telemetry
     /// Current Telemetry Setting
     public static TelemetryVerbosity telemetryVerbosity = TelemetryVerbosity.HIGH;
     /// Telemetry Defaults
-    public static final String telemetryPath = "SmartDashboard/Telemetry/"; // Make access public for other telemetry.
+    public static final String telemetryPath = "SmartDashboard/Telemetry"; // Make access public for other telemetry.
     public static final String smartDashboardPath = "Telemetry/";
     public static final NetworkTable telemetryTable = NetworkTableInstance.getDefault().getTable(telemetryPath);
 
@@ -35,16 +42,11 @@ public class Telemetry
             /// Telemetry Paths
             private static final NetworkTable robotTable = telemetryTable.getSubTable("RobotTelemetry");
             // Zones
-            private static final NetworkTable zoneTable = robotTable.getSubTable("Zones");
-            private static final NetworkTable zoneTriggerTable = zoneTable.getSubTable("Triggers");
+            public static final NetworkTable zoneTable = robotTable.getSubTable("Zones");
             private static final String smartDashboardRobotPath = smartDashboardPath + "RobotTelemetry/";
             // Input Selection
             public static final SmartDashboardPublisher inputPublisher = new SmartDashboardPublisher(smartDashboardRobotPath + "Input Selector");
             public static final StringPublisher inputOverride = robotTable.getSubTable("Input Selector").getStringTopic("selected").publish();
-            // Zone Trigger Bounding Boxes
-            public static final StructArrayPublisher<Pose2d> scoringZonePublisher = zoneTable.getStructArrayTopic("Scoring Zone", Pose2d.struct).publish();
-            // Zone Trigger Publishers
-            public static final BooleanPublisher scoringZoneTriggerPublisher = zoneTriggerTable.getBooleanTopic("In Scoring Zone").publish();
 
             /// Mech3d Publishers
             public static class Mech3D
@@ -62,6 +64,93 @@ public class Telemetry
             private static final NetworkTable mapleTable = NetworkTableInstance.getDefault().getTable("SmartDashboard/MapleSim");
             // Generic Game Piece Publisher.
             public static final StructArrayPublisher<Pose3d> elementPublisher = mapleTable.getStructArrayTopic("Fuel", Pose3d.struct).publish();
+        }
+    }
+
+    /// Initializes any need data. Called statically.
+    Telemetry() {
+        // Add all the default pieces.
+        if (RobotBase.isSimulation()) {
+            ((Arena2026Rebuilt) SimulatedArena.getInstance()).setEfficiencyMode(true); // Spawn more or less.
+            SimulatedArena.getInstance().resetFieldForAuto(); // Reset the field.
+        }
+    }
+
+    /// Updates all of our custom telemetry
+    public static void updateTelemetry()
+    {
+        // Input
+        Publishers.Robot.inputPublisher.update();
+
+        if (RobotBase.isSimulation()) {
+            // MapleSim
+        Publishers.MapleSim.elementPublisher.accept(SimulatedArena.getInstance().getGamePiecesArrayByType("Fuel"));
+        }
+    }
+
+    /**
+     * Quick Helper since RobotModeTriggers only has a few triggers.
+     */
+    public static class ModeTriggers {
+        private static final Trigger isEnabledTrigger = new Trigger(DriverStation::isEnabled);
+
+        public static Trigger isEnabled() {
+            return isEnabledTrigger;
+        }
+    }
+
+    /**
+     * SmartDashboard wrapper to match NT4 Publishers.
+     */
+    public static class SmartDashboardPublisher
+    {
+        /**
+         * The value published to the NT4.
+         */
+        @Getter
+        private Sendable value;
+        private Supplier<Sendable> supplier;
+        private final String path;
+
+        /**
+         * Small SmartDashboard Publisher Wrapper.
+         *
+         * @param path the telemetry path. Use smartDashboardPath + name.
+         */
+        public SmartDashboardPublisher(String path)
+        {
+            this.path = path;
+        }
+
+        /**
+         * Puts the value onto the dashboard.
+         *
+         * @param value to publish.
+         */
+        public void setValue(Sendable value)
+        {
+            this.value = value;
+            SmartDashboard.putData(path, value);
+        }
+
+        /**
+         * Accepts sendable to be updated later.
+         * Also sets when ran.
+         *
+         * @param supplier the value supplier.
+         */
+        public void accept(Supplier<Sendable> supplier)
+        {
+            this.supplier = supplier;
+            setValue(supplier.get());
+        }
+
+        /**
+         * Updates the published value from the current supplier.
+         */
+        public void update()
+        {
+            setValue(supplier.get());
         }
     }
 
@@ -95,75 +184,6 @@ public class Telemetry
                 SwerveDriveTelemetry.TelemetryVerbosity yagslVerbosity) {
             this.yamsVerbosity = yamsVerbosity;
             this.yagslVerbosity = yagslVerbosity;
-        }
-    }
-
-    /// Initializes any need data. Called statically.
-    Telemetry() {
-        // Add all the default pieces.
-        //SimulatedArena.getInstance().resetFieldForAuto();
-    }
-
-    /// Updates all of our custom telemetry
-    public static void updateTelemetry()
-    {
-        // Input
-        Publishers.Robot.inputPublisher.update();
-        // Zone Triggers
-        Publishers.Robot.scoringZoneTriggerPublisher.accept(ScoringSystem.ControlConstants.SCORING_ZONE_TRIGGER.getAsBoolean());
-
-
-        if (RobotBase.isSimulation()) {
-            // MapleSim
-        Publishers.MapleSim.elementPublisher.accept(SimulatedArena.getInstance().getGamePiecesArrayByType("Fuel"));
-        }
-    }
-
-    /**
-     * SmartDashboard wrapper to match NT4 Publishers.
-     */
-    public static class SmartDashboardPublisher
-    {
-        @Getter
-        private Sendable value;
-        private Supplier<Sendable> supplier;
-        private final String path;
-
-        /**
-         * Small SmartDashboard Publisher Wrapper.
-         *
-         * @param path the telemetry path. Use smartDashboardPath + name.
-         */
-        public SmartDashboardPublisher(String path)
-        {
-            this.path = path;
-
-        }
-
-        public void setValue(Sendable value)
-        {
-            this.value = value;
-            SmartDashboard.putData(path, value);
-        }
-
-        /**
-         * Accepts sendable to be updated later.
-         * Also sets when ran.
-         *
-         * @param supplier the value supplier.
-         */
-        public void accept(Supplier<Sendable> supplier)
-        {
-            this.supplier = supplier;
-            setValue(supplier.get());
-        }
-
-        /**
-         * Updates the published value from the current supplier.
-         */
-        public void update()
-        {
-            setValue(supplier.get());
         }
     }
 }

@@ -37,7 +37,7 @@ import java.util.function.Supplier;
 
 import frc.robot.Robot;
 import frc.robot.Telemetry;
-import frc.robot.util.math.AllianceFlipUtil;
+import frc.robot.util.borrowed.math.AllianceFlipUtil;
 import lombok.Getter;
 import lombok.Setter;
 import org.json.simple.parser.ParseException;
@@ -64,12 +64,11 @@ public class SwerveSubsystem extends SubsystemBase
     public static class ControlConstants {
         /// Enable vision odometry updates while driving.
         public static final boolean RUN_VISION = Robot.isSimulation(); // Run only in sim until real vision is ready.
-        // Simulation Starting Pose
-        public static final Pose2d INITIAL_SIM_POSE = AllianceFlipUtil.ifShouldFlip(
-                new Pose2d(new Translation2d(
-                        Meter.of(2),
-                        Meter.of(6)),
-                        Rotation2d.fromDegrees(0)));
+        // Simulation Starting Pose, flipping is handled by YAGSL.
+        public static final Pose2d INITIAL_SIM_POSE = new Pose2d(new Translation2d(
+                Meter.of(2),
+                Meter.of(6)),
+                Rotation2d.fromDegrees(0));
     }
   /// The Swerve drive object.
   @Getter
@@ -115,6 +114,8 @@ public class SwerveSubsystem extends SubsystemBase
     }
     setupPathPlanner();
 
+    Telemetry.ModeTriggers.isEnabled().onTrue(Commands.runOnce(() -> getSwerveDrive().resetOdometry(AllianceFlipUtil.ifShouldFlip(INITIAL_SIM_POSE))));
+
     /// Set our SwerveState Suppliers
     SwerveState.setSwerveDrive(this::getSwerveDrive);
   }
@@ -137,7 +138,6 @@ public class SwerveSubsystem extends SubsystemBase
       vision.updatePoseEstimation(swerveDrive);
     }
     SwerveState.setCurrentPose(swerveDrive.getPose());
-    SwerveState.setCurrentSpeeds(swerveDrive.getRobotVelocity());
   }
 
   @Override

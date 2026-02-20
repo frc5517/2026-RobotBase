@@ -2,6 +2,7 @@ package frc.robot.subsystems;
 
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
+import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.units.measure.*;
@@ -35,16 +36,18 @@ public class IntakeSubsystem extends SubsystemBase {
     /// Hardware Constants for the Intake Mechanism.
     public static class HardwareConstants {
         /// Motor Constants
-        public static final int                                 MOTOR_ID            = 27; // Spark Max CAN ID
+        public static final int                                 MOTOR_ID            = 11; // Spark Max CAN ID
         public static final boolean                             MOTOR_INVERTED      = false; // Inverts control direction.
         public static final MechanismGearing                    GEAR_RATIO          = new MechanismGearing(GearBox.fromReductionStages(3, 4)); // Intake Gear Ratio
         /// Motor Tuning Values
-        public static final ExponentialProfilePIDController     PID_CONTROLLER      = new ExponentialProfilePIDController( // Exponential Motion Profiling
-                1, 0, 0, // PID - Proportional, Integral, Derivative.
-                ExponentialProfilePIDController.createConstraints( /// Exponential Motion Profiling Constraints.
-                        Volts.of(10), // Max Control Voltage
-                        DegreesPerSecond.of(180), // Max Angular Velocity
-                        DegreesPerSecondPerSecond.of(360))); // Max Angular Acceleration
+        public static final PIDController PID_CONTROLLER              = new PIDController( // Exponential Motion Profiling
+                20, 0, 0.01); // PID - Proportional, Integral, Derivative.
+        /// Exponential Motion Profiling Constraints.
+        public static final class Profiling {
+            public static final Voltage                         MAX_CONTROL_VOLTAGE         = Volts.of(12); // Max Control Voltage
+            public static final AngularVelocity                 MAX_ANGULAR_VELOCITY        = DegreesPerSecond.of(180); // Max Angular Velocity
+            public static final AngularAcceleration             MAX_ANGULAR_ACCELERATION    = DegreesPerSecondPerSecond.of(360); // Max Angular Acceleration
+        }
         public static final Time                                RAMP_RATE           = Seconds.of(0.25); // Time it takes to reach max speed from 0.
         public static final SimpleMotorFeedforward              FEED_FORWARD        = new SimpleMotorFeedforward(0, 0, 0); // Feed Forwards, likely to be left empty.
         public static final Current                             CURRENT_LIMIT       = Amp.of(20); // Limits the current, this is a simple intake. We want the limit low so we don't break things in the case of a jam.
@@ -61,6 +64,7 @@ public class IntakeSubsystem extends SubsystemBase {
     }
     private final SparkMax                                      intakeMotor    = new SparkMax(MOTOR_ID, MotorType.kBrushless); /// The Normal Rev Vendor SparkMax Object.
     private final SmartMotorControllerConfig                    motorConfig     = new SmartMotorControllerConfig(this) /// The Smart Motor Controller Configuration.
+                    .withExponentialProfile(Profiling.MAX_CONTROL_VOLTAGE, Profiling.MAX_ANGULAR_VELOCITY, Profiling.MAX_ANGULAR_ACCELERATION)
                     .withClosedLoopController(PID_CONTROLLER)
                     .withGearing(GEAR_RATIO)
                     .withIdleMode(MotorMode.BRAKE)
@@ -69,7 +73,7 @@ public class IntakeSubsystem extends SubsystemBase {
                     .withMotorInverted(MOTOR_INVERTED)
                     .withClosedLoopRampRate(RAMP_RATE)
                     .withOpenLoopRampRate(RAMP_RATE)
-                    .withFeedforward(FEED_FORWARD)
+                    //.withFeedforward(FEED_FORWARD)
                     .withSimFeedforward(FEED_FORWARD)
                     .withControlMode(ControlMode.CLOSED_LOOP);
     private final SmartMotorController                          motor           = new SparkWrapper(intakeMotor, DCMotor.getNEO(1), motorConfig); /// The new Smart Motor Controller
@@ -99,9 +103,10 @@ public class IntakeSubsystem extends SubsystemBase {
 
     /**
      *
-     * @param swerve only used in constructor once for driveSim.
      */
-    public IntakeSubsystem(SwerveSubsystem swerve) {
+    public IntakeSubsystem() {
+        intake.run(DegreesPerSecond.of(0));
+
         // If in sim
         if (RobotBase.isSimulation()) {
             // Create our intake at runtime.
@@ -119,6 +124,26 @@ public class IntakeSubsystem extends SubsystemBase {
     }
 
     /**
+     * Runs the intake at the given speed.
+     *
+     * @param intakeSpeed the DutyCycle speed to run at.
+     * @param isIn whether to spin in or out.
+     * @return a command.
+     */
+    public Command runIntake(double intakeSpeed, boolean isIn) {
+        return intake.set(isIn ? intakeSpeed : -intakeSpeed);
+    }
+
+    /**
+     * Stops all power to the intake.
+     *
+     * @return a command that stops the intake.
+     */
+    public Command stopIntake() {
+        return intake.set(0.0);
+    }
+
+    /**
      * Resets the setters to default values.
      */
     public void resetSetters() {
@@ -130,13 +155,16 @@ public class IntakeSubsystem extends SubsystemBase {
     }
 
     /**
-     * Runs the intake at the {@link frc.robot.subsystems.IntakeSubsystem.IntakeState} TargetVelocity.
-     * 
-     * @return a command to run the intake at commanded velocity.
+     * Runs the intake at the given speed.
+     * If in sim runs SimIntake
+     *
+     * @param intakeSpeed the DutyCycle speed to run at.
+     * @param isIn whether to spin in or out.
+     * @return a command.
      */
-    public Command runIntake() {
+    public Command intake(double intakeSpeed, boolean isIn) {
         return Robot.isReal() // If real run the intake
-                ? intake.setSpeed(TargetVelocity).finallyDo(() -> intake.set(0))
+                ? runIntake(intakeSpeed, isIn)
                 : runSimIntake(); // If in sim run the sim intake.
     }
 

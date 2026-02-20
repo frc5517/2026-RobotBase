@@ -12,14 +12,14 @@ import static yams.motorcontrollers.SmartMotorControllerConfig.MotorMode.BRAKE;
 
 import com.revrobotics.spark.SparkLowLevel;
 import com.revrobotics.spark.SparkMax;
+import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
-import edu.wpi.first.math.geometry.Pose3d;
-import edu.wpi.first.math.geometry.Rotation3d;
-import edu.wpi.first.math.geometry.Translation3d;
+import edu.wpi.first.math.geometry.*;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.units.measure.*;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -37,6 +37,8 @@ import yams.motorcontrollers.SmartMotorControllerConfig;
 import yams.motorcontrollers.SmartMotorControllerConfig.ControlMode;
 import yams.motorcontrollers.local.SparkWrapper;
 
+import java.util.function.Supplier;
+
 public class TurretSubsystem extends SubsystemBase
 {
     /// Hardware Constants for the Turret Mechanism.
@@ -46,11 +48,14 @@ public class TurretSubsystem extends SubsystemBase
         public static final boolean                 MOTOR_INVERTED      = false; // Inverts control direction.
         public static final MechanismGearing        GEAR_RATIO          = new MechanismGearing(GearBox.fromReductionStages(3, 4, 5)); // FlyWheel Gear Ratio
         /// Motor Tuning Values
-        public static final ProfiledPIDController   PID_CONTROLLER      = new ProfiledPIDController( // Basic Trapezoidal Motion Profiling
-                                                                          1, 0, 0, // PID - Proportional, Integral, Derivative.
-                                                                          new TrapezoidProfile.Constraints( /// Trapezoid Motion Profiling Constraints.
-                                                                          DegreesPerSecond.of(5000).in(RPM), // Max Angular Velocity
-                                                                          DegreesPerSecondPerSecond.of(2500).in(RotationsPerSecondPerSecond))); // Max Angular Acceleration
+        public static final PIDController PID_CONTROLLER              = new PIDController( // Exponential Motion Profiling
+                20, 0, 0.01); // PID - Proportional, Integral, Derivative.
+        /// Exponential Motion Profiling Constraints.
+        public static final class Profiling {
+            public static final Voltage                         MAX_CONTROL_VOLTAGE         = Volts.of(12); // Max Control Voltage
+            public static final AngularVelocity                 MAX_ANGULAR_VELOCITY        = DegreesPerSecond.of(180); // Max Angular Velocity
+            public static final AngularAcceleration             MAX_ANGULAR_ACCELERATION    = DegreesPerSecondPerSecond.of(360); // Max Angular Acceleration
+        }
         public static final Time                    RAMP_RATE           = Seconds.of(0.25); // Time it takes to reach max speed from 0.
         public static final SimpleMotorFeedforward  FEED_FORWARD        = new SimpleMotorFeedforward(0, 0, 0); // Feed Forwards.
         public static final Current                 CURRENT_LIMIT       = Amp.of(40); // Current limit, Higher for faster control.
@@ -78,6 +83,7 @@ public class TurretSubsystem extends SubsystemBase
     private final SparkMax                          indexerMotor        = new SparkMax(MOTOR_ID, SparkLowLevel.MotorType.kBrushless);
     /// The Smart Motor Controller Configuration.
     private final SmartMotorControllerConfig        motorConfig         = new SmartMotorControllerConfig(this)
+            .withExponentialProfile(Profiling.MAX_CONTROL_VOLTAGE, Profiling.MAX_ANGULAR_VELOCITY, Profiling.MAX_ANGULAR_ACCELERATION)
             .withClosedLoopController(PID_CONTROLLER)
             .withGearing(GEAR_RATIO)
             .withIdleMode(BRAKE)
@@ -110,8 +116,19 @@ public class TurretSubsystem extends SubsystemBase
     private final Pivot                             turret              = new Pivot(config);
     public static class TurretState {
         @Getter private static Angle                CurrentAngle        = Degrees.of(0); // Set in periodic
-        @Setter @Getter private static Angle        DesiredAngle        = Degrees.of(0); // Set externally.
-        @Getter public static Trigger               AtDesiredAngle      = new Trigger(() -> false); // Set at construction.
+        @Getter private static Rotation2d           CurrentHeading      = Rotation2d.kZero; // Set in periodic
+    }
+
+    public TurretSubsystem()
+    {
+    }
+
+    public Supplier<Angle> angleToPose(Pose2d swervePose, Translation2d position) {
+        // Find the error between the turret and goal.
+        DriverStation.reportWarning(swervePose.toString(), false);
+        Translation2d error = position.minus(swervePose.getTranslation());
+        Rotation2d robotToTarget = new Rotation2d(error.getX(), error.getY()); // Makes a new angle based on the error between the 2 poses.
+        return () -> robotToTarget.minus(swervePose.getRotation()).getMeasure();
     }
 
     /**
@@ -147,11 +164,6 @@ public class TurretSubsystem extends SubsystemBase
                         turret.getAngle().in(Radians))); // Turret Rotation is Yaw, looking left and right.
     }
 
-    public TurretSubsystem()
-    {
-        TurretState.AtDesiredAngle = turret.isNear(TurretState.DesiredAngle, ANGLE_TOLERANCE); // Set our atDesiredAngle trigger.
-    }
-
     /**
      * Ran continuously while the robot is on.
      */
@@ -159,6 +171,7 @@ public class TurretSubsystem extends SubsystemBase
     public void periodic() {
         turret.updateTelemetry(); // Updates the turret mechanism's telemetry data to the network tables.
         TurretState.CurrentAngle = turret.getAngle(); // Update our current angle state.
+        TurretState.CurrentHeading = SwerveSubsystem.SwerveState.CurrentPose.getRotation().plus(new Rotation2d(TurretState.CurrentAngle));
     }
 
     /**

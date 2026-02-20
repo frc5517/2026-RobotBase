@@ -12,16 +12,18 @@ import frc.robot.systems.ScoringSystem;
 import swervelib.simulation.ironmaple.simulation.SimulatedArena;
 import swervelib.simulation.ironmaple.simulation.seasonspecific.rebuilt2026.Arena2026Rebuilt;
 
+import java.io.InputStream;
+
 public class RobotContainer {
     /// Subsystems
     private final SwerveSubsystem swerve = new SwerveSubsystem();
     private final FlyWheelSubsystem  flyWheel = new FlyWheelSubsystem();
     private final IndexerSubsystem indexer = new IndexerSubsystem();
-    private final IntakeSubsystem intake = new IntakeSubsystem(swerve);
+    private final IntakeSubsystem intake = new IntakeSubsystem();
     private final TurretSubsystem turret = new TurretSubsystem();
     private final HoodSubsystem hood = new HoodSubsystem();
     /// Bite-sized Subsystems record class for easy packaging of all the subsystems.
-    private final InputBuilder.Subsystems subsystems = new InputBuilder.Subsystems(flyWheel, hood, null, intake, swerve, turret);
+    private final InputBuilder.Subsystems subsystems = new InputBuilder.Subsystems(flyWheel, hood, indexer, intake, null, swerve, turret);
     /// Our Systems
     private final ScoringSystem scoring = new ScoringSystem();
     /// Input Builder
@@ -33,10 +35,7 @@ public class RobotContainer {
      * This allows creation, manipulation, selection, and layered complexity of bindings with ease.
      */
     public RobotContainer() {
-        if (RobotBase.isSimulation()) {
-            SimulatedArena.getInstance().resetFieldForAuto();
-            ((Arena2026Rebuilt) SimulatedArena.getInstance()).setEfficiencyMode(true);
-        }
+        inputBuilder.configureBindings();
     }
 
     public void periodic()
