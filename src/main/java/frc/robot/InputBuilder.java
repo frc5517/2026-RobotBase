@@ -2,6 +2,8 @@ package frc.robot;
 
 import edu.wpi.first.math.Pair;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.units.measure.Angle;
+import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
@@ -22,8 +24,9 @@ import swervelib.simulation.ironmaple.simulation.SimulatedArena;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
+import static edu.wpi.first.units.Units.*;
 import static frc.robot.InputBuilder.InputSelections.*;
-import static frc.robot.Telemetry.Publishers.Robot.inputOverride;
+import static frc.robot.Telemetry.Publishers.Robot.*;
 
 
 public class InputBuilder
@@ -52,45 +55,89 @@ public class InputBuilder
      * Method used to construct input streams
      */
     public void configureBindings() {
-        /// Testing control, gets randomly changed all the time.
+        /// Testing control gets randomly changed all the time.
         final InputStream testing = new InputStream().
-                StartingMethods // Dumb constructor to load a different one.
-                        .defaultXboxDrive(TESTING.isMode, driverXbox)
-                        .SmartBindings
-                        .withAimAt(                     driverXbox.y())
-                        .back().SwerveBindings                 /// SwerveDrive Bindings
-                        .setNormalRotation(.8)
-                        .setNormalTranslation(.8)
-                        .setSlowRotation(.4)
-                        .setSlowTranslation(.4)
-                        .withSlowDrive(                 CustomTriggers.bumpZone.getTrigger()) // Slows the drive when within the bump zone.
-                        .withSlowDrive(                 driverXbox.rightBumper())
-                        .withToggleCentricity(          driverXbox.back(), true)
-                        .withResetSimOdometry(          driverXbox.start())
-                        .updateSwerveStream()           // Update our stream after making default drive speed changes.
-                        .back().HoodBindings            /// Hood
-                        .withRunHood(                   driverXbox.pov(0), true)
-                        .withRunHood(                   driverXbox.pov(180), false)
-                        .back().TurretBindings          /// Turret
-                        .withRunTurret(                 driverXbox.pov(270), true)
-                        .withRunTurret(                 driverXbox.pov(90), false)
-                        .back().IndexerBindings
-                        .withRunIndexer(                driverXbox.leftBumper(), true)
-                        .withRunIndexer(                driverXbox.rightBumper(), false)
-                        .back().IntakeBindings          /// Intake
-                        .withRunIntake(                 driverXbox.leftBumper(), true)
-                        .withRunIntake(                 driverXbox.rightBumper(), false)
-                        .back().FlyWheelBindings        /// Flywheel
-                        .withSimShoot(                  driverXbox.rightTrigger())
-                        .back().MiscBindings            /// Misc Bindings
-                        .withChangeInput(MANUAL_CONTROL,   driverXbox.a().and(driverXbox.back()).debounce(1)) // Change to manual control when a() and back() are held for 1 second.
-                        .resetField(                    driverXbox.start())
+                StartingMethods
+                .defaultXboxDrive(TESTING.isMode,   driverXbox)
+                .SmartBindings
+                .withAimAt(                         driverXbox.y())
+                .back().SwerveBindings              /// SwerveDrive Bindings
+                .setNormalRotation(.8)
+                .setNormalTranslation(.8)
+                .setSlowRotation(.4)
+                .setSlowTranslation(.4)
+                .withSlowDrive(                     CustomTriggers.bumpZone.getTrigger()) // Slows the drive when within the bump zone.
+                .withSlowDrive(                     driverXbox.rightBumper())
+                .withToggleCentricity(              driverXbox.back(), true)
+                .withResetSimOdometry(              driverXbox.start())
+                .updateSwerveStream()               // Update our stream after making default drive speed changes.
+                .back().HoodBindings                /// Hood
+                .withSetAngle(                      driverXbox.x(), Degrees.of(90))
+                .withRunHood(                       driverXbox.pov(0), true)
+                .withRunHood(                       driverXbox.pov(180), false)
+                .back().TurretBindings              /// Turret
+                .withRunTurret(                     driverXbox.pov(270), true)
+                .withRunTurret(                     driverXbox.pov(90), false)
+                .back().IndexerBindings
+                .withRunIndexer(                    driverXbox.leftBumper(), true)
+                .withRunIndexer(                    driverXbox.rightBumper(), false)
+                .back().IntakeBindings              /// Intake
+                .withRunIntake(                     driverXbox.leftBumper(), true)
+                .withRunIntake(                     driverXbox.rightBumper(), false)
+                .back().FlyWheelBindings            /// Flywheel
+                .withSimShoot(                      driverXbox.rightTrigger())
+                .back().MiscBindings                /// Misc Bindings
+                .withChangeInput(MANUAL_CONTROL,   driverXbox.a().and(driverXbox.back()).debounce(1)) // Change to manual control when a() and back() are held for 1 second.
+                .resetField(                        driverXbox.start())
                 .back();
         /// Single xbox controller with manual duty cycle control of all the subsystems.
         final InputStream singleManual = new InputStream()
                 // A starting method should be set first.
                 .StartingMethods
                 .defaultXboxDrive(MANUAL_CONTROL.isMode, driverXbox)
+                // Now we can set .with our controller bindings.
+                .SwerveBindings /// Swerve Controller Bindings.
+                // When in the subsystem, set our desired constants with .set methods.
+                .setNormalRotation(.8)
+                .setNormalTranslation(.8)
+                .setSlowRotation(.4)
+                .setSlowTranslation(.4)
+                .setBoostRotation(1)
+                .setBoostTranslation(1)
+                // After any changes are made, we can then use .with methods to bind actions.
+                .withSlowDrive(         driverXbox.b())
+                .withToggleCentricity(  driverXbox.back(), true)
+                .withResetSimOdometry(  driverXbox.start())
+                .back().IntakeBindings /// Intake Controller Bindings.
+                .setIntakeSpeed(0.5)
+                .withRunIntake(         driverXbox.leftBumper(), true)
+                .withRunIntake(         driverXbox.rightBumper(), false)
+                .back().IndexerBindings /// Indexer Controller Bindings
+                .setIndexSpeed(0.5)
+                .withRunIndexer(        driverXbox.x(), true)
+                .withRunIndexer(        driverXbox.y(), false)
+                .back().KickerBindings /// Kicker Controller Bindings
+                .back().TurretBindings /// Turret Controller Bindings
+                .setTurretSpeed(0.5)
+                .withRunTurret(         driverXbox.pov(90), true)
+                .withRunTurret(         driverXbox.pov(270), false)
+                .back().HoodBindings /// Hood Controller Bindings
+                .setHoodSpeed(0.5)
+                .withRunHood(           driverXbox.pov(0), true)
+                .withRunHood(           driverXbox.pov(180), false)
+                .back().FlyWheelBindings /// Turret Controller Bindings
+                .setFlyWheelSpeed(0.5)
+                //.withRunFlyWheel(         driverXbox.rightTrigger(), true)
+                //.withRunFlyWheel(         driverXbox.leftTrigger(), false)
+                .back().FlyWheelBindings
+                .back().MiscBindings /// Miscellaneous Controller Bindings
+                .resetField(            driverXbox.start())
+                .back(); // Return to our InputStream.
+        /// Single xbox controller with manual PID control of all the subsystems.
+        final InputStream singlePID = new InputStream()
+                // A starting method should be set first.
+                .StartingMethods
+                .headingXboxDrive(MANUAL_CONTROL.isMode, driverXbox)
                 // Now we can set .with our controller bindings.
                 .SwerveBindings /// Swerve Controller Bindings.
                 // When in the subsystem, set our desired constants with .set methods.
@@ -345,6 +392,17 @@ public class InputBuilder
             }
 
             /**
+             * Sets a default command for this subsystem.
+             *
+             * @param defaultCommand the default command to set.
+             * @return this, for chaining.
+             */
+            public IntakeBindings withDefaultCommand(Supplier<Command> defaultCommand) {
+                isMode.and(DriverStation::isEnabled).onTrue(Commands.runOnce(() -> subsystems.intake.setDefaultCommand(defaultCommand.get())));
+                return this;
+            }
+
+            /**
              * Leaves IntakeBindings going back to the InputStream.
              *
              * @return this InputStream.
@@ -385,6 +443,17 @@ public class InputBuilder
             }
 
             /**
+             * Sets a default command for this subsystem.
+             *
+             * @param defaultCommand the default command to set.
+             * @return this, for chaining.
+             */
+            public IndexerBindings withDefaultCommand(Supplier<Command> defaultCommand) {
+                isMode.and(DriverStation::isEnabled).onTrue(Commands.runOnce(() -> subsystems.indexer.setDefaultCommand(defaultCommand.get())));
+                return this;
+            }
+
+            /**
              * Leaves IndexerBindings going back to the InputStream.
              *
              * @return this InputStream.
@@ -402,6 +471,17 @@ public class InputBuilder
 
             private KickerBindings() {
                 this.isPresent = subsystems.kicker != null;
+            }
+
+            /**
+             * Sets a default command for this subsystem.
+             *
+             * @param defaultCommand the default command to set.
+             * @return this, for chaining.
+             */
+            public KickerBindings withDefaultCommand(Supplier<Command> defaultCommand) {
+                isMode.and(DriverStation::isEnabled).onTrue(Commands.runOnce(() -> subsystems.kicker.setDefaultCommand(defaultCommand.get())));
+                return this;
             }
 
             /**
@@ -434,6 +514,19 @@ public class InputBuilder
             }
 
             /**
+             * Sets the flywheel velocity goal.
+             *
+             * @param setVelocity the button to map.
+             * @param flywheelVelocity the velocity goal.
+             * @return this, for chaining.
+             */
+            public FlyWheelBindings withSetVelocity(Trigger setVelocity, AngularVelocity flywheelVelocity) {
+                if (!isPresent) {return this;}
+                isMode.and(setVelocity).whileTrue(subsystems.flywheel.getFlyWheel().run(flywheelVelocity));
+                return this;
+            }
+
+            /**
              * Runs the flywheel at preset speed, stopping when finished.
              *
              * @param runFlyWheel then button to map.
@@ -456,6 +549,17 @@ public class InputBuilder
             public FlyWheelBindings withSimShoot(Trigger shoot) {
                 if (!isPresent) {return this;}
                 isMode.and(shoot).onTrue(subsystems.flywheel.simShoot());
+                return this;
+            }
+
+            /**
+             * Sets a default command for this subsystem.
+             *
+             * @param defaultCommand the default command to set.
+             * @return this, for chaining.
+             */
+            public FlyWheelBindings withDefaultCommand(Supplier<Command> defaultCommand) {
+                isMode.and(DriverStation::isEnabled).onTrue(Commands.runOnce(() -> subsystems.flywheel.setDefaultCommand(defaultCommand.get())));
                 return this;
             }
 
@@ -487,9 +591,23 @@ public class InputBuilder
             }
 
             /**
+             * Sets the hood angle to the given angle.
+             * Horizontal to the floor is 0 degrees.
+             *w
+             * @param setAngle the button to map.
+             * @param hoodAngle the angle to move to.
+             * @return this, for chaining.
+             */
+            public HoodBindings withSetAngle(Trigger setAngle, Angle hoodAngle) {
+                if (!isPresent) {return this;}
+                isMode.and(setAngle).whileTrue(subsystems.hood.getHood().setAngle(hoodAngle));
+                return this;
+            }
+
+            /**
              * Runs the hood at preset speed, stopping when finished.
              *
-             * @param runHood then button to map.
+             * @param runHood the button to map.
              * @param isUp whether to go up.
              * @return this, for chaining.
              */
@@ -497,6 +615,17 @@ public class InputBuilder
                 if (!isPresent) {return this;}
                 isMode.and(runHood).whileTrue(subsystems.hood.runHood(hoodSpeed, isUp))
                         .onFalse(subsystems.hood.stopHood());
+                return this;
+            }
+
+            /**
+             * Sets a default command for this subsystem.
+             *
+             * @param defaultCommand the default command to set.
+             * @return this, for chaining.
+             */
+            public HoodBindings withDefaultCommand(Supplier<Command> defaultCommand) {
+                isMode.and(DriverStation::isEnabled).onTrue(Commands.runOnce(() -> subsystems.hood.setDefaultCommand(defaultCommand.get())));
                 return this;
             }
 
@@ -538,6 +667,17 @@ public class InputBuilder
                 if (!isPresent) {return this;}
                 isMode.and(runTurret).whileTrue(subsystems.turret.runTurret(turretSpeed, isCCW))
                         .onFalse(subsystems.turret.stopTurret());
+                return this;
+            }
+
+            /**
+             * Sets a default command for this subsystem.
+             *
+             * @param defaultCommand the default command to set.
+             * @return this, for chaining.
+             */
+            public TurretBindings withDefaultCommand(Supplier<Command> defaultCommand) {
+                isMode.and(DriverStation::isEnabled).onTrue(Commands.runOnce(() -> subsystems.turret.setDefaultCommand(defaultCommand.get())));
                 return this;
             }
 
@@ -641,6 +781,17 @@ public class InputBuilder
             }
 
             /**
+             * Sets a default command for this subsystem.
+             *
+             * @param defaultCommand the default command to set.
+             * @return this, for chaining.
+             */
+            public SwerveBindings withDefaultCommand(Supplier<Command> defaultCommand) {
+                isMode.and(DriverStation::isEnabled).onTrue(Commands.runOnce(() -> subsystems.swerve.setDefaultCommand(defaultCommand.get())));
+                return this;
+            }
+
+            /**
              * Leaves SwerveBindings going back to the InputStream.
              *
              * @return this InputStream.
@@ -675,18 +826,6 @@ public class InputBuilder
              */
             public MiscBindings withChangeInput(InputSelections bindingType, Trigger changeInput) {
                 isMode.and(changeInput).onTrue(Commands.runOnce(() -> inputOverride.set(bindingType.name)));
-                return this;
-            }
-
-            /**
-             * Sets a default command for this input selection.
-             *
-             * @param subsystem the subsystem to apply the default command to.
-             * @param defaultCommand the default command to set.
-             * @return this, for chaining.
-             */
-            public MiscBindings withDefaultCommand(SubsystemBase subsystem, Supplier<Command> defaultCommand) {
-                isMode.and(DriverStation::isEnabled).onTrue(Commands.runOnce(() -> subsystem.setDefaultCommand(defaultCommand.get())));
                 return this;
             }
 

@@ -43,7 +43,8 @@ public class Telemetry
             private static final NetworkTable robotTable = telemetryTable.getSubTable("RobotTelemetry");
             // Zones
             public static final NetworkTable zoneTable = robotTable.getSubTable("Zones");
-            private static final String smartDashboardRobotPath = smartDashboardPath + "RobotTelemetry/";
+            public static final String smartDashboardRobotPath = smartDashboardPath + "RobotTelemetry/";
+            public static final String smartDashboardBrushedPath = smartDashboardRobotPath + "Brushed Telemetry/";
             // Input Selection
             public static final SmartDashboardPublisher inputPublisher = new SmartDashboardPublisher(smartDashboardRobotPath + "Input Selector");
             public static final StringPublisher inputOverride = robotTable.getSubTable("Input Selector").getStringTopic("selected").publish();

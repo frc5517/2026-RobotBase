@@ -14,11 +14,9 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Robot;
 import frc.robot.Telemetry;
 import lombok.Getter;
-import lombok.Setter;
 import swervelib.simulation.ironmaple.simulation.IntakeSimulation;
 import yams.gearing.GearBox;
 import yams.gearing.MechanismGearing;
-import yams.math.ExponentialProfilePIDController;
 import yams.mechanisms.config.FlyWheelConfig;
 import yams.mechanisms.velocity.FlyWheel;
 import yams.motorcontrollers.SmartMotorController;
@@ -28,8 +26,6 @@ import yams.motorcontrollers.SmartMotorControllerConfig.MotorMode;
 import yams.motorcontrollers.local.SparkWrapper;
 
 import static edu.wpi.first.units.Units.*;
-import static frc.robot.subsystems.IntakeSubsystem.IntakeState.*;
-import static frc.robot.subsystems.IntakeSubsystem.ControlConstants.*;
 import static frc.robot.subsystems.IntakeSubsystem.HardwareConstants.*;
 
 public class IntakeSubsystem extends SubsystemBase {
@@ -88,18 +84,9 @@ public class IntakeSubsystem extends SubsystemBase {
 
     @Getter
     private final IntakeSimulation                              intakeSim;
-   
-    /// Reports the current Intake state. To be used later in code and telemetry.
-    public static class IntakeState {
-        @Setter
-        public static AngularVelocity              VelocityTolerance  = VELOCITY_TOLERANCE;
-        @Setter
-        public static AngularVelocity              Velocity           = DegreesPerSecond.of(0);
-        @Setter
-        public static AngularVelocity              TargetVelocity     = TARGET_VELOCITY;
-        @Setter
-        public static Trigger                      IsReady            = new Trigger(() -> false);
-    }
+
+    @Getter
+    private final Trigger jammedTrigger = new Trigger(() -> intake.getMotorController().getStatorCurrent().gte(Amps.of(30)));
 
     /**
      *
@@ -131,7 +118,7 @@ public class IntakeSubsystem extends SubsystemBase {
      * @return a command.
      */
     public Command runIntake(double intakeSpeed, boolean isIn) {
-        return intake.set(isIn ? intakeSpeed : -intakeSpeed);
+        return intake.set(isIn ? intakeSpeed : -intakeSpeed).unless(jammedTrigger);
     }
 
     /**
@@ -141,13 +128,6 @@ public class IntakeSubsystem extends SubsystemBase {
      */
     public Command stopIntake() {
         return intake.set(0.0);
-    }
-
-    /**
-     * Resets the setters to default values.
-     */
-    public void resetSetters() {
-        IntakeState.setTargetVelocity(TARGET_VELOCITY);
     }
     
     public Command runSimIntake() {

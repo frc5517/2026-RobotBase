@@ -85,15 +85,15 @@ public class ZoneTrigger
 
         // Sets the publishing path to the telemetry table in our Telemetry class.
         /// This should be changed on differing projects.
-        this.setBothTables(Telemetry.Publishers.Robot.zoneTable);
+        this.setBothTables(Telemetry.Publishers.Robot.zoneTable); /// Sets the telemetry tables
         this.reloadPublishers(zoneName); // Reloads the publishers with our new tables.
-        this.setPoseSupplier(() -> SwerveSubsystem.SwerveState.CurrentPose);
+        this.setPoseSupplier(() -> SwerveSubsystem.SwerveState.CurrentPose); /// Sets the pose supplier
 
         // Sets the trigger telling when our robot is within the zone.
         this.trigger = new Trigger(() -> containsPose(this.getPoseSupplier()));
         // Update the published trigger whenever the robot is enabled.
         RobotModeTriggers.teleop().whileTrue(Commands.run(this::publishTrigger));
-        RobotModeTriggers.teleop().onTrue(Commands.runOnce(this::publishZone));
+        RobotModeTriggers.teleop().onTrue(Commands.runOnce(this::publishZone)); /// Because it only gets updated in teleop, it needs to be enabled to add as a Trajectory.
     }
 
     /**

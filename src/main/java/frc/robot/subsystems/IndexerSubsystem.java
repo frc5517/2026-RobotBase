@@ -55,20 +55,21 @@ public class IndexerSubsystem extends SubsystemBase {
         public static final AngularVelocity                     VELOCITY_TOLERANCE  = DegreesPerSecond.of(1); // How accurate the velocity should be.
         public static final AngularVelocity                     TARGET_VELOCITY     = DegreesPerSecond.of(60); // How fast the flywheel should spin.
     }
+    /// Indexer uses a custom Brushed wrapper, brushless code is just commented out.
 //    private final SparkMax                                      indexerMotor    = new SparkMax(HardwareConstants.MOTOR_ID, MotorType.kBrushless); /// The Normal Rev Vendor SparkMax Object.
-//    private final SmartMotorControllerConfig                    motorConfig     = new SmartMotorControllerConfig(this) /// The Smart Motor Controller Configuration.
-//            .withExponentialProfile(Profiling.MAX_CONTROL_VOLTAGE, Profiling.MAX_ANGULAR_VELOCITY, Profiling.MAX_ANGULAR_ACCELERATION)
-//            .withClosedLoopController(PID_CONTROLLER)
-//            .withGearing(HardwareConstants.GEAR_RATIO)
-//            .withIdleMode(MotorMode.BRAKE)
-//            .withTelemetry("Indexer Motor", Telemetry.telemetryVerbosity.yamsVerbosity)
-//            .withStatorCurrentLimit(HardwareConstants.CURRENT_LIMIT)
-//            .withMotorInverted(HardwareConstants.MOTOR_INVERTED)
-//            .withClosedLoopRampRate(HardwareConstants.RAMP_RATE)
-//            .withOpenLoopRampRate(HardwareConstants.RAMP_RATE)
-//            .withFeedforward(HardwareConstants.FEED_FORWARD)
-//            .withSimFeedforward(HardwareConstants.FEED_FORWARD)
-//            .withControlMode(ControlMode.CLOSED_LOOP);
+    private final SmartMotorControllerConfig                    motorConfig     = new SmartMotorControllerConfig(this) /// The Smart Motor Controller Configuration.
+            .withExponentialProfile(Profiling.MAX_CONTROL_VOLTAGE, Profiling.MAX_ANGULAR_VELOCITY, Profiling.MAX_ANGULAR_ACCELERATION)
+            .withClosedLoopController(PID_CONTROLLER)
+            .withGearing(HardwareConstants.GEAR_RATIO)
+            .withIdleMode(MotorMode.BRAKE)
+            .withTelemetry("Indexer Motor", Telemetry.telemetryVerbosity.yamsVerbosity)
+            .withStatorCurrentLimit(HardwareConstants.CURRENT_LIMIT)
+            .withMotorInverted(HardwareConstants.MOTOR_INVERTED)
+            .withClosedLoopRampRate(HardwareConstants.RAMP_RATE)
+            .withOpenLoopRampRate(HardwareConstants.RAMP_RATE)
+            .withFeedforward(HardwareConstants.FEED_FORWARD)
+            .withSimFeedforward(HardwareConstants.FEED_FORWARD)
+            .withControlMode(ControlMode.CLOSED_LOOP);
 //    private final SmartMotorController                          motor           = new SparkWrapper(indexerMotor, DCMotor.getNEO(1), motorConfig); /// The new Smart Motor Controller
 //    private final FlyWheelConfig                                indexerConfig   = new FlyWheelConfig(motor) /// The FlyWheel config for the Indexer.
 //            .withDiameter(HardwareConstants.INDEXER_DIAMETER)
@@ -78,18 +79,10 @@ public class IndexerSubsystem extends SubsystemBase {
 //            .withSpeedometerSimulation(HardwareConstants.INDEXER_MAX_SPEED);
 //    @Getter
 //    private final FlyWheel                                      indexer         = new FlyWheel(indexerConfig); /// The final FlyWheel Mechanism to use as the smart Indexer.
-    private final BrushedSparkWrapper indexer = new  BrushedSparkWrapper(MOTOR_ID);
-    /// Reports the current Indexer state. To be used later in code and telemetry.
-    public static class IndexerState {
-        @Setter
-        public static AngularVelocity              VelocityTolerance  = FlyWheelSubsystem.ControlConstants.VELOCITY_TOLERANCE;
-        @Setter
-        public static AngularVelocity              Velocity           = DegreesPerSecond.of(0);
-        @Setter
-        public static AngularVelocity              TargetVelocity     = FlyWheelSubsystem.ControlConstants.TARGET_VELOCITY;
-        @Setter
-        public static Trigger                      IsReady            = new Trigger(() -> false);
-    }
+    private final BrushedSparkWrapper indexer = new BrushedSparkWrapper(MOTOR_ID, motorConfig); /// Custom dumb brushed spark wrapper made to easily replace a YAMS Spark Max object.
+
+    @Getter
+    private final Trigger jammedTrigger = new Trigger(() -> indexer.getMotorController().getStatorCurrent().gte(Amps.of(30)));
 
     public IndexerSubsystem() {
     }
@@ -102,7 +95,7 @@ public class IndexerSubsystem extends SubsystemBase {
      * @return a command.
      */
     public Command runIndexer(double indexSpeed, boolean isIn) {
-        return indexer.set(isIn ? indexSpeed : -indexSpeed);
+        return indexer.set(isIn ? indexSpeed : -indexSpeed).unless(jammedTrigger);
     }
 
     /**
@@ -115,37 +108,13 @@ public class IndexerSubsystem extends SubsystemBase {
     }
 
     /**
-     * Resets the setters to default values.
-     */
-    public void resetSetters() {
-        IndexerState.setTargetVelocity(ControlConstants.TARGET_VELOCITY);
-    }
-
-    /**
-     * Indexes a single fuel piece using sensors.
-     *
-     * @return a command to index fuel.
-     */
-    public Command indexOne() {
-        return Commands.none();
-    }
-
-    /**
-     * Gets the YAMS Flywheel AKA our Indexer.
-     *
-     * @return the {@link FlyWheel} Indexer Mechanism.
-     */
-//    public FlyWheel getIndexerMechanism() {
-//        return indexer;
-//    }
-
-    /**
      * Ran continuously while the robot is on.
      */
     @Override
     public void periodic() {
         // Updates the indexer mechanism's telemetry data to the network tables.
-        //indexer.updateTelemetry();
+        indexer.updateTelemetry();
+
     }
 
     /**
@@ -154,6 +123,6 @@ public class IndexerSubsystem extends SubsystemBase {
     @Override
     public void simulationPeriodic() {
         // Iterates the sim so that the sim actually works and the data sent to the network tables can be updated.
-        //indexer.simIterate();
+        indexer.simIterate();
     }
 }
