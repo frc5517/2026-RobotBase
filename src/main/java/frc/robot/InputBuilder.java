@@ -17,6 +17,7 @@ import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.commands.ShootOnTheMoveCommand;
 import frc.robot.subsystems.*;
+import frc.robot.systems.ScoringSystem;
 import frc.robot.util.ZoneTrigger;
 import frc.robot.util.borrowed.math.AllianceFlipUtil;
 import frc.robot.util.borrowed.math.FieldConstants;
@@ -37,17 +38,20 @@ public class InputBuilder
 {
     /// Our subsystems and systems to call to from RobotContainer
     private final Subsystems subsystems;
+    private final ScoringSystem scoring;
     // Control chooser for dashboard
     private static final SendableChooser<InputSelections> inputSelector = new SendableChooser<>();
     // Control input devices
     private final CommandXboxController driverXbox;
     private final CommandXboxController operatorXbox;
 
-    public InputBuilder(Subsystems subsystems) {
+    public InputBuilder(Subsystems subsystems, ScoringSystem scoring) {
         /// Stop the console spam from not all buttons showing up.
         DriverStation.silenceJoystickConnectionWarning(true);
         /// Initialize our subsystem record
         this.subsystems = subsystems;
+        /// Initialize our system record
+        this.scoring = scoring;
         /// Initialize Controllers here.
         this.driverXbox = new CommandXboxController(0);
         this.operatorXbox = new CommandXboxController(1);
@@ -64,14 +68,16 @@ public class InputBuilder
                 StartingMethods
                 .defaultXboxDrive(TESTING.isMode,   driverXbox)
                 .SmartBindings
-                .withAimAt(                         driverXbox.y())
+                .withShootOnTheMove(                         driverXbox.y())
                 .back().SwerveBindings              /// SwerveDrive Bindings
                 .setNormalRotation(.8)
                 .setNormalTranslation(.8)
                 .setSlowRotation(.4)
                 .setSlowTranslation(.4)
 
-                .withLookAtHubThenFire(             driverXbox.leftTrigger()) // Decrease look ahead time
+                .withLookAtHubThenFire(             driverXbox.leftTrigger(), new Trigger(() -> false))
+
+                //.withLookAtHubThenFire(             CustomTriggers.aimingZone.getTrigger(), CustomTriggers.scoringZone.getTrigger()) // Decrease look ahead time
 
                 .withSlowDrive(                     CustomTriggers.bumpZone.getTrigger()) // Slows the drive when within the bump zone.
                 .withSlowDrive(                     driverXbox.rightBumper())
@@ -238,8 +244,11 @@ public class InputBuilder
                 Pair.of(new Translation2d(11, 4.5), new Translation2d(12.75, 6.5)),
                 Pair.of(new Translation2d(11, 1.5), new Translation2d(12.75, 3.5)));
 
-        public static ZoneTrigger scoringZone = new ZoneTrigger("Scoring",
+        public static ZoneTrigger aimingZone = new ZoneTrigger("Aiming",
                 Pair.of(new Translation2d(1.5, 0.5), new Translation2d(3.5, 7.5)));
+
+        public static ZoneTrigger scoringZone = new ZoneTrigger("Scoring",
+                Pair.of(new Translation2d(1.5, 1), new Translation2d(2.5, 7)));
     }
 
     /**
@@ -348,7 +357,15 @@ public class InputBuilder
          */
         public class SmartBindings {
 
-            public SmartBindings withAimAt(Trigger aimAt) {
+            public SmartBindings withShootOnTheMove(Trigger shootOnTheMoveWhile) {
+                if (!TurretBindings.isPresent || !HoodBindings.isPresent || !FlyWheelBindings.isPresent) {return this;}
+
+                isMode.and(shootOnTheMoveWhile).whileTrue(scoring.shootOnTheMove());
+
+                return this;
+            }
+
+            public SmartBindings withShootOnTheMoveCommand(Trigger aimAt) {
                 // If any required subsystems are missing, don't bind anything.
                 if (!TurretBindings.isPresent || !HoodBindings.isPresent || !FlyWheelBindings.isPresent) {return this;}
                 isMode.and(aimAt).whileTrue(new ShootOnTheMoveCommand(subsystems, () -> FieldConstants.Hub.topCenterPoint));
@@ -406,6 +423,7 @@ public class InputBuilder
              * @return this, for chaining.
              */
             public IntakeBindings withDefaultCommand(Supplier<Command> defaultCommand) {
+                if (!isPresent) {return this;}
                 isMode.and(DriverStation::isEnabled).onTrue(Commands.runOnce(() -> subsystems.intake.setDefaultCommand(defaultCommand.get())));
                 return this;
             }
@@ -457,6 +475,7 @@ public class InputBuilder
              * @return this, for chaining.
              */
             public IndexerBindings withDefaultCommand(Supplier<Command> defaultCommand) {
+                if (!isPresent) {return this;}
                 isMode.and(DriverStation::isEnabled).onTrue(Commands.runOnce(() -> subsystems.indexer.setDefaultCommand(defaultCommand.get())));
                 return this;
             }
@@ -488,6 +507,7 @@ public class InputBuilder
              * @return this, for chaining.
              */
             public KickerBindings withDefaultCommand(Supplier<Command> defaultCommand) {
+                if (!isPresent) {return this;}
                 isMode.and(DriverStation::isEnabled).onTrue(Commands.runOnce(() -> subsystems.kicker.setDefaultCommand(defaultCommand.get())));
                 return this;
             }
@@ -567,6 +587,7 @@ public class InputBuilder
              * @return this, for chaining.
              */
             public FlyWheelBindings withDefaultCommand(Supplier<Command> defaultCommand) {
+                if (!isPresent) {return this;}
                 isMode.and(DriverStation::isEnabled).onTrue(Commands.runOnce(() -> subsystems.flywheel.setDefaultCommand(defaultCommand.get())));
                 return this;
             }
@@ -633,6 +654,7 @@ public class InputBuilder
              * @return this, for chaining.
              */
             public HoodBindings withDefaultCommand(Supplier<Command> defaultCommand) {
+                if (!isPresent) {return this;}
                 isMode.and(DriverStation::isEnabled).onTrue(Commands.runOnce(() -> subsystems.hood.setDefaultCommand(defaultCommand.get())));
                 return this;
             }
@@ -685,6 +707,7 @@ public class InputBuilder
              * @return this, for chaining.
              */
             public TurretBindings withDefaultCommand(Supplier<Command> defaultCommand) {
+                if (!isPresent) {return this;}
                 isMode.and(DriverStation::isEnabled).onTrue(Commands.runOnce(() -> subsystems.turret.setDefaultCommand(defaultCommand.get())));
                 return this;
             }
@@ -741,6 +764,7 @@ public class InputBuilder
              * Changes inputs to the given input selection.
              */
             public SwerveBindings withToggleCentricity(Trigger toggleCentricity, boolean fieldDefault) {
+                if (!isPresent) {return this;}
                 // Set our default.
                 swerveInputStream.robotRelative(!fieldDefault).allianceRelativeControl(fieldDefault);
                 // Toggle when pressed.
@@ -754,9 +778,11 @@ public class InputBuilder
              * Looks at the hub with the drive and scores while moving. Doesn't account for distance.
              *
              * @param autoAimDriveThenFireWhile the button to map.
+             * @param readyToScore additional {@link Trigger} to tell when it's ok to fire.
              * @return this, for chaining.
              */
-            public SwerveBindings withLookAtHubThenFire(Trigger autoAimDriveThenFireWhile) {
+            public SwerveBindings withLookAtHubThenFire(Trigger autoAimDriveThenFireWhile, Trigger readyToScore) {
+                if (!isPresent || !FlyWheelBindings.isPresent) {return this;}
                 // Aim at the hub with the drive
                 this.withAimWhile(autoAimDriveThenFireWhile,
                         new Pose2d(FieldConstants.Hub.topCenterPoint.toTranslation2d(), Rotation2d.kZero),
@@ -764,8 +790,19 @@ public class InputBuilder
                         new Trigger(() -> false)); // Leave look ahead time alone.
                 // Score when aim is locked.
                 this.back().FlyWheelBindings
-                        .withSimShoot(isMode.and(swerveInputStream.aimLock(Degrees.of(1.5))));
+                        .withSimShoot(isMode.and(readyToScore).and(swerveInputStream.aimLock(Degrees.of(1.5))));
                 return this;
+            }
+
+            /**
+             * Looks at the hub with the drive and scores while moving. Doesn't account for distance.
+             *
+             * @param autoAimDriveThenFireWhile the button to map.
+             * @return this, for chaining.
+             */
+            public SwerveBindings withLookAtHubThenFire(Trigger autoAimDriveThenFireWhile) {
+                if (!isPresent) {return this;}
+                return withLookAtHubThenFire(autoAimDriveThenFireWhile, new Trigger(() -> true));
             }
 
             /**
@@ -778,6 +815,7 @@ public class InputBuilder
              * @return this, for chaining.
              */
             public SwerveBindings withAimWhile(Trigger aimWhile, Pose2d aimWhilePose, Trigger lookAheadUp, Trigger lookAheadDown) {
+                if (!isPresent) {return this;}
                 // Update Telemetry Continuously
                 isMode.and(DriverStation::isEnabled).whileTrue(Commands.run(() -> {
                     SmartDashboard.putBoolean("Aim Data/isLocked", swerveInputStream.aimLock(Degrees.of(1)).getAsBoolean());
@@ -811,6 +849,7 @@ public class InputBuilder
              * @return this, for chaining.
              */
             public SwerveBindings withSlowDrive(Trigger slowDrive) {
+                if (!isPresent) {return this;}
                 isMode.and(slowDrive)
                         .onTrue(Commands.runOnce(() -> swerveInputStream.scaleTranslation(slowTranslation).scaleRotation(slowRotation)))
                         .onFalse(Commands.runOnce(() -> swerveInputStream.scaleTranslation(normalTranslation).scaleRotation(normalRotation)));
@@ -835,6 +874,7 @@ public class InputBuilder
              * @return this, for chaining.
              */
             public SwerveBindings updateSwerveStream() {
+                if (!isPresent) {return this;}
                 swerveInputStream
                         .scaleTranslation(normalTranslation)
                         .scaleRotation(normalRotation)
@@ -849,6 +889,7 @@ public class InputBuilder
              * @return this, for chaining.
              */
             public SwerveBindings withDefaultCommand(Supplier<Command> defaultCommand) {
+                if (!isPresent) {return this;}
                 isMode.and(DriverStation::isEnabled).onTrue(Commands.runOnce(() -> subsystems.swerve.setDefaultCommand(defaultCommand.get())));
                 return this;
             }

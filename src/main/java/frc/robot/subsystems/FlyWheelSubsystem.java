@@ -11,11 +11,8 @@ import edu.wpi.first.units.measure.*;
 import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Telemetry;
 import lombok.Getter;
-import lombok.Setter;
-import lombok.experimental.Accessors;
 import swervelib.simulation.ironmaple.simulation.SimulatedArena;
 import swervelib.simulation.ironmaple.simulation.seasonspecific.rebuilt2026.RebuiltFuelOnFly;
 import yams.gearing.GearBox;
@@ -27,6 +24,8 @@ import yams.motorcontrollers.SmartMotorControllerConfig;
 import yams.motorcontrollers.SmartMotorControllerConfig.ControlMode;
 import yams.motorcontrollers.SmartMotorControllerConfig.MotorMode;
 import yams.motorcontrollers.local.SparkWrapper;
+
+import java.util.function.Supplier;
 
 import static edu.wpi.first.units.Units.*;
 import static frc.robot.subsystems.FlyWheelSubsystem.HardwareConstants.*;
@@ -55,6 +54,7 @@ public class FlyWheelSubsystem extends SubsystemBase
         public static final Distance                    FLYWHEEL_DIAMETER           = Inches.of(4); // Diameter of the wheel, belt, whatever is spinning on the flywheel.
         public static final Mass                        FLYWHEEL_MASS               = Pounds.of(1); // Weight of the flywheel, just what gets spun.
         public static final AngularVelocity             FLYWHEEL_MAX_SPEED          = RPM.of(8000); // Max RPM soft limits
+        public static final double                      FLYWHEEL_EFFICIENCY         = .39; // Multiplicity factor used to determine how much speed was transferred,
     }
     /// Control Constants for the FlyWheel Mechanism
     public static class ControlConstants {
@@ -112,7 +112,7 @@ public class FlyWheelSubsystem extends SubsystemBase
     /**
      * @return a {@link Command} that launches sim fuel.
      */
-    public Command simShoot() {
+    public Command simShoot(Supplier<AngularVelocity> flyWheelSpeed) {
         return runOnce(() -> {
             if (RobotBase.isSimulation()) {
                 SimulatedArena.getInstance().addGamePieceProjectile(new RebuiltFuelOnFly(
@@ -121,8 +121,25 @@ public class FlyWheelSubsystem extends SubsystemBase
                     SwerveSubsystem.SwerveState.CurrentSpeeds,
                     TurretSubsystem.TurretState.getCurrentHeading().rotateBy(Rotation2d.k180deg),
                     Inches.of(23),
-                    MetersPerSecond.of(7),
+                    MetersPerSecond.of(flyWheelSpeed.get().in(RadiansPerSecond) * (FLYWHEEL_DIAMETER.in(Meters) / 2) * FLYWHEEL_EFFICIENCY),
                     HoodSubsystem.HoodState.CurrentAngle.plus(Degrees.of(90))));
+            }});
+    }
+
+    /**
+     * @return a {@link Command} that launches sim fuel.
+     */
+    public Command simShoot() {
+        return runOnce(() -> {
+            if (RobotBase.isSimulation()) {
+                SimulatedArena.getInstance().addGamePieceProjectile(new RebuiltFuelOnFly(
+                        SwerveSubsystem.SwerveState.CurrentPose.getTranslation(),
+                        new Translation2d(Inches.of(5), Inches.of(0)),
+                        SwerveSubsystem.SwerveState.CurrentSpeeds,
+                        TurretSubsystem.TurretState.getCurrentHeading().rotateBy(Rotation2d.k180deg),
+                        Inches.of(23),
+                        MetersPerSecond.of(7),
+                        HoodSubsystem.HoodState.CurrentAngle.plus(Degrees.of(90))));
             }});
     }
 

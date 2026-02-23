@@ -20,9 +20,9 @@ public class RobotContainer {
     /// Bite-sized Subsystems record class for easy packaging of all the subsystems.
     private final InputBuilder.Subsystems subsystems = new InputBuilder.Subsystems(flyWheel, hood, indexer, intake, null, swerve, turret);
     /// Our Systems
-    private final ScoringSystem scoring = new ScoringSystem();
+    private final ScoringSystem scoring = new ScoringSystem(subsystems);
     /// Input Builder
-    private final InputBuilder inputBuilder = new InputBuilder(subsystems);
+    private final InputBuilder inputBuilder = new InputBuilder(subsystems, scoring);
 
     /**
      * This is an unconventional FRC RobotContainer layout.

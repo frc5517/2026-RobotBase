@@ -125,7 +125,6 @@ public class TurretSubsystem extends SubsystemBase
 
     public Supplier<Angle> angleToPose(Pose2d swervePose, Translation2d position) {
         // Find the error between the turret and goal.
-        DriverStation.reportWarning(swervePose.toString(), false);
         Translation2d error = position.minus(swervePose.getTranslation());
         Rotation2d robotToTarget = new Rotation2d(error.getX(), error.getY()); // Makes a new angle based on the error between the 2 poses.
         return () -> robotToTarget.minus(swervePose.getRotation()).getMeasure();
