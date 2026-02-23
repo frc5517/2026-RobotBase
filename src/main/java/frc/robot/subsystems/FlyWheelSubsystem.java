@@ -121,7 +121,7 @@ public class FlyWheelSubsystem extends SubsystemBase
                     SwerveSubsystem.SwerveState.CurrentSpeeds,
                     TurretSubsystem.TurretState.getCurrentHeading().rotateBy(Rotation2d.k180deg),
                     Inches.of(23),
-                    MetersPerSecond.of(8),
+                    MetersPerSecond.of(7),
                     HoodSubsystem.HoodState.CurrentAngle.plus(Degrees.of(90))));
             }});
     }

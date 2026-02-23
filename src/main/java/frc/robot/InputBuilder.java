@@ -1,12 +1,15 @@
 package frc.robot;
 
 import edu.wpi.first.math.Pair;
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -15,6 +18,7 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.commands.ShootOnTheMoveCommand;
 import frc.robot.subsystems.*;
 import frc.robot.util.ZoneTrigger;
+import frc.robot.util.borrowed.math.AllianceFlipUtil;
 import frc.robot.util.borrowed.math.FieldConstants;
 import lombok.*;
 import lombok.experimental.Accessors;
@@ -66,6 +70,9 @@ public class InputBuilder
                 .setNormalTranslation(.8)
                 .setSlowRotation(.4)
                 .setSlowTranslation(.4)
+
+                .withLookAtHubThenFire(             driverXbox.leftTrigger()) // Decrease look ahead time
+
                 .withSlowDrive(                     CustomTriggers.bumpZone.getTrigger()) // Slows the drive when within the bump zone.
                 .withSlowDrive(                     driverXbox.rightBumper())
                 .withToggleCentricity(              driverXbox.back(), true)
@@ -76,9 +83,10 @@ public class InputBuilder
                 .withRunHood(                       driverXbox.pov(0), true)
                 .withRunHood(                       driverXbox.pov(180), false)
                 .back().TurretBindings              /// Turret
+                .withDefaultCommand(                () -> subsystems.turret.getTurret().setAngle(Degrees.of(0))) // Lock the turret to center while not doing anything.
                 .withRunTurret(                     driverXbox.pov(270), true)
                 .withRunTurret(                     driverXbox.pov(90), false)
-                .back().IndexerBindings
+                .back().IndexerBindings             /// Indexer
                 .withRunIndexer(                    driverXbox.leftBumper(), true)
                 .withRunIndexer(                    driverXbox.rightBumper(), false)
                 .back().IntakeBindings              /// Intake
@@ -548,7 +556,7 @@ public class InputBuilder
              */
             public FlyWheelBindings withSimShoot(Trigger shoot) {
                 if (!isPresent) {return this;}
-                isMode.and(shoot).onTrue(subsystems.flywheel.simShoot());
+                isMode.and(shoot).whileTrue(subsystems.flywheel.simShoot().andThen(Commands.waitSeconds(.25)).repeatedly());
                 return this;
             }
 
@@ -739,6 +747,60 @@ public class InputBuilder
                 isMode.and(toggleCentricity).toggleOnTrue(Commands.runEnd(
                         () -> swerveInputStream.robotRelative(fieldDefault).allianceRelativeControl(!fieldDefault),
                         () -> swerveInputStream.robotRelative(!fieldDefault).allianceRelativeControl(fieldDefault)));
+                return this;
+            }
+
+            /**
+             * Looks at the hub with the drive and scores while moving. Doesn't account for distance.
+             *
+             * @param autoAimDriveThenFireWhile the button to map.
+             * @return this, for chaining.
+             */
+            public SwerveBindings withLookAtHubThenFire(Trigger autoAimDriveThenFireWhile) {
+                // Aim at the hub with the drive
+                this.withAimWhile(autoAimDriveThenFireWhile,
+                        new Pose2d(FieldConstants.Hub.topCenterPoint.toTranslation2d(), Rotation2d.kZero),
+                        new Trigger(() -> false),
+                        new Trigger(() -> false)); // Leave look ahead time alone.
+                // Score when aim is locked.
+                this.back().FlyWheelBindings
+                        .withSimShoot(isMode.and(swerveInputStream.aimLock(Degrees.of(1.5))));
+                return this;
+            }
+
+            /**
+             * Aims at a pose while held.
+             *
+             * @param aimWhile the button to map.
+             * @param aimWhilePose the pose to aim at.
+             * @param lookAheadUp increase look ahead time.
+             * @param lookAheadDown decrease look ahead time.
+             * @return this, for chaining.
+             */
+            public SwerveBindings withAimWhile(Trigger aimWhile, Pose2d aimWhilePose, Trigger lookAheadUp, Trigger lookAheadDown) {
+                // Update Telemetry Continuously
+                isMode.and(DriverStation::isEnabled).whileTrue(Commands.run(() -> {
+                    SmartDashboard.putBoolean("Aim Data/isLocked", swerveInputStream.aimLock(Degrees.of(1)).getAsBoolean());
+                }));
+                // Save an adjustable atomic time.
+                final int[] lookAheadTime = {0};
+                // Add 1s to lookAheadTime
+                isMode.and(lookAheadUp).onTrue(Commands.runOnce(() -> {
+                    lookAheadTime[0]++;
+                    swerveInputStream.aimLookahead(Seconds.of(lookAheadTime[0]));
+                }));
+                // Remove 1s from lookAheadTime
+                isMode.and(lookAheadDown).onTrue(Commands.runOnce(() -> {
+                    lookAheadTime[0]--;
+                    swerveInputStream.aimLookahead(Seconds.of(lookAheadTime[0]));
+                }));
+                // Aim while held
+                isMode.and(aimWhile).onTrue(Commands.runOnce(() -> {
+                    // Update our pose and aim supplier when isMode and aimWhile.
+                    swerveInputStream.aim(AllianceFlipUtil.ifShouldFlip(aimWhilePose));
+                    swerveInputStream.aimWhile(isMode.and(aimWhile));
+                }));
+                // Return this for chaining.
                 return this;
             }
 
