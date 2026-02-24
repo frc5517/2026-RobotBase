@@ -4,13 +4,17 @@ import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
+import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.units.measure.*;
 import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import edu.wpi.first.wpilibj2.command.button.Trigger;
+import frc.robot.InputBuilder;
 import frc.robot.Telemetry;
 import lombok.Getter;
 import swervelib.simulation.ironmaple.simulation.SimulatedArena;
@@ -25,10 +29,14 @@ import yams.motorcontrollers.SmartMotorControllerConfig.ControlMode;
 import yams.motorcontrollers.SmartMotorControllerConfig.MotorMode;
 import yams.motorcontrollers.local.SparkWrapper;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
 import static edu.wpi.first.units.Units.*;
 import static frc.robot.subsystems.FlyWheelSubsystem.HardwareConstants.*;
+import static frc.robot.subsystems.FlyWheelSubsystem.ControlConstants.*;
 
 public class FlyWheelSubsystem extends SubsystemBase
 {
@@ -41,11 +49,11 @@ public class FlyWheelSubsystem extends SubsystemBase
 
         /// Motor Tuning Values
         public static final PIDController               PID_CONTROLLER              = new PIDController( // Exponential Motion Profiling
-                                                                                    20, 0, 0.01); // PID - Proportional, Integral, Derivative.
+                                                                                    60, 0, 0.01); // PID - Proportional, Integral, Derivative.
         /// Trapezoidal Motion Profiling Constraints.
         public static final class Profiling {
             public static final AngularVelocity         MAX_ANGULAR_VELOCITY        = RPM.of(5000); // Max Angular Velocity
-            public static final AngularAcceleration     MAX_ANGULAR_ACCELERATION    = DegreesPerSecondPerSecond.of(2500); // Max Angular Acceleration
+            public static final AngularAcceleration     MAX_ANGULAR_ACCELERATION    = DegreesPerSecondPerSecond.of(15000); // Max Angular Acceleration
         }
         public static final Time                        RAMP_RATE                   = Seconds.of(0.25); // Time it takes to reach max speed from 0.
         public static final SimpleMotorFeedforward      FEED_FORWARD                = new SimpleMotorFeedforward(0, 0, 0); // Feed Forwards.
@@ -58,8 +66,7 @@ public class FlyWheelSubsystem extends SubsystemBase
     }
     /// Control Constants for the FlyWheel Mechanism
     public static class ControlConstants {
-        public static final AngularVelocity             VELOCITY_TOLERANCE          = RPM.of(10); // How accurate the velocity should be.
-        public static final AngularVelocity             TARGET_VELOCITY             = RPM.of(5000); // How fast the flywheel should spin.
+        public static final AngularVelocity             VELOCITY_TOLERANCE          = RPM.of(1000); // How accurate the velocity should be.
     }
     /// Initialize the FlyWheel
     private final SparkMax                              indexerMotor                = new SparkMax(HardwareConstants.MOTOR_ID, MotorType.kBrushless); /// The Normal Rev Vendor SparkMax Object.
@@ -112,35 +119,61 @@ public class FlyWheelSubsystem extends SubsystemBase
     /**
      * @return a {@link Command} that launches sim fuel.
      */
-    public Command simShoot(Supplier<AngularVelocity> flyWheelSpeed) {
-        return runOnce(() -> {
+    public Command simShoot(SwerveSubsystem swerve, Supplier<AngularVelocity> flyWheelSpeed) {
+        return Commands.runOnce(() -> {
             if (RobotBase.isSimulation()) {
                 SimulatedArena.getInstance().addGamePieceProjectile(new RebuiltFuelOnFly(
-                    SwerveSubsystem.SwerveState.CurrentPose.getTranslation(),
+                    swerve.getSwerveDrive().getSimulationDriveTrainPose().get().getTranslation(),
                     new Translation2d(Inches.of(5), Inches.of(0)),
-                    SwerveSubsystem.SwerveState.CurrentSpeeds,
+                    swerve.getSwerveDrive().getFieldVelocity(),
                     TurretSubsystem.TurretState.getCurrentHeading().rotateBy(Rotation2d.k180deg),
                     Inches.of(23),
                     MetersPerSecond.of(flyWheelSpeed.get().in(RadiansPerSecond) * (FLYWHEEL_DIAMETER.in(Meters) / 2) * FLYWHEEL_EFFICIENCY),
-                    HoodSubsystem.HoodState.CurrentAngle.plus(Degrees.of(90))));
+                    HoodSubsystem.HoodState.CurrentAngle.plus(Degrees.of(90)))
+                    .withProjectileTrajectoryDisplayCallBack((trajectory) -> Telemetry.Publishers.Robot.Mech3D.fuelTrajectory.accept(trajectory.toArray(Pose3d[]::new))));
             }});
     }
 
     /**
      * @return a {@link Command} that launches sim fuel.
      */
-    public Command simShoot() {
+    public Command simShoot(SwerveSubsystem swerve) {
         return runOnce(() -> {
             if (RobotBase.isSimulation()) {
                 SimulatedArena.getInstance().addGamePieceProjectile(new RebuiltFuelOnFly(
-                        SwerveSubsystem.SwerveState.CurrentPose.getTranslation(),
+                        swerve.getSwerveDrive().getSimulationDriveTrainPose().get().getTranslation(),
                         new Translation2d(Inches.of(5), Inches.of(0)),
-                        SwerveSubsystem.SwerveState.CurrentSpeeds,
+                        swerve.getSwerveDrive().getFieldVelocity(),
                         TurretSubsystem.TurretState.getCurrentHeading().rotateBy(Rotation2d.k180deg),
                         Inches.of(23),
                         MetersPerSecond.of(7),
-                        HoodSubsystem.HoodState.CurrentAngle.plus(Degrees.of(90))));
+                        HoodSubsystem.HoodState.CurrentAngle.plus(Degrees.of(90)))
+                        .withProjectileTrajectoryDisplayCallBack((trajectory) -> Telemetry.Publishers.Robot.Mech3D.fuelTrajectory.accept(trajectory.toArray(Pose3d[]::new))));
             }});
+    }
+
+    /**
+     * FlyWheel is near a speed.
+     *
+     * @param speed  {@link AngularVelocity} to be near.
+     * @return Trigger on when the FlyWheel is near another speed.
+     */
+    public Trigger isNear(Supplier<AngularVelocity> speed)
+    {
+        return new Trigger(isNear(speed, VELOCITY_TOLERANCE));
+    }
+
+
+    /**
+     * FlyWheel is near a speed.
+     *
+     * @param speed  {@link AngularVelocity} to be near.
+     * @param within {@link AngularVelocity} within.
+     * @return Trigger on when the FlyWheel is near another speed.
+     */
+    public BooleanSupplier isNear(Supplier<AngularVelocity> speed, AngularVelocity within)
+    {
+        return () -> flyWheel.getSpeed().isNear(speed.get(), within);
     }
 
     /**

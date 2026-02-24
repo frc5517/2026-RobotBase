@@ -35,7 +35,6 @@ import java.io.IOException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
-import frc.robot.Robot;
 import frc.robot.Telemetry;
 import frc.robot.util.borrowed.math.AllianceFlipUtil;
 import lombok.Getter;
@@ -63,7 +62,7 @@ public class SwerveSubsystem extends SubsystemBase
     }
     public static class ControlConstants {
         /// Enable vision odometry updates while driving.
-        public static final boolean RUN_VISION = Robot.isSimulation(); // Run only in sim until real vision is ready.
+        public static final boolean RUN_VISION = false; // Run only in sim until real vision is ready.
         // Simulation Starting Pose, flipping is handled by YAGSL.
         public static final Pose2d INITIAL_SIM_POSE = new Pose2d(new Translation2d(
                 Meter.of(2),

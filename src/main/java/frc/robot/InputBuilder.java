@@ -576,7 +576,7 @@ public class InputBuilder
              */
             public FlyWheelBindings withSimShoot(Trigger shoot) {
                 if (!isPresent) {return this;}
-                isMode.and(shoot).whileTrue(subsystems.flywheel.simShoot().andThen(Commands.waitSeconds(.25)).repeatedly());
+                isMode.and(shoot).whileTrue(subsystems.flywheel.simShoot(subsystems.swerve).andThen(Commands.waitSeconds(.25)).repeatedly());
                 return this;
             }
 

@@ -3,7 +3,7 @@ package frc.robot.commands;
 import java.util.Map;
 import java.util.function.Supplier;
 
-import edu.wpi.first.wpilibj.RobotBase;
+import edu.wpi.first.math.trajectory.Trajectory;
 import frc.robot.InputBuilder;
 
 import edu.wpi.first.math.geometry.Translation2d;

@@ -22,7 +22,11 @@ import yams.motorcontrollers.SmartMotorController;
 import yams.motorcontrollers.SmartMotorControllerConfig;
 import yams.motorcontrollers.local.SparkWrapper;
 
+import java.util.function.BooleanSupplier;
+import java.util.function.Supplier;
+
 import static edu.wpi.first.units.Units.*;
+import static frc.robot.subsystems.HoodSubsystem.ControlConstants.ANGLE_TOLERANCE;
 import static frc.robot.subsystems.HoodSubsystem.HardwareConstants.*;
 import static frc.robot.subsystems.TurretSubsystem.HardwareConstants.TURRET_POSITION;
 
@@ -35,12 +39,12 @@ public class HoodSubsystem extends SubsystemBase {
         public static final MechanismGearing                    GEAR_RATIO                  = new MechanismGearing(GearBox.fromReductionStages(3, 4, 5)); // FlyWheel Gear Ratio
         /// Motor Tuning Values
         public static final PIDController                       PID_CONTROLLER              = new PIDController( // Exponential Motion Profiling
-                                                                                            20, 0, 0.01); // PID - Proportional, Integral, Derivative.
+                                                                                            60, 0, 0.01); // PID - Proportional, Integral, Derivative.
         /// Exponential Motion Profiling Constraints.
         public static final class Profiling {
             public static final Voltage                         MAX_CONTROL_VOLTAGE         = Volts.of(12); // Max Control Voltage
-            public static final AngularVelocity                 MAX_ANGULAR_VELOCITY        = DegreesPerSecond.of(180); // Max Angular Velocity
-            public static final AngularAcceleration             MAX_ANGULAR_ACCELERATION    = DegreesPerSecondPerSecond.of(360); // Max Angular Acceleration
+            public static final AngularVelocity                 MAX_ANGULAR_VELOCITY        = DegreesPerSecond.of(360); // Max Angular Velocity
+            public static final AngularAcceleration             MAX_ANGULAR_ACCELERATION    = DegreesPerSecondPerSecond.of(720); // Max Angular Acceleration
         }
         public static final Time                                RAMP_RATE                   = Seconds.of(0.15); // Time it takes to reach max speed from 0.
         public static final ArmFeedforward                      FEED_FORWARD                = new ArmFeedforward(0, 0, 0); // Feed Forwards.
@@ -68,7 +72,7 @@ public class HoodSubsystem extends SubsystemBase {
     /// The Control Constants for the Hood Mechanism.
     public static final class ControlConstants {
         public static final double                              HOOD_SPEED                  = 0.3; // Predefined duty cycle speed.
-        public static final Angle                               ANGLE_TOLERANCE             = Degrees.of(.1); // How accurate the angle should be.
+        public static final Angle                               ANGLE_TOLERANCE             = Degrees.of(5); // How accurate the angle should be.
     }
     public static final class MathConstants {
         public static final LinearVelocity                      kExitVelocity               = MetersPerSecond.of(10);
@@ -146,6 +150,28 @@ public class HoodSubsystem extends SubsystemBase {
                         hood.getAngle().in(Radians), // Hood Rotation is Pitch, looking up and down.
                         turretRotation));
 
+    }
+
+    /**
+     * Hood is near an angle.
+     *
+     * @param angle  {@link Angle} to be near.
+     * @return {@link Trigger} on when the pivot is near another angle.
+     */
+    public Trigger isNear(Supplier<Angle> angle)
+    {
+        return new Trigger(isNear(angle, ANGLE_TOLERANCE));
+    }
+
+    /**
+     * Hood is near an angle.
+     *
+     * @param angle  {@link Angle} to be near.
+     * @param within {@link Angle} within.
+     * @return {@link Trigger} on when the pivot is near another angle.
+     */
+    public BooleanSupplier isNear(Supplier<Angle> angle, Angle within) {
+        return hood.isNear(angle.get(), within);
     }
 
     /**

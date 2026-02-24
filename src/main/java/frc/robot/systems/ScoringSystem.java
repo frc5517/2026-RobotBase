@@ -5,6 +5,7 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.interpolation.InterpolatingDoubleTreeMap;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.math.trajectory.Trajectory;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Distance;
@@ -12,6 +13,9 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.InputBuilder;
 import frc.robot.Robot;
+import frc.robot.subsystems.FlyWheelSubsystem;
+import frc.robot.subsystems.HoodSubsystem;
+import frc.robot.subsystems.TurretSubsystem;
 import frc.robot.util.borrowed.math.AllianceFlipUtil;
 import frc.robot.util.borrowed.math.FieldConstants;
 
@@ -30,24 +34,19 @@ public class ScoringSystem {
         public static final class DoubleInterpolatingMaps {
             // meters, seconds
             public static final InterpolatingDoubleTreeMap TIME_OF_FLIGHT = InterpolatingDoubleTreeMap.ofEntries(
-                    Map.entry(1.0, .3),
-                    Map.entry(4.0, .75));
-            // TODO: add more data points here.
-            // CLOSE: NEED
-            // MID: maybe good enough
-            // FAR: NEED
+                    Map.entry(1.0, .4),
+                    Map.entry(3.0, .55));
 
             // meters, RPM
             public static final InterpolatingDoubleTreeMap SHOOT_SPEED = InterpolatingDoubleTreeMap.ofEntries(
                     Map.entry(2.0, 2500.0),
-                    Map.entry(3.0, 2700.0),
-                    Map.entry(4.0, 3000.0),
-                    Map.entry(4.86, 3500.0));
+                    Map.entry(3.0, 2750.0),
+                    Map.entry(4.0, 3250.0));
 
             // meters, degrees
             public static final InterpolatingDoubleTreeMap HOOD_ANGLE = InterpolatingDoubleTreeMap.ofEntries(
-                    Map.entry(1.0, 10.0),
-                    Map.entry(2.0, 25.0),
+                    Map.entry(1.0, 8.0),
+                    Map.entry(2.0, 24.0),
                     Map.entry(3.0, 40.0));
         }
     }
@@ -59,19 +58,34 @@ public class ScoringSystem {
     }
 
     public Command shootOnTheMove() {
+        // Goal values
         Angle[] turretGoal = {subsystems.turret().getTurret().getAngle()};
         Angle[] hoodGoal = {subsystems.hood().getHood().getAngle()};
         AngularVelocity[] flyWheelGoal = {subsystems.flywheel().getFlyWheel().getSpeed()};
         return Commands.run(() -> calculateSOTMGoals(
+                // Calculate goals based on a flipped target
                 AllianceFlipUtil.ifShouldFlip(new Pose2d(FieldConstants.Hub.topCenterPoint.toTranslation2d(), Rotation2d.kZero)).getTranslation(),
                 (newAngle) -> turretGoal[0] = newAngle,
                 (newAngle) -> hoodGoal[0] = newAngle,
                 (newSpeed) -> flyWheelGoal[0] = newSpeed))
+                // Run goals
                 .alongWith(subsystems.turret().getTurret().run(() -> turretGoal[0]))
                 .alongWith(subsystems.hood().getHood().run(() -> hoodGoal[0]))
-                .alongWith(Robot.isSimulation()
-                ? subsystems.flywheel().simShoot(() -> flyWheelGoal[0]).andThen(Commands.waitSeconds(0.2)).repeatedly()
-                : subsystems.flywheel().getFlyWheel().run(() -> flyWheelGoal[0]));
+                .alongWith(subsystems.flywheel().getFlyWheel().run(() -> flyWheelGoal[0]))
+                // Score when safe
+                .alongWith(
+                        // To be replaced with isSim ? simShoot : index, indexing automatically stops when flywheel is not ready.
+                        subsystems.flywheel().simShoot(subsystems.swerve(), () -> flyWheelGoal[0])
+                                // Only Index when all systems are ready
+                                .onlyIf(() -> subsystems.turret().getTurret().isNear(turretGoal[0], TurretSubsystem.ControlConstants.ANGLE_TOLERANCE).getAsBoolean()
+                                        && subsystems.hood().getHood().isNear(hoodGoal[0], HoodSubsystem.ControlConstants.ANGLE_TOLERANCE).getAsBoolean()
+                                        && subsystems.flywheel().getFlyWheel().isNear(flyWheelGoal[0], FlyWheelSubsystem.ControlConstants.VELOCITY_TOLERANCE).getAsBoolean())
+                                .andThen(Commands.waitSeconds(0.25)).repeatedly()
+                                .onlyIf(Robot::isSimulation));
+    }
+
+    private void publishTrajectory(Trajectory trajectory) {
+
     }
 
     public void calculateSOTMGoals(Translation2d target, Consumer<Angle> turretGoal, Consumer<Angle> hoodGoal, Consumer<AngularVelocity> flyWheelGoal) {

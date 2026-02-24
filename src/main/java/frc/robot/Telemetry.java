@@ -2,26 +2,20 @@ package frc.robot;
 
 import edu.wpi.first.math.Pair;
 import edu.wpi.first.math.geometry.*;
+import edu.wpi.first.math.trajectory.Trajectory;
 import edu.wpi.first.networktables.*;
 import edu.wpi.first.util.sendable.Sendable;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.subsystems.SwerveSubsystem;
-import frc.robot.systems.ScoringSystem;
-import frc.robot.util.borrowed.math.AllianceFlipUtil;
 import lombok.Getter;
-import lombok.Setter;
 import swervelib.simulation.ironmaple.simulation.SimulatedArena;
 import swervelib.simulation.ironmaple.simulation.seasonspecific.rebuilt2026.Arena2026Rebuilt;
 import swervelib.telemetry.SwerveDriveTelemetry;
 import yams.motorcontrollers.SmartMotorControllerConfig;
 
-import java.awt.geom.Rectangle2D;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.function.Supplier;
 
 public class Telemetry
@@ -52,9 +46,11 @@ public class Telemetry
             /// Mech3d Publishers
             public static class Mech3D
             {
-                public static final NetworkTable mechTable = robotTable.getSubTable("Mech3DTelemetry");
+                public static final NetworkTable mechTable = robotTable.getSubTable("Visualize Telemetry");
+                public static final StructPublisher<Pose2d> robotPose = mechTable.getStructTopic("Robot Pose", Pose2d.struct).publish();
                 public static final StructPublisher<Pose3d> hoodPose = mechTable.getStructTopic("Hood Pose", Pose3d.struct).publish();
                 public static final StructPublisher<Pose3d> turretPose = mechTable.getStructTopic("Turret Pose", Pose3d.struct).publish();
+                public static final StructArrayPublisher<Pose3d> fuelTrajectory = mechTable.getStructArrayTopic("Shot Trajectory", Pose3d.struct).publish();
             }
 
         }
@@ -82,6 +78,7 @@ public class Telemetry
     {
         // Input
         Publishers.Robot.inputPublisher.update();
+        Publishers.Robot.Mech3D.robotPose.set(SwerveSubsystem.SwerveState.CurrentPose);
 
         if (RobotBase.isSimulation()) {
             // MapleSim

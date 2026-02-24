@@ -37,6 +37,7 @@ import yams.motorcontrollers.SmartMotorControllerConfig;
 import yams.motorcontrollers.SmartMotorControllerConfig.ControlMode;
 import yams.motorcontrollers.local.SparkWrapper;
 
+import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
 public class TurretSubsystem extends SubsystemBase
@@ -49,12 +50,12 @@ public class TurretSubsystem extends SubsystemBase
         public static final MechanismGearing        GEAR_RATIO          = new MechanismGearing(GearBox.fromReductionStages(3, 4, 5)); // FlyWheel Gear Ratio
         /// Motor Tuning Values
         public static final PIDController PID_CONTROLLER              = new PIDController( // Exponential Motion Profiling
-                20, 0, 0.01); // PID - Proportional, Integral, Derivative.
+                60, 0, 0.01); // PID - Proportional, Integral, Derivative.
         /// Exponential Motion Profiling Constraints.
         public static final class Profiling {
             public static final Voltage                         MAX_CONTROL_VOLTAGE         = Volts.of(12); // Max Control Voltage
-            public static final AngularVelocity                 MAX_ANGULAR_VELOCITY        = DegreesPerSecond.of(180); // Max Angular Velocity
-            public static final AngularAcceleration             MAX_ANGULAR_ACCELERATION    = DegreesPerSecondPerSecond.of(360); // Max Angular Acceleration
+            public static final AngularVelocity                 MAX_ANGULAR_VELOCITY        = DegreesPerSecond.of(360); // Max Angular Velocity
+            public static final AngularAcceleration             MAX_ANGULAR_ACCELERATION    = DegreesPerSecondPerSecond.of(720); // Max Angular Acceleration
         }
         public static final Time                    RAMP_RATE           = Seconds.of(0.25); // Time it takes to reach max speed from 0.
         public static final SimpleMotorFeedforward  FEED_FORWARD        = new SimpleMotorFeedforward(0, 0, 0); // Feed Forwards.
@@ -76,7 +77,7 @@ public class TurretSubsystem extends SubsystemBase
     public static class ControlConstants {
         public static final Angle                   IDLE_ANGLE          = SIM_STARTING_ANGLE;
 
-        public static final Angle                   ANGLE_TOLERANCE     = Degrees.of(1);
+        public static final Angle                   ANGLE_TOLERANCE     = Degrees.of(5);
 
     }
     /// The Normal Rev Vendor SparkMax Object.
@@ -161,6 +162,28 @@ public class TurretSubsystem extends SubsystemBase
                 new Rotation3d(0.0,
                         0.0,
                         turret.getAngle().in(Radians))); // Turret Rotation is Yaw, looking left and right.
+    }
+
+    /**
+     * Pivot is near an angle.
+     *
+     * @param angle  {@link Angle} to be near.
+     * @return {@link Trigger} on when the pivot is near another angle.
+     */
+    public Trigger isNear(Supplier<Angle> angle)
+    {
+        return new Trigger(isNear(angle, ANGLE_TOLERANCE));
+    }
+
+    /**
+     * Pivot is near an angle.
+     *
+     * @param angle  {@link Angle} to be near.
+     * @param within {@link Angle} within.
+     * @return {@link Trigger} on when the pivot is near another angle.
+     */
+    public BooleanSupplier isNear(Supplier<Angle> angle, Angle within) {
+        return turret.isNear(angle.get(), within);
     }
 
     /**
