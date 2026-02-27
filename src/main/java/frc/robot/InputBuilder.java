@@ -151,7 +151,7 @@ public class InputBuilder
         final InputStream singlePID = new InputStream()
                 // A starting method should be set first.
                 .StartingMethods
-                .headingXboxDrive(MANUAL_CONTROL.isMode, driverXbox)
+                .headingXboxDrive(PID_CONTROL.isMode, driverXbox)
                 // Now we can set .with our controller bindings.
                 .SwerveBindings /// Swerve Controller Bindings.
                 // When in the subsystem, set our desired constants with .set methods.
@@ -199,6 +199,7 @@ public class InputBuilder
         DUAL_XBOX("Dual Xbox"),
         TESTING("Testing", true),
         MANUAL_CONTROL("Manual Control", false),
+        PID_CONTROL("Basic PID Control", false),
 
         /**  Define Student Input Selections here  */
 
