@@ -17,6 +17,7 @@ import com.pathplanner.lib.util.swerve.SwerveSetpoint;
 import com.pathplanner.lib.util.swerve.SwerveSetpointGenerator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Transform2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.util.Units;
@@ -62,7 +63,7 @@ public class SwerveSubsystem extends SubsystemBase
     }
     public static class ControlConstants {
         /// Enable vision odometry updates while driving.
-        public static final boolean RUN_VISION = false; // Run only in sim until real vision is ready.
+        public static final boolean RUN_VISION = true; // Run only in sim until real vision is ready.
         // Simulation Starting Pose, flipping is handled by YAGSL.
         public static final Pose2d INITIAL_SIM_POSE = new Pose2d(new Translation2d(
                 Meter.of(2),
@@ -135,6 +136,7 @@ public class SwerveSubsystem extends SubsystemBase
     {
       swerveDrive.updateOdometry();
       vision.updatePoseEstimation(swerveDrive);
+      //vision.updateGamePieceSim();
     }
     SwerveState.setCurrentPose(swerveDrive.getPose());
   }
@@ -142,6 +144,24 @@ public class SwerveSubsystem extends SubsystemBase
   @Override
   public void simulationPeriodic()
   {
+  }
+
+    /**
+     * Drives to the nearest fuel target.
+     *
+     * @return a command that drives to the nearest fuel target.
+     */
+  public Command driveToNearestFuel() {
+      var target = vision.getBestGamePieceTransform();
+      // No target found, report error.
+      if (target == null) {return Commands.runOnce(() -> DriverStation.reportError("Target Fuel Not Found!", false));}
+      // Drive to the target
+      return driveToPose(
+              getSwerveDrive().getPose().plus(
+                      new Transform2d(
+                              target.getX(),
+                              target.getY(),
+                              target.getRotation().toRotation2d())));
   }
 
   /**

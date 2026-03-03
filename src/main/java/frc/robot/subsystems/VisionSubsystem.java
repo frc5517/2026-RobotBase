@@ -21,9 +21,11 @@ import edu.wpi.first.networktables.NetworkTablesJNI;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.Robot;
 import java.awt.Desktop;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -32,12 +34,15 @@ import org.photonvision.EstimatedRobotPose;
 import org.photonvision.PhotonCamera;
 import org.photonvision.PhotonPoseEstimator;
 import org.photonvision.PhotonUtils;
+import org.photonvision.estimation.TargetModel;
 import org.photonvision.simulation.PhotonCameraSim;
 import org.photonvision.simulation.SimCameraProperties;
 import org.photonvision.simulation.VisionSystemSim;
+import org.photonvision.simulation.VisionTargetSim;
 import org.photonvision.targeting.PhotonPipelineResult;
 import org.photonvision.targeting.PhotonTrackedTarget;
 import swervelib.SwerveDrive;
+import swervelib.simulation.ironmaple.simulation.SimulatedArena;
 import swervelib.telemetry.SwerveDriveTelemetry;
 
 
@@ -51,7 +56,7 @@ public class VisionSubsystem
     enum Cameras {
         /// Center Camera
         CENTER_CAM("center",
-                new Rotation3d(0, Units.degreesToRadians(18), 0),
+                new Rotation3d(0, Units.degreesToRadians(-18), 0),
                 new Translation3d(Units.inchesToMeters(-4.628),
                         Units.inchesToMeters(-10.687),
                         Units.inchesToMeters(16.129)),
@@ -79,6 +84,8 @@ public class VisionSubsystem
         public        List<PhotonPipelineResult>   resultsList       = new ArrayList<>();
         /// Last read from the camera timestamp to prevent lag due to slow data fetches.
         private       double                       lastReadTimestamp = Microseconds.of(NetworkTablesJNI.now()).in(Seconds);
+        /// Quick check to determine which cameras to use to update the pose.
+        public        boolean                      isAprilTag        = true;
 
         /**
          * Construct a Photon Camera class with help. Standard deviations are fake values, experiment, and determine
@@ -217,7 +224,7 @@ public class VisionSubsystem
             Optional<EstimatedRobotPose> visionEst = Optional.empty();
             for (var change : resultsList)
             {
-                var estimatedPose = poseEstimator.estimateLowestAmbiguityPose(change);
+                var estimatedPose = poseEstimator.estimateAverageBestTargetsPose(change);
                 if (estimatedPose.isPresent()) {
                     estimatedRobotPose = Optional.of(new EstimatedRobotPose(
                             estimatedPose.get().estimatedPose,
@@ -297,7 +304,7 @@ public class VisionSubsystem
    * April Tag Field Layout of the year.
    */
   public static final AprilTagFieldLayout fieldLayout                     = AprilTagFieldLayout.loadField(
-      AprilTagFields.k2025ReefscapeAndyMark);
+      AprilTagFields.k2026RebuiltWelded);
   /**
    * Ambiguity defined as a value between (0,1). Used in {@link VisionSubsystem#filterPose}.
    */
@@ -335,6 +342,7 @@ public class VisionSubsystem
     {
       visionSim = new VisionSystemSim("Vision");
       visionSim.addAprilTags(fieldLayout);
+        SmartDashboard.putData("PhotonField", visionSim.getDebugField());
 
       for (Cameras c : Cameras.values())
       {
@@ -366,6 +374,39 @@ public class VisionSubsystem
 
   }
 
+    /**
+     * Gets the best fuel tracked from the camera list.
+     *
+     * @return the best target {@link Transform3d} relative to the robot origin.
+     */
+    public Transform3d getBestGamePieceTransform()
+    {
+        // The best target
+        Transform3d best = null;
+        double bestArea = -1;
+        // Check all cams
+        for (Cameras camera : Cameras.values()) {
+            // Update the latest results
+            camera.updateUnreadResults();
+            // Get the best one
+            var result = camera.getBestResult();
+            // Skip if no targets are viable
+            if (result.isEmpty()) continue;
+            if (!result.get().hasTargets()) continue;
+            // Save our target
+            PhotonTrackedTarget target = result.get().getBestTarget();
+            // Target area
+            double area = target.getArea();
+            // If the target area is greater than best, save it.
+            if (area > bestArea) {
+                bestArea = area;
+                best = target.getBestCameraToTarget().plus(camera.robotToCamTransform.inverse()); // Return pose relative to chassis.
+            }
+        }
+        // Return the best target of all cams.
+        return best; // null if no cameras see anything
+    }
+
   /**
    * Update the pose estimation inside of {@link SwerveDrive} with all of the given poses.
    *
@@ -384,18 +425,34 @@ public class VisionSubsystem
        */
       visionSim.update(swerveDrive.getSimulationDriveTrainPose().get());
     }
-    for (Cameras camera : Cameras.values())
-    {
-      Optional<EstimatedRobotPose> poseEst = getEstimatedGlobalPose(camera);
-      if (poseEst.isPresent())
-      {
-        var pose = poseEst.get();
-        swerveDrive.addVisionMeasurement(pose.estimatedPose.toPose2d(),
-                                         pose.timestampSeconds,
-                                         camera.curStdDevs);
-      }
+    for (Cameras camera : Cameras.values()) {
+        if (!camera.isAprilTag) {break;}
+        Optional<EstimatedRobotPose> poseEst = getEstimatedGlobalPose(camera);
+        poseEst.ifPresent(pose -> swerveDrive.addVisionMeasurement(
+                        pose.estimatedPose.toPose2d(),
+                        pose.timestampSeconds,
+                        camera.curStdDevs));
     }
-
+  }
+    /**
+     * This loads the MapleSim Gamepiece targetable poses into the Vision Sim.
+     * Call under updatePoseEstimation.
+     * It checks for sim inside the function.
+     */
+  public void updateGamePieceSim() {
+      if (Robot.isSimulation()) {
+          // Load all our targets
+          var poses = SimulatedArena.getInstance().getGamePiecesPosesByType("fuel");
+          var gamepieces = new VisionTargetSim[poses.size()];
+          // Update each piece with an ID.
+          for (int i = 0; i < poses.size(); i++) {
+              gamepieces[i] = new VisionTargetSim(poses.get(i), new TargetModel(15.0 / 100), i);
+          }
+          // Remove stale targets
+          visionSim.removeVisionTargets("fuel");
+          // Set as an array
+          visionSim.addVisionTargets("fuel", gamepieces);
+      }
   }
 
   /**
@@ -472,7 +529,6 @@ public class VisionSubsystem
     }
     return Optional.empty();
   }
-
 
   /**
    * Get distance of the robot from the AprilTag pose.

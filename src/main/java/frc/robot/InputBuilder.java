@@ -26,6 +26,7 @@ import lombok.experimental.Accessors;
 import swervelib.SwerveInputStream;
 import swervelib.simulation.ironmaple.simulation.SimulatedArena;
 
+import java.util.Objects;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
@@ -68,12 +69,13 @@ public class InputBuilder
                 StartingMethods
                 .defaultXboxDrive(TESTING.isMode,   driverXbox)
                 .SmartBindings
-                .withShootOnTheMove(                         driverXbox.y())
+                .withAutoShootOnTheMove()
                 .back().SwerveBindings              /// SwerveDrive Bindings
                 .setNormalRotation(.8)
                 .setNormalTranslation(.8)
                 .setSlowRotation(.4)
                 .setSlowTranslation(.4)
+                .withCollectFuel(driverXbox.b())
 
                 .withLookAtHubThenFire(             driverXbox.leftTrigger(), new Trigger(() -> false))
 
@@ -83,7 +85,6 @@ public class InputBuilder
                 .withSlowDrive(                     driverXbox.rightBumper())
                 .withToggleCentricity(              driverXbox.back(), true)
                 .withResetSimOdometry(              driverXbox.start())
-                .updateSwerveStream()               // Update our stream after making default drive speed changes.
                 .back().HoodBindings                /// Hood
                 .withSetAngle(                      driverXbox.x(), Degrees.of(90))
                 .withRunHood(                       driverXbox.pov(0), true)
@@ -112,8 +113,8 @@ public class InputBuilder
                 // Now we can set .with our controller bindings.
                 .SwerveBindings /// Swerve Controller Bindings.
                 // When in the subsystem, set our desired constants with .set methods.
-                .setNormalRotation(.8)
-                .setNormalTranslation(.8)
+                .setNormalRotation(.2)
+                .setNormalTranslation(.2)
                 .setSlowRotation(.4)
                 .setSlowTranslation(.4)
                 .setBoostRotation(1)
@@ -264,6 +265,7 @@ public class InputBuilder
          * Trigger used to determine when this InputStream is in control.
          */
         @Setter private Trigger isMode;
+        private Trigger onChange;
 
         /// Inner Config Namespaces
         public final StartingMethods StartingMethods = new StartingMethods();
@@ -280,8 +282,7 @@ public class InputBuilder
         private SwerveInputStream swerveInputStream;
 
         /// Initialize our binding options only when the subsystem is not null.
-        InputStream() {
-        }
+        InputStream() {}
 
         /// Default Constructor with no drive.
         InputStream(Trigger isMode) {
@@ -304,7 +305,11 @@ public class InputBuilder
                     .robotRelative(true)
                     .allianceRelativeControl(false);
             this.SwerveBindings.driveCommand = () -> subsystems.swerve.driveFieldOriented(() -> swerveInputStream.get());
-            isMode.and(DriverStation::isEnabled).onTrue(Commands.runOnce(() -> subsystems.swerve.setDefaultCommand(SwerveBindings.driveCommand.get())));
+            isMode.and(DriverStation::isEnabled).onTrue(Commands.runOnce(() -> {
+                // Update some things on entry between inputs
+                subsystems.swerve.setDefaultCommand(SwerveBindings.driveCommand.get());
+                SwerveBindings.back();
+            }));
         }
 
         /**
@@ -357,6 +362,12 @@ public class InputBuilder
          * Smart controls that make use of automatic sequencing controls.
          */
         public class SmartBindings {
+
+            public SmartBindings withAutoShootOnTheMove() {
+                if (!TurretBindings.isPresent || !HoodBindings.isPresent || !FlyWheelBindings.isPresent) {return this;}
+                withShootOnTheMove(isMode.and(CustomTriggers.aimingZone.getTrigger()));
+                return this;
+            }
 
             public SmartBindings withShootOnTheMove(Trigger shootOnTheMoveWhile) {
                 if (!TurretBindings.isPresent || !HoodBindings.isPresent || !FlyWheelBindings.isPresent) {return this;}
@@ -499,6 +510,37 @@ public class InputBuilder
 
             private KickerBindings() {
                 this.isPresent = subsystems.kicker != null;
+            }
+            /**
+             * The default duty cycle speed to run at.
+             */
+            @Setter private double kickerSpeed = 0.5;
+
+            /**
+             * Sets the kicker velocity goal.
+             *
+             * @param setVelocity the button to map.
+             * @param kickerVelocity the velocity goal.
+             * @return this, for chaining.
+             */
+            public KickerBindings withSetVelocity(Trigger setVelocity, AngularVelocity kickerVelocity) {
+                if (!isPresent) {return this;}
+                isMode.and(setVelocity).whileTrue(subsystems.flywheel.getFlyWheel().run(kickerVelocity));
+                return this;
+            }
+
+            /**
+             * Runs the kicker at preset speed, stopping when finished.
+             *
+             * @param runkicker then button to map.
+             * @param isOut whether to spin out.
+             * @return this, for chaining.
+             */
+            public KickerBindings withRunFlyWheel(Trigger runkicker, boolean isOut) {
+                if (!isPresent) {return this;}
+                isMode.and(runkicker).whileTrue(subsystems.kicker.runKicker(kickerSpeed, isOut))
+                        .onFalse(subsystems.hood.stopHood());
+                return this;
             }
 
             /**
@@ -775,6 +817,12 @@ public class InputBuilder
                 return this;
             }
 
+            public SwerveBindings withCollectFuel(Trigger collectFuel) {
+                if (!isPresent) {return this;}
+                isMode.and(collectFuel).whileTrue(subsystems.swerve.driveToNearestFuel());
+                return this;
+            }
+
             /**
              * Looks at the hub with the drive and scores while moving. Doesn't account for distance.
              *
@@ -819,7 +867,7 @@ public class InputBuilder
                 if (!isPresent) {return this;}
                 // Update Telemetry Continuously
                 isMode.and(DriverStation::isEnabled).whileTrue(Commands.run(() -> {
-                    SmartDashboard.putBoolean("Aim Data/isLocked", swerveInputStream.aimLock(Degrees.of(1)).getAsBoolean());
+                    SmartDashboard.putBoolean("Telemetry/RobotTelemetry/Swerve/Drive is Aimed", swerveInputStream.aimLock(Degrees.of(1)).getAsBoolean());
                 }));
                 // Save an adjustable atomic time.
                 final int[] lookAheadTime = {0};
@@ -870,20 +918,6 @@ public class InputBuilder
             }
 
             /**
-             * Updates the {@link SwerveInputStream} with the latest values.
-             *
-             * @return this, for chaining.
-             */
-            public SwerveBindings updateSwerveStream() {
-                if (!isPresent) {return this;}
-                swerveInputStream
-                        .scaleTranslation(normalTranslation)
-                        .scaleRotation(normalRotation)
-                        .deadband(deadzone);
-                return this;
-            }
-
-            /**
              * Sets a default command for this subsystem.
              *
              * @param defaultCommand the default command to set.
@@ -901,10 +935,16 @@ public class InputBuilder
              * @return this InputStream.
              */
             public InputStream back() {
+                /// Update things here, also runs on binding entry.
+                if (Objects.nonNull(swerveInputStream)) {
+                    swerveInputStream
+                            .scaleTranslation(normalTranslation)
+                            .scaleRotation(normalRotation)
+                            .deadband(deadzone);
+                }
                 return InputStream.this;
             }
         }
-
 
         /**
          * Various Bindings that don't fit into a category yet.
@@ -952,7 +992,7 @@ public class InputBuilder
             HoodSubsystem hood,
             IndexerSubsystem indexer,
             IntakeSubsystem intake,
-            SubsystemBase kicker,
+            KickerSubsystem kicker,
             SwerveSubsystem swerve,
             TurretSubsystem turret) {}
 }
