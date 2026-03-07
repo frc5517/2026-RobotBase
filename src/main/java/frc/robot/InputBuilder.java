@@ -1,5 +1,6 @@
 package frc.robot;
 
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.Pair;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -64,6 +65,9 @@ public class InputBuilder
      * Method used to construct input streams
      */
     public void configureBindings() {
+        // Stop all movement.
+        DISABLED.isMode.and(DriverStation::isEnabled).onTrue(Commands.runOnce(subsystems.swerve::removeDefaultCommand));
+
         /// Testing control gets randomly changed all the time.
         final InputStream testing = new InputStream().
                 StartingMethods
@@ -169,26 +173,24 @@ public class InputBuilder
                 .withToggleCentricity(  driverXbox.back(), true)
                 .withResetSimOdometry(  driverXbox.start())
                 .back().IntakeBindings /// Intake Controller Bindings.
-                .setIntakeSpeed(0.5)
                 .withRunIntake(         driverXbox.leftBumper(), true)
                 .withRunIntake(         driverXbox.rightBumper(), false)
                 .back().IndexerBindings /// Indexer Controller Bindings
-                .setIndexSpeed(0.5)
                 .withRunIndexer(        driverXbox.x(), true)
                 .withRunIndexer(        driverXbox.y(), false)
                 .back().KickerBindings /// Kicker Controller Bindings
+                .withRunKicker(         driverXbox.a(), true)
                 .back().TurretBindings /// Turret Controller Bindings
-                .setTurretSpeed(0.5)
-                .withRunTurret(         driverXbox.pov(90), true)
-                .withRunTurret(         driverXbox.pov(270), false)
+                .withDefaultCommand(() -> subsystems.turret.getTurret().setAngle(Degrees.of(MathUtil.interpolate(TurretSubsystem.HardwareConstants.HARD_LIMIT_REVERSE.in(Degrees), TurretSubsystem.HardwareConstants.HARD_LIMIT_FORWARD.in(Degrees), 0.5))))
+                .withSetAngle(          driverXbox.pov(90), Degrees.of(MathUtil.interpolate(TurretSubsystem.HardwareConstants.HARD_LIMIT_REVERSE.in(Degrees), TurretSubsystem.HardwareConstants.HARD_LIMIT_FORWARD.in(Degrees), 0.25)))
+                .withSetAngle(          driverXbox.pov(270), Degrees.of(MathUtil.interpolate(TurretSubsystem.HardwareConstants.HARD_LIMIT_REVERSE.in(Degrees), TurretSubsystem.HardwareConstants.HARD_LIMIT_FORWARD.in(Degrees), 0.75)))
                 .back().HoodBindings /// Hood Controller Bindings
-                .setHoodSpeed(0.5)
-                .withRunHood(           driverXbox.pov(0), true)
-                .withRunHood(           driverXbox.pov(180), false)
+                .withDefaultCommand(() -> subsystems.hood.getHood().setAngle(Degrees.of(MathUtil.interpolate(HoodSubsystem.HardwareConstants.HARD_LIMIT_REVERSE.in(Degrees), HoodSubsystem.HardwareConstants.HARD_LIMIT_FORWARD.in(Degrees), 0.5))))
+                .withSetAngle(          driverXbox.pov(0), Degrees.of(MathUtil.interpolate(HoodSubsystem.HardwareConstants.HARD_LIMIT_REVERSE.in(Degrees), HoodSubsystem.HardwareConstants.HARD_LIMIT_FORWARD.in(Degrees), 0.25)))
+                .withSetAngle(          driverXbox.pov(180), Degrees.of(MathUtil.interpolate(HoodSubsystem.HardwareConstants.HARD_LIMIT_REVERSE.in(Degrees), HoodSubsystem.HardwareConstants.HARD_LIMIT_FORWARD.in(Degrees), 0.75)))
                 .back().FlyWheelBindings /// Turret Controller Bindings
-                .setFlyWheelSpeed(0.5)
-                //.withRunFlyWheel(         driverXbox.rightTrigger(), true)
-                //.withRunFlyWheel(         driverXbox.leftTrigger(), false)
+                .withRunFlyWheel(         driverXbox.rightTrigger(), true)
+                .withRunFlyWheel(         driverXbox.leftTrigger(), false)
                 .back().FlyWheelBindings
                 .back().MiscBindings /// Miscellaneous Controller Bindings
                 .resetField(            driverXbox.start())
@@ -201,7 +203,7 @@ public class InputBuilder
         DISABLED("DISABLED - Temp", true),
         SINGLE_XBOX("Single Xbox", false),
         DUAL_XBOX("Dual Xbox"),
-        TESTING("Testing", true),
+        TESTING("Testing", false),
         MANUAL_CONTROL("Manual Control", false),
         PID_CONTROL("Basic PID Control", false),
 
@@ -520,19 +522,6 @@ public class InputBuilder
             @Setter private double kickerSpeed = 0.5;
 
             /**
-             * Sets the kicker velocity goal.
-             *
-             * @param setVelocity the button to map.
-             * @param kickerVelocity the velocity goal.
-             * @return this, for chaining.
-             */
-            public KickerBindings withSetVelocity(Trigger setVelocity, AngularVelocity kickerVelocity) {
-                if (!isPresent) {return this;}
-                isMode.and(setVelocity).whileTrue(subsystems.kicker.getKicker().run(kickerVelocity));
-                return this;
-            }
-
-            /**
              * Runs the kicker at preset speed, stopping when finished.
              *
              * @param runkicker then button to map.
@@ -730,6 +719,20 @@ public class InputBuilder
 
             private TurretBindings() {
                 this.isPresent = subsystems.turret != null;
+            }
+
+            /**
+             * Sets the turret angle to the given angle.
+             * Horizontal to the floor is 0 degrees.
+             *w
+             * @param setAngle the button to map.
+             * @param turretAngle the angle to move to.
+             * @return this, for chaining.
+             */
+            public TurretBindings withSetAngle(Trigger setAngle, Angle turretAngle) {
+                if (!isPresent) {return this;}
+                isMode.and(setAngle).whileTrue(subsystems.turret.getTurret().setAngle(turretAngle));
+                return this;
             }
 
             /**

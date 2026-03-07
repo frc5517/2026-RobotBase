@@ -86,7 +86,7 @@ public class ScoringSystem {
 
     public void calculateSOTMGoals(Translation2d target, Consumer<Angle> turretGoal, Consumer<Angle> hoodGoal, Consumer<AngularVelocity> flyWheelGoal) {
         // Velocity measurement delay that affects precise calculations.
-        double phaseDelay = 0.5;
+        double phaseDelay = 0.05;
         Pose2d rawPose = subsystems.swerve().getSwerveDrive().getPose();
         // 2d location of the shooter
         Translation2d shooterOnGround = rawPose.getTranslation()
@@ -96,8 +96,8 @@ public class ScoringSystem {
         // Time that the fuel is in the air.
         double timeOfFlight = DoubleInterpolatingMaps.TIME_OF_FLIGHT.get(distanceToTarget.in(Meters));
         // Chassis speeds times the time of flight.
-        ChassisSpeeds speedsAtTime = subsystems.swerve().getSwerveDrive().getFieldVelocity().times(timeOfFlight).times(timeOfFlight);
-        // Estimate the robot pose based on the updated speeds and phase delay
+        ChassisSpeeds speedsAtTime = subsystems.swerve().getSwerveDrive().getFieldVelocity().times(timeOfFlight);
+        // Estimate the robot pose based on phase delay
         Pose2d estimatedPose = rawPose.exp(new Twist2d(
             speedsAtTime.vxMetersPerSecond * phaseDelay, 
             speedsAtTime.vyMetersPerSecond * phaseDelay, 

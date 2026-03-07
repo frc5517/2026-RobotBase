@@ -53,10 +53,10 @@ public class HoodSubsystem extends SubsystemBase {
         public static final Mass                                HOOD_MASS                   = Pounds.of(3); // Weight of the hood mechanism.
         public static final Distance                            HOOD_LENGTH                 = Inches.of(8); // Hood Length, used in calculations and to visualize in sim.
         public static final Angle                               HORIZONTAL_OFFSET           = Degrees.of(0); // Offset required making angle 0 horizontal and parallel to the ground.
-        public static final Angle                               HARD_LIMIT_REVERSE          = Degrees.of(10); // The hard limit should be a metal physical stop.
-        public static final Angle                               HARD_LIMIT_FORWARD          = Degrees.of(180);
-        public static final Angle                               SOFT_LIMIT_REVERSE          = Degrees.of(10); // A soft limit so we don't constantly hit the hard limit without reason.
-        public static final Angle                               SOFT_LIMIT_FORWARD          = Degrees.of(180);
+        public static final Angle                               HARD_LIMIT_REVERSE          = Degrees.of(0); // The hard limit should be a metal physical stop.
+        public static final Angle                               HARD_LIMIT_FORWARD          = Degrees.of(90);
+        public static final Angle                               SOFT_LIMIT_REVERSE          = Degrees.of(0); // A soft limit so we don't constantly hit the hard limit without reason.
+        public static final Angle                               SOFT_LIMIT_FORWARD          = Degrees.of(90);
         /// IMPORTANT, this helps calculate the initial fuel velocity; it is the friction affecting on the ball from the hood.
         public static final double                              HOOD_COF_FACTOR             = 0.8;
         /// Sim Constants

@@ -114,8 +114,7 @@ public class TurretSubsystem extends SubsystemBase
         @Getter private static Rotation2d           CurrentHeading      = Rotation2d.kZero; // Set in periodic
     }
 
-    public TurretSubsystem()
-    {
+    public TurretSubsystem() {
     }
 
     public Supplier<Angle> angleToPose(Pose2d swervePose, Translation2d position) {

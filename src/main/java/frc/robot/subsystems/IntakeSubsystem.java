@@ -92,8 +92,6 @@ public class IntakeSubsystem extends SubsystemBase {
      *
      */
     public IntakeSubsystem() {
-        intake.run(DegreesPerSecond.of(0));
-
         // If in sim
         if (RobotBase.isSimulation()) {
             // Create our intake at runtime.
