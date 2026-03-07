@@ -16,6 +16,7 @@ import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.geometry.*;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.units.measure.*;
@@ -163,6 +164,32 @@ public class TurretSubsystem extends SubsystemBase
                         0.0,
                         turret.getAngle().in(Radians))); // Turret Rotation is Yaw, looking left and right.
     }
+
+    public Pose2d getPose(Pose2d robotPose)
+    {
+        return robotPose.plus(new Transform2d(
+                getPose3D().getTranslation().toTranslation2d(), getPose3D().getRotation().toRotation2d()));
+    }
+
+    public ChassisSpeeds getVelocity(ChassisSpeeds robotVelocity, Angle robotAngle)
+    {
+        var robotAngleRads = robotAngle.in(Radians);
+        double turretVelocityX =
+                robotVelocity.vxMetersPerSecond
+                        + robotVelocity.omegaRadiansPerSecond
+                        * (getPose3D().getY() * Math.cos(robotAngleRads)
+                        - getPose3D().getX() * Math.sin(robotAngleRads));
+        double turretVelocityY =
+                robotVelocity.vyMetersPerSecond
+                        + robotVelocity.omegaRadiansPerSecond
+                        * (getPose3D().getX() * Math.cos(robotAngleRads)
+                        - getPose3D().getY() * Math.sin(robotAngleRads));
+
+        return new ChassisSpeeds(turretVelocityX,
+                turretVelocityY,
+                robotVelocity.omegaRadiansPerSecond + motor.getMechanismVelocity().in(RadiansPerSecond));
+    }
+
 
     /**
      * Pivot is near an angle.
