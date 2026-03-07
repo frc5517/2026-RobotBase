@@ -3,9 +3,9 @@ package frc.robot.systems;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.geometry.Twist2d;
 import edu.wpi.first.math.interpolation.InterpolatingDoubleTreeMap;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
-import edu.wpi.first.math.trajectory.Trajectory;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Distance;
@@ -16,6 +16,7 @@ import frc.robot.Robot;
 import frc.robot.subsystems.FlyWheelSubsystem;
 import frc.robot.subsystems.HoodSubsystem;
 import frc.robot.subsystems.TurretSubsystem;
+import frc.robot.systems.ScoringSystem.ControlConstants.DoubleInterpolatingMaps;
 import frc.robot.util.borrowed.math.AllianceFlipUtil;
 import frc.robot.util.borrowed.math.FieldConstants;
 
@@ -23,7 +24,6 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 import static edu.wpi.first.units.Units.*;
-import static frc.robot.systems.ScoringSystem.ControlConstants.*;
 
 public class ScoringSystem {
     public static class HardwareConstants {
@@ -84,22 +84,28 @@ public class ScoringSystem {
                                 .onlyIf(Robot::isSimulation));
     }
 
-    private void publishTrajectory(Trajectory trajectory) {
-
-    }
-
     public void calculateSOTMGoals(Translation2d target, Consumer<Angle> turretGoal, Consumer<Angle> hoodGoal, Consumer<AngularVelocity> flyWheelGoal) {
+        // Velocity measurement delay that affects precise calculations.
+        double phaseDelay = 0.5;
+        Pose2d rawPose = subsystems.swerve().getSwerveDrive().getPose();
         // 2d location of the shooter
-        Translation2d shooterOnGround = subsystems.swerve().getSwerveDrive().getPose().getTranslation()
+        Translation2d shooterOnGround = rawPose.getTranslation()
                         .plus(subsystems.turret().getPose3D().toPose2d().getTranslation());
         // Distance to the target
         Distance distanceToTarget = Meters.of(shooterOnGround.getDistance(target));
         // Time that the fuel is in the air.
         double timeOfFlight = DoubleInterpolatingMaps.TIME_OF_FLIGHT.get(distanceToTarget.in(Meters));
         // Chassis speeds times the time of flight.
-        ChassisSpeeds speedsAtTime = subsystems.swerve().getSwerveDrive().getFieldVelocity().times(timeOfFlight);
-        // Subtract the current speed times the time of flight. Adjusting our goal based on the chassis speeds.
-        Translation2d targetAdjustedForSpeed = target.minus(new Translation2d(speedsAtTime.vxMetersPerSecond, speedsAtTime.vyMetersPerSecond));
+        ChassisSpeeds speedsAtTime = subsystems.swerve().getSwerveDrive().getFieldVelocity().times(timeOfFlight).times(timeOfFlight);
+        // Estimate the robot pose based on the updated speeds and phase delay
+        Pose2d estimatedPose = rawPose.exp(new Twist2d(
+            speedsAtTime.vxMetersPerSecond * phaseDelay, 
+            speedsAtTime.vyMetersPerSecond * phaseDelay, 
+            speedsAtTime.omegaRadiansPerSecond * phaseDelay));
+        // Adjust the speeds to be turret relative
+        ChassisSpeeds turretSpeedsAtTime = subsystems.turret().getVelocity(speedsAtTime, estimatedPose.getRotation().getMeasure());
+        // Subtract the current speed times the time of flight. Adjusting our goal based on the chassis speeds. 
+        Translation2d targetAdjustedForSpeed = target.minus(new Translation2d(turretSpeedsAtTime.vxMetersPerSecond, turretSpeedsAtTime.vyMetersPerSecond));
         // Distance from the updated target based on robot speeds.
         Distance adjustedDistance = Meters.of(targetAdjustedForSpeed.getNorm());
         /// Turret goal is straightforward, angle from origin from our translation with the robot as the origin.

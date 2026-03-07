@@ -1,28 +1,19 @@
 package frc.robot.subsystems;
 
-import com.revrobotics.spark.SparkLowLevel.MotorType;
-import com.revrobotics.spark.SparkMax;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
-import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.units.measure.*;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Telemetry;
 import frc.robot.util.BrushedSparkWrapper;
 import lombok.Getter;
-import lombok.Setter;
 import yams.gearing.GearBox;
 import yams.gearing.MechanismGearing;
-import yams.mechanisms.config.FlyWheelConfig;
-import yams.mechanisms.velocity.FlyWheel;
-import yams.motorcontrollers.SmartMotorController;
 import yams.motorcontrollers.SmartMotorControllerConfig;
 import yams.motorcontrollers.SmartMotorControllerConfig.ControlMode;
 import yams.motorcontrollers.SmartMotorControllerConfig.MotorMode;
-import yams.motorcontrollers.local.SparkWrapper;
 
 import static edu.wpi.first.units.Units.*;
 import static frc.robot.subsystems.IndexerSubsystem.HardwareConstants.*;
@@ -31,7 +22,7 @@ public class IndexerSubsystem extends SubsystemBase {
     /// Hardware Constants for the Indexer Mechanism.
     public static class HardwareConstants {
         /// Motor Constants
-        public static final int                                 MOTOR_ID            = 22; // Spark Max CAN ID
+        public static final int                                 MOTOR_ID            = 12; // Spark Max CAN ID
         public static final boolean                             MOTOR_INVERTED      = false; // Inverts control direction.
         public static final MechanismGearing                    GEAR_RATIO          = new MechanismGearing(GearBox.fromReductionStages(3, 4)); // Indexer Gear Ratio
         /// Motor Tuning Values

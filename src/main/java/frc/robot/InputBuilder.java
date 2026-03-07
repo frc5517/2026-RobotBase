@@ -34,7 +34,7 @@ import static edu.wpi.first.units.Units.*;
 import static frc.robot.InputBuilder.InputSelections.*;
 import static frc.robot.Telemetry.Publishers.Robot.*;
 
-
+@SuppressWarnings("unused")
 public class InputBuilder
 {
     /// Our subsystems and systems to call to from RobotContainer
@@ -106,10 +106,10 @@ public class InputBuilder
                 .resetField(                        driverXbox.start())
                 .back();
         /// Single xbox controller with manual duty cycle control of all the subsystems.
-        final InputStream singleManual = new InputStream()
+        final InputStream singleManual = new InputStream(MANUAL_CONTROL.isMode)
                 // A starting method should be set first.
-                .StartingMethods
-                .defaultXboxDrive(MANUAL_CONTROL.isMode, driverXbox)
+                //.StartingMethods
+                //.defaultXboxDrive(MANUAL_CONTROL.isMode, driverXbox)
                 // Now we can set .with our controller bindings.
                 .SwerveBindings /// Swerve Controller Bindings.
                 // When in the subsystem, set our desired constants with .set methods.
@@ -120,9 +120,9 @@ public class InputBuilder
                 .setBoostRotation(1)
                 .setBoostTranslation(1)
                 // After any changes are made, we can then use .with methods to bind actions.
-                .withSlowDrive(         driverXbox.b())
-                .withToggleCentricity(  driverXbox.back(), true)
-                .withResetSimOdometry(  driverXbox.start())
+                //.withSlowDrive(         driverXbox.b())
+                //.withToggleCentricity(  driverXbox.back(), true)
+                //.withResetSimOdometry(  driverXbox.start())
                 .back().IntakeBindings /// Intake Controller Bindings.
                 .setIntakeSpeed(0.5)
                 .withRunIntake(         driverXbox.leftBumper(), true)
@@ -132,6 +132,8 @@ public class InputBuilder
                 .withRunIndexer(        driverXbox.x(), true)
                 .withRunIndexer(        driverXbox.y(), false)
                 .back().KickerBindings /// Kicker Controller Bindings
+                .withRunKicker(         driverXbox.rightTrigger(), true)
+                .withRunKicker(         driverXbox.leftTrigger(), false)
                 .back().TurretBindings /// Turret Controller Bindings
                 .setTurretSpeed(0.5)
                 .withRunTurret(         driverXbox.pov(90), true)
@@ -196,6 +198,7 @@ public class InputBuilder
     // Control binding type enum
     public enum InputSelections {
         /// Default Input Schema
+        DISABLED("DISABLED - Temp", true),
         SINGLE_XBOX("Single Xbox", false),
         DUAL_XBOX("Dual Xbox"),
         TESTING("Testing", true),
@@ -525,7 +528,7 @@ public class InputBuilder
              */
             public KickerBindings withSetVelocity(Trigger setVelocity, AngularVelocity kickerVelocity) {
                 if (!isPresent) {return this;}
-                isMode.and(setVelocity).whileTrue(subsystems.flywheel.getFlyWheel().run(kickerVelocity));
+                isMode.and(setVelocity).whileTrue(subsystems.kicker.getKicker().run(kickerVelocity));
                 return this;
             }
 
@@ -536,10 +539,10 @@ public class InputBuilder
              * @param isOut whether to spin out.
              * @return this, for chaining.
              */
-            public KickerBindings withRunFlyWheel(Trigger runkicker, boolean isOut) {
+            public KickerBindings withRunKicker(Trigger runkicker, boolean isOut) {
                 if (!isPresent) {return this;}
                 isMode.and(runkicker).whileTrue(subsystems.kicker.runKicker(kickerSpeed, isOut))
-                        .onFalse(subsystems.hood.stopHood());
+                        .onFalse(subsystems.kicker.stopKicker());
                 return this;
             }
 
@@ -607,7 +610,7 @@ public class InputBuilder
             public FlyWheelBindings withRunFlyWheel(Trigger runFlyWheel, boolean isOut) {
                 if (!isPresent) {return this;}
                 isMode.and(runFlyWheel).whileTrue(subsystems.flywheel.runFlyWheel(flyWheelSpeed, isOut))
-                        .onFalse(subsystems.hood.stopHood());
+                        .onFalse(subsystems.flywheel.stopFlyWheel());
                 return this;
             }
 
@@ -818,7 +821,7 @@ public class InputBuilder
             }
 
             public SwerveBindings withCollectFuel(Trigger collectFuel) {
-                if (!isPresent) {return this;}
+                if (!isPresent || !SwerveSubsystem.ControlConstants.RUN_VISION) {return this;}
                 isMode.and(collectFuel).whileTrue(subsystems.swerve.driveToNearestFuel());
                 return this;
             }

@@ -33,7 +33,7 @@ public class KickerSubsystem extends SubsystemBase
     /// Hardware Constants for the Kicker Mechanism.
     public static class HardwareConstants {
         /// Motor Constants
-        public static final int                         MOTOR_ID                    = 28; // Spark Max CAN ID
+        public static final int                         MOTOR_ID                    = 13; // Spark Max CAN ID
         public static final boolean                     MOTOR_INVERTED              = false; // Inverts control direction.
         public static final MechanismGearing            GEAR_RATIO                  = new MechanismGearing(GearBox.fromReductionStages(1)); // Kicker Gear Ratio
 
@@ -70,7 +70,7 @@ public class KickerSubsystem extends SubsystemBase
             .withMotorInverted(HardwareConstants.MOTOR_INVERTED)
             .withClosedLoopRampRate(HardwareConstants.RAMP_RATE)
             .withOpenLoopRampRate(HardwareConstants.RAMP_RATE)
-            .withFeedforward(HardwareConstants.FEED_FORWARD)
+            //.withFeedforward(HardwareConstants.FEED_FORWARD)
             .withSimFeedforward(HardwareConstants.FEED_FORWARD)
             .withControlMode(ControlMode.CLOSED_LOOP);
     private final SmartMotorController                  motor                       = new SparkWrapper(indexerMotor, DCMotor.getNEO(1), motorConfig); /// The new Smart Motor Controller

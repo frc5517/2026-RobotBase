@@ -1,8 +1,6 @@
 package frc.robot;
 
-import edu.wpi.first.math.Pair;
 import edu.wpi.first.math.geometry.*;
-import edu.wpi.first.math.trajectory.Trajectory;
 import edu.wpi.first.networktables.*;
 import edu.wpi.first.util.sendable.Sendable;
 import edu.wpi.first.wpilibj.DriverStation;

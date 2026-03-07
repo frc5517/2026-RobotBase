@@ -12,14 +12,14 @@ import frc.robot.systems.ScoringSystem;
 public class RobotContainer {
     /// Subsystems
     private final SwerveSubsystem swerve = new SwerveSubsystem();
-    private final FlyWheelSubsystem  flyWheel = new FlyWheelSubsystem();
+    //private final FlyWheelSubsystem  flyWheel = new FlyWheelSubsystem();
     private final IndexerSubsystem indexer = new IndexerSubsystem();
     private final IntakeSubsystem intake = new IntakeSubsystem();
     private final KickerSubsystem kicker = new KickerSubsystem();
-    private final TurretSubsystem turret = new TurretSubsystem();
-    private final HoodSubsystem hood = new HoodSubsystem();
+    //private final TurretSubsystem turret = new TurretSubsystem();
+    //private final HoodSubsystem hood = new HoodSubsystem();
     /// Bite-sized Subsystems record class for easy packaging of all the subsystems.
-    private final InputBuilder.Subsystems subsystems = new InputBuilder.Subsystems(flyWheel, hood, indexer, intake, kicker, swerve, turret);
+    private final InputBuilder.Subsystems subsystems = new InputBuilder.Subsystems(null, null, indexer, intake, kicker, swerve, null);
     /// Our Systems
     private final ScoringSystem scoring = new ScoringSystem(subsystems);
     /// Input Builder
