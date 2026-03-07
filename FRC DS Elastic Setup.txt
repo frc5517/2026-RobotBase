@@ -1,0 +1,6 @@
+Navigate to the public documents folder, finding this file.
+"C:\Users\Public\Documents\FRC\FRC DS Data Storage.ini"
+
+Then open it in the notepad and edit the DashboardCmdLine line to the elastic .exe file path.
+Typically in the public folder as shown below. 
+DashboardCmdLine = ""C:\Users\Public\wpilib\2026\elastic\elastic_dashboard.exe""
