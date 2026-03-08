@@ -3,6 +3,7 @@ package frc.robot.subsystems;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.units.measure.*;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
@@ -58,7 +59,7 @@ public class IndexerSubsystem extends SubsystemBase {
             .withMotorInverted(HardwareConstants.MOTOR_INVERTED)
             .withClosedLoopRampRate(HardwareConstants.RAMP_RATE)
             .withOpenLoopRampRate(HardwareConstants.RAMP_RATE)
-            .withFeedforward(HardwareConstants.FEED_FORWARD)
+            //.withFeedforward(HardwareConstants.FEED_FORWARD)
             .withSimFeedforward(HardwareConstants.FEED_FORWARD)
             .withControlMode(ControlMode.CLOSED_LOOP);
 //    private final SmartMotorController                          motor           = new SparkWrapper(indexerMotor, DCMotor.getNEO(1), motorConfig); /// The new Smart Motor Controller
@@ -73,7 +74,7 @@ public class IndexerSubsystem extends SubsystemBase {
     private final BrushedSparkWrapper indexer = new BrushedSparkWrapper(MOTOR_ID, motorConfig); /// Custom dumb brushed spark wrapper made to easily replace a YAMS Spark Max object.
 
     @Getter
-    private final Trigger jammedTrigger = new Trigger(() -> indexer.getMotorController().getStatorCurrent().gte(Amps.of(30)));
+    private final Trigger jammedTrigger = new Trigger(() -> indexer.getMotorController().getStatorCurrent().gte(Amps.of(40)));
 
     public IndexerSubsystem() {
     }
@@ -105,7 +106,7 @@ public class IndexerSubsystem extends SubsystemBase {
     public void periodic() {
         // Updates the indexer mechanism's telemetry data to the network tables.
         indexer.updateTelemetry();
-
+        SmartDashboard.putBoolean("RobotTelemetry/Jammed Triggers/Indexer", jammedTrigger.getAsBoolean());
     }
 
     /**

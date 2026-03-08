@@ -44,7 +44,7 @@ public class RobotContainer {
         if (RobotBase.isSimulation()) {
             subsystems = new InputBuilder.Subsystems(flyWheel, hood, indexer, intake, kicker, swerve, turret);
         } else {
-            subsystems = new InputBuilder.Subsystems(null, null, indexer, intake, kicker, swerve, null);
+            subsystems = new InputBuilder.Subsystems(flyWheel, hood, indexer, intake, kicker, swerve, null);
         }
         scoring = new ScoringSystem(subsystems);
         inputBuilder = new InputBuilder(subsystems, scoring);

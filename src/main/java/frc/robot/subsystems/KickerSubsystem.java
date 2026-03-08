@@ -55,7 +55,7 @@ public class KickerSubsystem extends SubsystemBase
         public static final AngularVelocity                     VELOCITY_TOLERANCE  = DegreesPerSecond.of(1); // How accurate the velocity should be.
         public static final AngularVelocity                     TARGET_VELOCITY     = DegreesPerSecond.of(60); // How fast the flywheel should spin.
     }
-    private final SparkMax                                      kickerMotor    = new SparkMax(MOTOR_ID, MotorType.kBrushless); /// The Normal Rev Vendor SparkMax Object.
+    private final SparkMax                                      kickerMotor    = new SparkMax(MOTOR_ID, MotorType.kBrushed); /// The Normal Rev Vendor SparkMax Object.
     private final SmartMotorControllerConfig                    motorConfig     = new SmartMotorControllerConfig(this) /// The Smart Motor Controller Configuration.
                 .withExponentialProfile(KickerSubsystem.HardwareConstants.Profiling.MAX_CONTROL_VOLTAGE, KickerSubsystem.HardwareConstants.Profiling.MAX_ANGULAR_VELOCITY, KickerSubsystem.HardwareConstants.Profiling.MAX_ANGULAR_ACCELERATION)
                 .withClosedLoopController(PID_CONTROLLER)

@@ -128,28 +128,31 @@ public class InputBuilder
                 //.withToggleCentricity(  driverXbox.back(), true)
                 //.withResetSimOdometry(  driverXbox.start())
                 .back().IntakeBindings /// Intake Controller Bindings.
-                .setIntakeSpeed(0.5)
+                .setIntakeSpeed(0.75)
                 .withRunIntake(         driverXbox.leftBumper(), true)
                 .withRunIntake(         driverXbox.rightBumper(), false)
                 .back().IndexerBindings /// Indexer Controller Bindings
-                .setIndexSpeed(0.5)
+                .setIndexSpeed(0.75)
                 .withRunIndexer(        driverXbox.x(), true)
                 .withRunIndexer(        driverXbox.y(), false)
                 .back().KickerBindings /// Kicker Controller Bindings
-                .withRunKicker(         driverXbox.rightTrigger(), true)
-                .withRunKicker(         driverXbox.leftTrigger(), false)
+                .setKickerSpeed(.75)
+                .withRunKicker(         driverXbox.a(), true)
+                .withRunKicker(         driverXbox.b(), false)
                 .back().TurretBindings /// Turret Controller Bindings
                 .setTurretSpeed(0.5)
                 .withRunTurret(         driverXbox.pov(90), true)
                 .withRunTurret(         driverXbox.pov(270), false)
                 .back().HoodBindings /// Hood Controller Bindings
-                .setHoodSpeed(0.5)
-                .withRunHood(           driverXbox.pov(0), true)
-                .withRunHood(           driverXbox.pov(180), false)
+                .setHoodSpeed(0.15)
+                .withSetAngle(driverXbox.pov(0), Degrees.of(15))
+                .withSetAngle(driverXbox.pov(180), Degrees.of(30))
+                //.withRunHood(           driverXbox.pov(0), true)
+                //.withRunHood(           driverXbox.pov(180), false)
                 .back().FlyWheelBindings /// Turret Controller Bindings
-                .setFlyWheelSpeed(0.5)
-                //.withRunFlyWheel(         driverXbox.rightTrigger(), true)
-                //.withRunFlyWheel(         driverXbox.leftTrigger(), false)
+                .setFlyWheelSpeed(1)
+                .withRunFlyWheel(         driverXbox.rightTrigger(), true)
+                .withRunFlyWheel(         driverXbox.leftTrigger(), false)
                 .back().FlyWheelBindings
                 .back().MiscBindings /// Miscellaneous Controller Bindings
                 .resetField(            driverXbox.start())

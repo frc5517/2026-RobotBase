@@ -1,5 +1,6 @@
 package frc.robot.subsystems;
 
+import com.ctre.phoenix6.hardware.TalonFX;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
 import edu.wpi.first.math.controller.PIDController;
@@ -20,6 +21,7 @@ import swervelib.simulation.ironmaple.simulation.SimulatedArena;
 import swervelib.simulation.ironmaple.simulation.seasonspecific.rebuilt2026.RebuiltFuelOnFly;
 import yams.gearing.GearBox;
 import yams.gearing.MechanismGearing;
+import yams.gearing.Sprocket;
 import yams.mechanisms.config.FlyWheelConfig;
 import yams.mechanisms.velocity.FlyWheel;
 import yams.motorcontrollers.SmartMotorController;
@@ -27,6 +29,7 @@ import yams.motorcontrollers.SmartMotorControllerConfig;
 import yams.motorcontrollers.SmartMotorControllerConfig.ControlMode;
 import yams.motorcontrollers.SmartMotorControllerConfig.MotorMode;
 import yams.motorcontrollers.local.SparkWrapper;
+import yams.motorcontrollers.remote.TalonFXWrapper;
 
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
@@ -40,9 +43,9 @@ public class FlyWheelSubsystem extends SubsystemBase
     /// Hardware Constants for the FlyWheel Mechanism.
     public static class HardwareConstants {
         /// Motor Constants
-        public static final int                         MOTOR_ID                    = 25; // Spark Max CAN ID
-        public static final boolean                     MOTOR_INVERTED              = false; // Inverts control direction.
-        public static final MechanismGearing            GEAR_RATIO                  = new MechanismGearing(GearBox.fromReductionStages(1)); // FlyWheel Gear Ratio
+        public static final int                         MOTOR_ID                    = 15; // Spark Max CAN ID
+        public static final boolean                     MOTOR_INVERTED              = true; // Inverts control direction.
+        public static final MechanismGearing            GEAR_RATIO                  = new MechanismGearing(36 / 60.0); // FlyWheel Gear Ratio
 
         /// Motor Tuning Values
         public static final PIDController               PID_CONTROLLER              = new PIDController( // Exponential Motion Profiling
@@ -66,7 +69,7 @@ public class FlyWheelSubsystem extends SubsystemBase
         public static final AngularVelocity             VELOCITY_TOLERANCE          = RPM.of(1000); // How accurate the velocity should be.
     }
     /// Initialize the FlyWheel
-    private final SparkMax                              indexerMotor                = new SparkMax(HardwareConstants.MOTOR_ID, MotorType.kBrushless); /// The Normal Rev Vendor SparkMax Object.
+    private final TalonFX                              indexerMotor                = new TalonFX(HardwareConstants.MOTOR_ID); /// The Normal Rev Vendor SparkMax Object.
     private final SmartMotorControllerConfig            motorConfig                 = new SmartMotorControllerConfig(this) /// The Smart Motor Controller Configuration.
             .withTrapezoidalProfile(Profiling.MAX_ANGULAR_VELOCITY, Profiling.MAX_ANGULAR_ACCELERATION)
             .withClosedLoopController(PID_CONTROLLER)
@@ -80,7 +83,7 @@ public class FlyWheelSubsystem extends SubsystemBase
             .withFeedforward(HardwareConstants.FEED_FORWARD)
             .withSimFeedforward(HardwareConstants.FEED_FORWARD)
             .withControlMode(ControlMode.CLOSED_LOOP);
-    private final SmartMotorController                  motor                       = new SparkWrapper(indexerMotor, DCMotor.getNEO(1), motorConfig); /// The new Smart Motor Controller
+    private final SmartMotorController                  motor                       = new TalonFXWrapper(indexerMotor, DCMotor.getNEO(1), motorConfig); /// The new Smart Motor Controller
     private final FlyWheelConfig                        flyWheelConfig              = new FlyWheelConfig(motor) /// The FlyWheel config.
             .withDiameter(HardwareConstants.FLYWHEEL_DIAMETER)
             .withMass(HardwareConstants.FLYWHEEL_MASS)

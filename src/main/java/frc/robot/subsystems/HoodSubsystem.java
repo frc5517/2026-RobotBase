@@ -15,6 +15,7 @@ import lombok.Getter;
 import lombok.Setter;
 import yams.gearing.GearBox;
 import yams.gearing.MechanismGearing;
+import yams.gearing.Sprocket;
 import yams.mechanisms.config.ArmConfig;
 import yams.mechanisms.config.MechanismPositionConfig;
 import yams.mechanisms.positional.Arm;
@@ -27,6 +28,7 @@ import java.util.function.Supplier;
 
 import static edu.wpi.first.units.Units.*;
 import static frc.robot.subsystems.HoodSubsystem.ControlConstants.ANGLE_TOLERANCE;
+import static frc.robot.subsystems.HoodSubsystem.ControlConstants.PHYSICAL_STARTING_ANGLE;
 import static frc.robot.subsystems.HoodSubsystem.HardwareConstants.*;
 import static frc.robot.subsystems.TurretSubsystem.HardwareConstants.TURRET_POSITION;
 
@@ -34,9 +36,9 @@ public class HoodSubsystem extends SubsystemBase {
     /// The Hardware Constants for the Hood Mechanism.
     public static final class HardwareConstants {
         /// Motor Constants
-        public static final int                                 MOTOR_ID                    = 24; // Spark Max CAN ID
+        public static final int                                 MOTOR_ID                    = 14; // Spark Max CAN ID
         public static final boolean                             MOTOR_INVERTED              = false; // Inverts control direction.
-        public static final MechanismGearing                    GEAR_RATIO                  = new MechanismGearing(GearBox.fromReductionStages(3, 4, 5)); // FlyWheel Gear Ratio
+        public static final MechanismGearing                    GEAR_RATIO                  = new MechanismGearing(GearBox.fromReductionStages(5, 4, 4, 56 / 40.0)); // FlyWheel Gear Ratio
         /// Motor Tuning Values
         public static final PIDController                       PID_CONTROLLER              = new PIDController( // Exponential Motion Profiling
                                                                                             60, 0, 0.01); // PID - Proportional, Integral, Derivative.
@@ -47,20 +49,20 @@ public class HoodSubsystem extends SubsystemBase {
             public static final AngularAcceleration             MAX_ANGULAR_ACCELERATION    = DegreesPerSecondPerSecond.of(720); // Max Angular Acceleration
         }
         public static final Time                                RAMP_RATE                   = Seconds.of(0.15); // Time it takes to reach max speed from 0.
-        public static final ArmFeedforward                      FEED_FORWARD                = new ArmFeedforward(0, 0, 0); // Feed Forwards.
+        public static final ArmFeedforward                      FEED_FORWARD                = new ArmFeedforward(0.01, 0.2, 0.01); // Feed Forwards.
         public static final Current                             CURRENT_LIMIT               = Amp.of(40); // Current limit, Higher for faster control.
         /// Hood Constants
         public static final Mass                                HOOD_MASS                   = Pounds.of(3); // Weight of the hood mechanism.
         public static final Distance                            HOOD_LENGTH                 = Inches.of(8); // Hood Length, used in calculations and to visualize in sim.
         public static final Angle                               HORIZONTAL_OFFSET           = Degrees.of(0); // Offset required making angle 0 horizontal and parallel to the ground.
         public static final Angle                               HARD_LIMIT_REVERSE          = Degrees.of(0); // The hard limit should be a metal physical stop.
-        public static final Angle                               HARD_LIMIT_FORWARD          = Degrees.of(90);
+        public static final Angle                               HARD_LIMIT_FORWARD          = Degrees.of(80);
         public static final Angle                               SOFT_LIMIT_REVERSE          = Degrees.of(0); // A soft limit so we don't constantly hit the hard limit without reason.
-        public static final Angle                               SOFT_LIMIT_FORWARD          = Degrees.of(90);
+        public static final Angle                               SOFT_LIMIT_FORWARD          = Degrees.of(80);
         /// IMPORTANT, this helps calculate the initial fuel velocity; it is the friction affecting on the ball from the hood.
         public static final double                              HOOD_COF_FACTOR             = 0.8;
         /// Sim Constants
-        public static final Angle                               SIM_STARTING_ANGLE          = Degrees.of(160); // Starting Hood angle in sim.
+        public static final Angle                               SIM_STARTING_ANGLE          = Degrees.of(0); // Starting Hood angle in sim.
         public static final Distance                            MAX_ROBOT_HEIGHT            = Inches.of(22); // Max robot height for visualization. TODO Push to swerve constants
         public static final Distance                            MAX_ROBOT_WIDTH             = Inches.of(29); // Max robot width for visualization.
         public static final Translation3d                       HOOD_POSITION               = TURRET_POSITION.plus(
@@ -71,6 +73,7 @@ public class HoodSubsystem extends SubsystemBase {
     }
     /// The Control Constants for the Hood Mechanism.
     public static final class ControlConstants {
+        public static final Angle                               PHYSICAL_STARTING_ANGLE     = Degrees.of(0);
         public static final double                              HOOD_SPEED                  = 0.3; // Predefined duty cycle speed.
         public static final Angle                               ANGLE_TOLERANCE             = Degrees.of(5); // How accurate the angle should be.
     }
@@ -89,7 +92,7 @@ public class HoodSubsystem extends SubsystemBase {
             .withMotorInverted(MOTOR_INVERTED)
             .withClosedLoopRampRate(RAMP_RATE)
             .withOpenLoopRampRate(RAMP_RATE)
-            .withFeedforward(FEED_FORWARD)
+            //.withFeedforward(FEED_FORWARD)
             .withSimFeedforward(FEED_FORWARD)
             .withControlMode(SmartMotorControllerConfig.ControlMode.CLOSED_LOOP);
     private final SmartMotorController                          motor               = new SparkWrapper(hoodMotor, DCMotor.getNEO(1), motorConfig); /// The new Smart Motor Controller
@@ -98,6 +101,7 @@ public class HoodSubsystem extends SubsystemBase {
             .withMaxRobotLength(MAX_ROBOT_WIDTH)
             .withRelativePosition(HOOD_POSITION);
     private final ArmConfig m_config = new ArmConfig(motor) /// The Arm Config for the Hood Mechanism.
+            .withStartingPosition(PHYSICAL_STARTING_ANGLE)
             .withLength(HOOD_LENGTH)
             .withHardLimit(HARD_LIMIT_REVERSE, HARD_LIMIT_FORWARD)
             .withSoftLimits(SOFT_LIMIT_REVERSE, SOFT_LIMIT_FORWARD)
