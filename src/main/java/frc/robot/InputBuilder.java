@@ -13,10 +13,8 @@ import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
-import frc.robot.commands.ShootOnTheMoveCommand;
 import frc.robot.subsystems.*;
 import frc.robot.systems.ScoringSystem;
 import frc.robot.util.ZoneTrigger;
@@ -371,24 +369,29 @@ public class InputBuilder
          */
         public class SmartBindings {
 
+            /**
+             * Shoots while moving using double interpolating maps while calculating for ToF, Phase Delay, Velocity, ect.
+             * Active while inside a preset zone while the hub is active.
+             *
+             * @return this, for chaining.
+             */
             public SmartBindings withAutoShootOnTheMove() {
                 if (!TurretBindings.isPresent || !HoodBindings.isPresent || !FlyWheelBindings.isPresent) {return this;}
-                withShootOnTheMove(isMode.and(CustomTriggers.aimingZone.getTrigger()));
+                withShootOnTheMove(isMode.and(CustomTriggers.aimingZone.getTrigger()).and(Telemetry.FMSTriggers.isHubActive));
                 return this;
             }
 
+            /**
+             * Shoots while moving using double interpolating maps while calculating for ToF, Phase Delay, Velocity, ect.
+             *
+             * @param shootOnTheMoveWhile the button to map.
+             * @return this, for chaining.
+             */
             public SmartBindings withShootOnTheMove(Trigger shootOnTheMoveWhile) {
                 if (!TurretBindings.isPresent || !HoodBindings.isPresent || !FlyWheelBindings.isPresent) {return this;}
 
                 isMode.and(shootOnTheMoveWhile).whileTrue(scoring.shootOnTheMove());
 
-                return this;
-            }
-
-            public SmartBindings withShootOnTheMoveCommand(Trigger aimAt) {
-                // If any required subsystems are missing, don't bind anything.
-                if (!TurretBindings.isPresent || !HoodBindings.isPresent || !FlyWheelBindings.isPresent) {return this;}
-                isMode.and(aimAt).whileTrue(new ShootOnTheMoveCommand(subsystems, () -> FieldConstants.Hub.topCenterPoint));
                 return this;
             }
 
@@ -614,7 +617,7 @@ public class InputBuilder
              */
             public FlyWheelBindings withSimShoot(Trigger shoot) {
                 if (!isPresent) {return this;}
-                isMode.and(shoot).whileTrue(subsystems.flywheel.simShoot(subsystems.swerve).andThen(Commands.waitSeconds(.25)).repeatedly());
+                isMode.and(shoot).whileTrue(subsystems.flywheel.simShoot(subsystems).andThen(Commands.waitSeconds(.25)).repeatedly());
                 return this;
             }
 
@@ -997,11 +1000,11 @@ public class InputBuilder
      * Neatly packs our subsystems into a bite size struct.
      */
     public record Subsystems(
+            SwerveSubsystem swerve,
             FlyWheelSubsystem flywheel,
             HoodSubsystem hood,
             IndexerSubsystem indexer,
             IntakeSubsystem intake,
             KickerSubsystem kicker,
-            SwerveSubsystem swerve,
             TurretSubsystem turret) {}
 }

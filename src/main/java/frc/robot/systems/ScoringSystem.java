@@ -75,7 +75,7 @@ public class ScoringSystem {
                 // Score when safe
                 .alongWith(
                         // To be replaced with isSim ? simShoot : index, indexing automatically stops when flywheel is not ready.
-                        subsystems.flywheel().simShoot(subsystems.swerve(), () -> flyWheelGoal[0])
+                        subsystems.flywheel().simShoot(subsystems, () -> flyWheelGoal[0])
                                 // Only Index when all systems are ready
                                 .onlyIf(() -> subsystems.turret().getTurret().isNear(turretGoal[0], TurretSubsystem.ControlConstants.ANGLE_TOLERANCE).getAsBoolean()
                                         && subsystems.hood().getHood().isNear(hoodGoal[0], HoodSubsystem.ControlConstants.ANGLE_TOLERANCE).getAsBoolean()

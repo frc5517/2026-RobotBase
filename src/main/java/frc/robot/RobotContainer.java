@@ -11,14 +11,6 @@ import frc.robot.subsystems.*;
 import frc.robot.systems.ScoringSystem;
 
 public class RobotContainer {
-    /// Subsystems
-    private final FlyWheelSubsystem  flyWheel;
-    private final HoodSubsystem hood;
-    private final IndexerSubsystem indexer;
-    private final IntakeSubsystem intake;
-    private final KickerSubsystem kicker;
-    private final SwerveSubsystem swerve;
-    private final TurretSubsystem turret;
     /// Bite-sized Subsystems record class for easy packaging of all the subsystems.
     private final InputBuilder.Subsystems subsystems;
     /// Our Systems
@@ -32,19 +24,15 @@ public class RobotContainer {
      * This allows creation, manipulation, selection, and layered complexity of bindings with ease.
      */
     public RobotContainer() {
-        swerve = new SwerveSubsystem(); // Swerve MUST come first. Compile issues.
-        flyWheel = new FlyWheelSubsystem();
-        hood = new HoodSubsystem();
-        indexer = new IndexerSubsystem();
-        intake = new IntakeSubsystem();
-        kicker = new KickerSubsystem();
-        turret = new TurretSubsystem();
-
         /// Disable not hardware finished subsystems unless it is sim.
         if (RobotBase.isSimulation()) {
-            subsystems = new InputBuilder.Subsystems(flyWheel, hood, indexer, intake, kicker, swerve, turret);
+            ///  If in Simulation enable all
+            final var turretSubsystem = new TurretSubsystem();
+            subsystems = new InputBuilder.Subsystems(new SwerveSubsystem(), new FlyWheelSubsystem(), new HoodSubsystem(turretSubsystem), new IndexerSubsystem(), new IntakeSubsystem(), new KickerSubsystem(), turretSubsystem);
         } else {
-            subsystems = new InputBuilder.Subsystems(flyWheel, hood, indexer, intake, kicker, swerve, null);
+            ///  If not in sim, disable not complete systems.
+            final TurretSubsystem turretSubsystem = null;
+            subsystems = new InputBuilder.Subsystems(new SwerveSubsystem(), new FlyWheelSubsystem(), new HoodSubsystem(turretSubsystem), new IndexerSubsystem(), new IntakeSubsystem(), new KickerSubsystem(), turretSubsystem);
         }
         scoring = new ScoringSystem(subsystems);
         inputBuilder = new InputBuilder(subsystems, scoring);

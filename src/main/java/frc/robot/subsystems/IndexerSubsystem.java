@@ -73,10 +73,32 @@ public class IndexerSubsystem extends SubsystemBase {
 //    private final FlyWheel                                      indexer         = new FlyWheel(indexerConfig); /// The final FlyWheel Mechanism to use as the smart Indexer.
     private final BrushedSparkWrapper indexer = new BrushedSparkWrapper(MOTOR_ID, motorConfig); /// Custom dumb brushed spark wrapper made to easily replace a YAMS Spark Max object.
 
-    @Getter
-    private final Trigger jammedTrigger = new Trigger(() -> indexer.getMotorController().getStatorCurrent().gte(Amps.of(40)));
+    /// A trigger used to stop the motor when it is trying too hard.
+    private final Trigger jammedTrigger = currentSensorTrigger(Amps.of(40), Seconds.of(1));
 
     public IndexerSubsystem() {
+        /// A safety to automatically stop the motor if it starts trying too hard.
+        jammedTrigger.whileTrue(stopIndexer());
+    }
+
+    /**
+     * Creates a new current sensing trigger.
+     * Can be used as many sensors.
+     * It can detect various jams, it can detect a piece as soon as it was grabbed,
+     * it can be used to home the absolute position.
+     *
+     * @param triggerCurrent how high the current draw should be before triggering.
+     * @param debounceTime how long the current should be above the threshold before triggering.
+     *
+     * @return a new {@link Trigger} to sense current.
+     */
+    public Trigger currentSensorTrigger(Current triggerCurrent, Time debounceTime) {
+        // Get our motor current using YAMS, not the vendor motor.
+        return new Trigger(() -> indexer.getMotorController().getStatorCurrent()
+                // Then check if it is greater or equal to the given threshold
+                .gte(triggerCurrent))
+                // To prevent minor spikes, set a debounce to wait until it is above the threshold for the given time.
+                .debounce(debounceTime.in(Seconds));
     }
 
     /**
@@ -87,7 +109,7 @@ public class IndexerSubsystem extends SubsystemBase {
      * @return a command.
      */
     public Command runIndexer(double indexSpeed, boolean isIn) {
-        return indexer.set(isIn ? indexSpeed : -indexSpeed).unless(jammedTrigger);
+        return indexer.set(isIn ? indexSpeed : -indexSpeed);
     }
 
     /**
@@ -106,7 +128,7 @@ public class IndexerSubsystem extends SubsystemBase {
     public void periodic() {
         // Updates the indexer mechanism's telemetry data to the network tables.
         indexer.updateTelemetry();
-        SmartDashboard.putBoolean("RobotTelemetry/Jammed Triggers/Indexer", jammedTrigger.getAsBoolean());
+        SmartDashboard.putBoolean("Telemetry/Jammed Triggers/Indexer", jammedTrigger.getAsBoolean());
     }
 
     /**

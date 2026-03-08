@@ -11,10 +11,12 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.units.measure.*;
 import edu.wpi.first.wpilibj.RobotBase;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
+import frc.robot.InputBuilder;
 import frc.robot.Telemetry;
 import lombok.Getter;
 import swervelib.simulation.ironmaple.simulation.SimulatedArena;
@@ -56,12 +58,12 @@ public class FlyWheelSubsystem extends SubsystemBase
             public static final AngularAcceleration     MAX_ANGULAR_ACCELERATION    = DegreesPerSecondPerSecond.of(15000); // Max Angular Acceleration
         }
         public static final Time                        RAMP_RATE                   = Seconds.of(0.25); // Time it takes to reach max speed from 0.
-        public static final SimpleMotorFeedforward      FEED_FORWARD                = new SimpleMotorFeedforward(0, 0, 0); // Feed Forwards.
+        public static final SimpleMotorFeedforward      FEED_FORWARD                = new SimpleMotorFeedforward(5, 0, 0); // Feed Forwards.
         public static final Current                     CURRENT_LIMIT               = Amp.of(40); // Current limit, Higher for faster control.
         /// FlyWheel Constants
         public static final Distance                    FLYWHEEL_DIAMETER           = Inches.of(4); // Diameter of the wheel, belt, whatever is spinning on the flywheel.
         public static final Mass                        FLYWHEEL_MASS               = Pounds.of(1); // Weight of the flywheel, just what gets spun.
-        public static final AngularVelocity             FLYWHEEL_MAX_SPEED          = RPM.of(8000); // Max RPM soft limits
+        public static final AngularVelocity             FLYWHEEL_MAX_SPEED          = RPM.of(80000); // Max RPM soft limits
         public static final double                      FLYWHEEL_EFFICIENCY         = .39; // Multiplicity factor used to determine how much speed was transferred,
     }
     /// Control Constants for the FlyWheel Mechanism
@@ -93,8 +95,35 @@ public class FlyWheelSubsystem extends SubsystemBase
     @Getter
     private final FlyWheel                              flyWheel                    = new FlyWheel(flyWheelConfig); /// The final FlyWheel Mechanism.
 
+    /// A trigger used to stop the motor when it is trying too hard.
+    private final Trigger jammedTrigger = currentSensorTrigger(Amps.of(40), Seconds.of(0.2));
+
     public FlyWheelSubsystem() {
+        /// A safety to automatically stop the motor if it starts trying too hard.
+        // Disabled for now since I want to see about pushing 60a at some point.
+        //jammedTrigger.whileTrue(stopFlyWheel());
     }
+
+    /**
+     * Creates a new current sensing trigger.
+     * Can be used as many sensors.
+     * It can detect various jams, it can detect a piece as soon as it was grabbed,
+     * it can be used to home the absolute position.
+     *
+     * @param triggerCurrent how high the current draw should be before triggering.
+     * @param debounceTime how long the current should be above the threshold before triggering.
+     *
+     * @return a new {@link Trigger} to sense current.
+     */
+    public Trigger currentSensorTrigger(Current triggerCurrent, Time debounceTime) {
+        // Get our motor current using YAMS, not the vendor motor.
+        return new Trigger(() -> flyWheel.getMotorController().getStatorCurrent()
+                // Then check if it is greater or equal to the given threshold
+                .gte(triggerCurrent))
+                // To prevent minor spikes, set a debounce to wait until it is above the threshold for the given time.
+                .debounce(debounceTime.in(Seconds));
+    }
+
 
     /**
      * Runs the flywheel at the given speed.
@@ -119,17 +148,17 @@ public class FlyWheelSubsystem extends SubsystemBase
     /**
      * @return a {@link Command} that launches sim fuel.
      */
-    public Command simShoot(SwerveSubsystem swerve, Supplier<AngularVelocity> flyWheelSpeed) {
+    public Command simShoot(InputBuilder.Subsystems subsystems, Supplier<AngularVelocity> flyWheelSpeed) {
         return Commands.runOnce(() -> {
             if (RobotBase.isSimulation()) {
                 SimulatedArena.getInstance().addGamePieceProjectile(new RebuiltFuelOnFly(
-                    swerve.getSwerveDrive().getSimulationDriveTrainPose().get().getTranslation(),
+                    subsystems.swerve().getSwerveDrive().getSimulationDriveTrainPose().get().getTranslation(),
                     new Translation2d(Inches.of(5), Inches.of(0)),
-                    swerve.getSwerveDrive().getFieldVelocity(),
-                    TurretSubsystem.TurretState.getCurrentHeading().rotateBy(Rotation2d.k180deg),
+                    subsystems.swerve().getSwerveDrive().getFieldVelocity(),
+                    subsystems.turret().getHeading(subsystems).rotateBy(Rotation2d.k180deg),
                     Inches.of(23),
                     MetersPerSecond.of(flyWheelSpeed.get().in(RadiansPerSecond) * (FLYWHEEL_DIAMETER.in(Meters) / 2) * FLYWHEEL_EFFICIENCY),
-                    HoodSubsystem.HoodState.CurrentAngle.plus(Degrees.of(90)))
+                    subsystems.hood().getHood().getAngle().plus(Degrees.of(90)))
                     .withProjectileTrajectoryDisplayCallBack((trajectory) -> Telemetry.Publishers.Robot.Mech3D.fuelTrajectory.accept(trajectory.toArray(Pose3d[]::new))));
             }});
     }
@@ -137,17 +166,17 @@ public class FlyWheelSubsystem extends SubsystemBase
     /**
      * @return a {@link Command} that launches sim fuel.
      */
-    public Command simShoot(SwerveSubsystem swerve) {
+    public Command simShoot(InputBuilder.Subsystems subsystems) {
         return runOnce(() -> {
             if (RobotBase.isSimulation()) {
                 SimulatedArena.getInstance().addGamePieceProjectile(new RebuiltFuelOnFly(
-                        swerve.getSwerveDrive().getSimulationDriveTrainPose().get().getTranslation(),
+                        subsystems.swerve().getSwerveDrive().getSimulationDriveTrainPose().get().getTranslation(),
                         new Translation2d(Inches.of(5), Inches.of(0)),
-                        swerve.getSwerveDrive().getFieldVelocity(),
-                        TurretSubsystem.TurretState.getCurrentHeading().rotateBy(Rotation2d.k180deg),
+                        subsystems.swerve().getSwerveDrive().getFieldVelocity(),
+                        subsystems.turret().getHeading(subsystems).rotateBy(Rotation2d.k180deg),
                         Inches.of(23),
                         MetersPerSecond.of(7),
-                        HoodSubsystem.HoodState.CurrentAngle.plus(Degrees.of(90)))
+                        subsystems.hood().getHood().getAngle().plus(Degrees.of(90)))
                         .withProjectileTrajectoryDisplayCallBack((trajectory) -> Telemetry.Publishers.Robot.Mech3D.fuelTrajectory.accept(trajectory.toArray(Pose3d[]::new))));
             }});
     }
@@ -183,6 +212,7 @@ public class FlyWheelSubsystem extends SubsystemBase
     public void periodic() {
         // Updates the flywheel mechanism's telemetry data to the network tables.
         flyWheel.updateTelemetry();
+        SmartDashboard.putBoolean("Telemetry/Jammed Triggers/FlyWheel", jammedTrigger.getAsBoolean());
     }
 
     /**

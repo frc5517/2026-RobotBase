@@ -5,6 +5,7 @@ import static edu.wpi.first.units.Units.*;
 import static edu.wpi.first.units.Units.Amp;
 import static edu.wpi.first.units.Units.Inches;
 import static frc.robot.subsystems.HoodSubsystem.ControlConstants.ANGLE_TOLERANCE;
+import static frc.robot.subsystems.HoodSubsystem.ControlConstants.PHYSICAL_STARTING_ANGLE;
 import static frc.robot.subsystems.TurretSubsystem.HardwareConstants.*;
 import static yams.motorcontrollers.SmartMotorControllerConfig.MotorMode.BRAKE;
 
@@ -16,9 +17,12 @@ import edu.wpi.first.math.geometry.*;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.units.measure.*;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
+import frc.robot.InputBuilder;
 import frc.robot.Telemetry;
 import lombok.Getter;
 import yams.gearing.GearBox;
@@ -60,7 +64,7 @@ public class TurretSubsystem extends SubsystemBase
         public static final Angle                   SOFT_LIMIT_FORWARD  = Degrees.of(80);
         /// Sim Constants
         public static final Angle                   SIM_STARTING_ANGLE  = Degrees.of(0); // Starting turret angle in sim.
-        public static final Distance                MAX_ROBOT_HEIGHT    = Inches.of(22); // Max robot height for visualization. TODO Push to swerve constants
+        public static final Distance                MAX_ROBOT_HEIGHT    = Inches.of(30); // Max robot height for visualization. TODO Push to swerve constants
         public static final Distance                MAX_ROBOT_WIDTH     = Inches.of(29); // Max robot width for visualization.
         public static final Translation3d           TURRET_POSITION     = new Translation3d( /// Turret position for visualization.
                                                                           Inches.of(-6).in(Meters),  // X-axis left positive relative to the robot center, Same as pose2d.
@@ -109,13 +113,51 @@ public class TurretSubsystem extends SubsystemBase
     /// The final Pivot Mechanism to use as the turret.
     @Getter
     private final Pivot                             turret              = new Pivot(config);
-    public static class TurretState {
-        @Getter private static Angle                CurrentAngle        = Degrees.of(0); // Set in periodic
-        @Getter private static Rotation2d           CurrentHeading      = Rotation2d.kZero; // Set in periodic
-    }
+
+    /// A trigger used to stop the motor when it is trying too hard.
+    private final Trigger jammedTrigger = currentSensorTrigger(Amps.of(20), Seconds.of(0.1));
 
     public TurretSubsystem() {
+        /// A safety to automatically stop the motor if it starts trying too hard.
+        jammedTrigger.whileTrue(stopTurret());
     }
+
+    /**
+     * Creates a new current sensing trigger.
+     * Can be used as many sensors.
+     * It can detect various jams, it can detect a piece as soon as it was grabbed,
+     * it can be used to home the absolute position.
+     *
+     * @param triggerCurrent how high the current draw should be before triggering.
+     * @param debounceTime how long the current should be above the threshold before triggering.
+     *
+     * @return a new {@link Trigger} to sense current.
+     */
+    public Trigger currentSensorTrigger(Current triggerCurrent, Time debounceTime) {
+        // Get our motor current using YAMS, not the vendor motor.
+        return new Trigger(() -> turret.getMotorController().getStatorCurrent()
+                // Then check if it is greater or equal to the given threshold
+                .gte(triggerCurrent))
+                // To prevent minor spikes, set a debounce to wait until it is above the threshold for the given time.
+                .debounce(debounceTime.in(Seconds));
+    }
+
+    /**
+     * Homes the mech to the starting position.
+     * @return a {@link Command} to home the mech.
+     */
+    public Command home() {
+        // Disable closed loop so we don't hit soft limits, then move backwards at a low power.
+        return Commands.startRun(motor::stopClosedLoopController,
+                        () -> motor.setVoltage(Volts.of(-2)))
+                // Until we hit something, the something should be our hard stop, but it shouldn't hurt to get your hand stuck.
+                .until(currentSensorTrigger(Amps.of(1.5), Seconds.of(0)))
+                .finallyDo(() -> { // Then we set our new zero point and restart the closed loop.
+                    motor.setPosition(PHYSICAL_STARTING_ANGLE);
+                    motor.startClosedLoopController();
+                });
+    }
+
 
     public Supplier<Angle> angleToPose(Pose2d swervePose, Translation2d position) {
         // Find the error between the turret and goal.
@@ -157,10 +199,14 @@ public class TurretSubsystem extends SubsystemBase
                         turret.getAngle().in(Radians))); // Turret Rotation is Yaw, looking left and right.
     }
 
-    public Pose2d getPose(Pose2d robotPose)
-    {
-        return robotPose.plus(new Transform2d(
-                getPose3D().getTranslation().toTranslation2d(), getPose3D().getRotation().toRotation2d()));
+    /**
+     * Gets the turret angle relative to the field.
+     *
+     * @param subsystem all the subsystems
+     * @return the current heading.
+     */
+    public Rotation2d getHeading(InputBuilder.Subsystems subsystem) {
+        return subsystem.swerve().getSwerveDrive().getPose().getRotation().plus(new Rotation2d(turret.getAngle()));
     }
 
     public ChassisSpeeds getVelocity(ChassisSpeeds robotVelocity, Angle robotAngle)
@@ -211,8 +257,7 @@ public class TurretSubsystem extends SubsystemBase
     @Override
     public void periodic() {
         turret.updateTelemetry(); // Updates the turret mechanism's telemetry data to the network tables.
-        TurretState.CurrentAngle = turret.getAngle(); // Update our current angle state.
-        TurretState.CurrentHeading = SwerveSubsystem.SwerveState.CurrentPose.getRotation().plus(new Rotation2d(TurretState.CurrentAngle));
+        SmartDashboard.putBoolean("Telemetry/Jammed Triggers/Turret", jammedTrigger.getAsBoolean());
     }
 
     /**

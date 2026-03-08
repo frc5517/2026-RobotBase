@@ -7,9 +7,12 @@ import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.*;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.units.measure.*;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
+import frc.robot.InputBuilder;
 import frc.robot.Telemetry;
 import lombok.Getter;
 import lombok.Setter;
@@ -112,14 +115,54 @@ public class HoodSubsystem extends SubsystemBase {
             .withMechanismPositionConfig(robotToMechanism);
     @Getter
     private final Arm                               hood                = new Arm(m_config); /// The final Arm Mechanism to use as the hood.
-    /// Reports the current Hood state. To be used later in code and telemetry.
-    public static class HoodState {
-        @Setter
-        public static Angle     CurrentAngle    = Degrees.of(0);
+
+    private final TurretSubsystem turret;
+
+    /// A trigger used to stop the motor when it is trying too hard.
+    private final Trigger jammedTrigger = currentSensorTrigger(Amps.of(20), Seconds.of(0.1));
+
+    public HoodSubsystem(TurretSubsystem turretSubsystem) {
+        this.turret = turretSubsystem;
+        /// A safety to automatically stop the motor if it starts trying too hard.
+        jammedTrigger.whileTrue(stopHood());
     }
 
-    public HoodSubsystem() {
+    /**
+     * Creates a new current sensing trigger.
+     * Can be used as many sensors.
+     * It can detect various jams, it can detect a piece as soon as it was grabbed,
+     * it can be used to home the absolute position.
+     *
+     * @param triggerCurrent how high the current draw should be before triggering.
+     * @param debounceTime how long the current should be above the threshold before triggering.
+     *
+     * @return a new {@link Trigger} to sense current.
+     */
+    public Trigger currentSensorTrigger(Current triggerCurrent, Time debounceTime) {
+        // Get our motor current using YAMS, not the vendor motor.
+        return new Trigger(() -> hood.getMotorController().getStatorCurrent()
+                // Then check if it is greater or equal to the given threshold
+                .gte(triggerCurrent))
+                // To prevent minor spikes, set a debounce to wait until it is above the threshold for the given time.
+                .debounce(debounceTime.in(Seconds));
     }
+
+    /**
+     * Homes the mech to the starting position.
+     * @return a {@link Command} to home the mech.
+     */
+    public Command home() {
+        // Disable closed loop so we don't hit soft limits, then move backwards at a low power.
+        return Commands.startRun(motor::stopClosedLoopController,
+                        () -> motor.setVoltage(Volts.of(-2)))
+                // Until we hit something, the something should be our hard stop, but it shouldn't hurt to get your hand stuck.
+                .until(currentSensorTrigger(Amps.of(1.5), Seconds.of(0)))
+                .finallyDo(() -> { // Then we set our new zero point and restart the closed loop.
+                    motor.setPosition(PHYSICAL_STARTING_ANGLE);
+                    motor.startClosedLoopController();
+                });
+    }
+
 
     /**
      * Runs the hood at the given speed.
@@ -146,12 +189,23 @@ public class HoodSubsystem extends SubsystemBase {
      *
      * @return the hood current 3D pose.
      */
-    public Pose3d getPose3D() {
-        var turretRotation = TurretSubsystem.TurretState.getCurrentAngle().in(Radians);
+    public Pose3d getPose3D(TurretSubsystem turret) {
+        Angle turretRotation; // Null safe turretRotation
+        if (turret == null) {
+            turretRotation = Degrees.of(0);
+        } else {
+            turretRotation = turret.getTurret().getAngle();
+        }
         return new Pose3d(
-                HOOD_POSITION.rotateAround(TURRET_POSITION, new Rotation3d(0, 0, turretRotation)),
-                new Rotation3d(0.0,
-                        hood.getAngle().in(Radians), // Hood Rotation is Pitch, looking up and down.
+                // Rotate Hood around turret
+                HOOD_POSITION.rotateAround(TURRET_POSITION, new Rotation3d(
+                        Degrees.of(0),
+                        Degrees.of(0),
+                        turretRotation)),
+                // Then Rotate the hood based on turret rotation.
+                new Rotation3d(
+                        Degrees.of(0),
+                        hood.getAngle(), // Hood Rotation is Pitch, looking up and down.
                         turretRotation));
 
     }
@@ -185,7 +239,7 @@ public class HoodSubsystem extends SubsystemBase {
     public void periodic() {
         // Updates the hood mechanism's telemetry data to the network tables.
         hood.updateTelemetry();
-        HoodState.setCurrentAngle(hood.getAngle()); // Update our static hood angle.
+        SmartDashboard.putBoolean("Telemetry/Jammed Triggers/FlyWheel", jammedTrigger.getAsBoolean());
     }
 
     /**
@@ -197,6 +251,6 @@ public class HoodSubsystem extends SubsystemBase {
         hood.simIterate();
 
         // Update our Mech3d Pose.
-        Telemetry.Publishers.Robot.Mech3D.hoodPose.accept(getPose3D());
+        Telemetry.Publishers.Robot.Mech3D.hoodPose.accept(getPose3D(turret));
     }
 }

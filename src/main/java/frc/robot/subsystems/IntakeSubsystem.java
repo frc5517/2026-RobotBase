@@ -7,6 +7,7 @@ import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.units.measure.*;
 import edu.wpi.first.wpilibj.RobotBase;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -85,13 +86,16 @@ public class IntakeSubsystem extends SubsystemBase {
     @Getter
     private final IntakeSimulation                              intakeSim;
 
-    @Getter
-    private final Trigger jammedTrigger = new Trigger(() -> intake.getMotorController().getStatorCurrent().gte(Amps.of(30)));
+    /// A trigger used to stop the motor when it is trying too hard.
+    private final Trigger jammedTrigger = currentSensorTrigger(Amps.of(40), Seconds.of(0.5));
 
     /**
      *
      */
     public IntakeSubsystem() {
+        /// A safety to automatically stop the motor if it starts trying too hard.
+        jammedTrigger.whileTrue(stopIntake());
+
         // If in sim
         if (RobotBase.isSimulation()) {
             // Create our intake at runtime.
@@ -106,6 +110,26 @@ public class IntakeSubsystem extends SubsystemBase {
         } else {
             intakeSim = null; // Doesn't like not being constructed, we'll just make it null.
         }
+    }
+
+    /**
+     * Creates a new current sensing trigger.
+     * Can be used as many sensors.
+     * It can detect various jams, it can detect a piece as soon as it was grabbed,
+     * it can be used to home the absolute position.
+     *
+     * @param triggerCurrent how high the current draw should be before triggering.
+     * @param debounceTime how long the current should be above the threshold before triggering.
+     *
+     * @return a new {@link Trigger} to sense current.
+     */
+    public Trigger currentSensorTrigger(Current triggerCurrent, Time debounceTime) {
+        // Get our motor current using YAMS, not the vendor motor.
+        return new Trigger(() -> intake.getMotorController().getStatorCurrent()
+                // Then check if it is greater or equal to the given threshold
+                .gte(triggerCurrent))
+                // To prevent minor spikes, set a debounce to wait until it is above the threshold for the given time.
+                .debounce(debounceTime.in(Seconds));
     }
 
     /**
@@ -162,6 +186,7 @@ public class IntakeSubsystem extends SubsystemBase {
     public void periodic() {
         // Updates the intake mechanism's telemetry data to the network tables.
         intake.updateTelemetry();
+        SmartDashboard.putBoolean("Telemetry/Jammed Triggers/Intake", jammedTrigger.getAsBoolean());
     }
 
     /**

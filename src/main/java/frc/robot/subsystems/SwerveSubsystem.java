@@ -114,8 +114,6 @@ public class SwerveSubsystem extends SubsystemBase
     }
     setupPathPlanner();
 
-    Telemetry.ModeTriggers.isEnabled().onTrue(Commands.runOnce(() -> getSwerveDrive().resetOdometry(AllianceFlipUtil.ifShouldFlip(INITIAL_SIM_POSE))));
-
     /// Set our SwerveState Suppliers
     SwerveState.setSwerveDrive(this::getSwerveDrive);
   }
