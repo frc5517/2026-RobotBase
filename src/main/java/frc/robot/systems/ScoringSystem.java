@@ -41,13 +41,13 @@ public class ScoringSystem {
             public static final InterpolatingDoubleTreeMap SHOOT_SPEED = InterpolatingDoubleTreeMap.ofEntries(
                     Map.entry(2.0, 2500.0),
                     Map.entry(3.0, 2750.0),
-                    Map.entry(4.0, 3250.0));
+                    Map.entry(4.0, 3500.0));
 
             // meters, degrees
             public static final InterpolatingDoubleTreeMap HOOD_ANGLE = InterpolatingDoubleTreeMap.ofEntries(
                     Map.entry(1.0, 8.0),
                     Map.entry(2.0, 24.0),
-                    Map.entry(3.0, 40.0));
+                    Map.entry(3.0, 35.0));
         }
     }
 

@@ -11,6 +11,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Telemetry;
+import frc.robot.util.BrushedSparkWrapper;
 import lombok.Getter;
 import yams.gearing.GearBox;
 import yams.gearing.MechanismGearing;
@@ -23,6 +24,8 @@ import yams.motorcontrollers.SmartMotorControllerConfig.MotorMode;
 import yams.motorcontrollers.local.SparkWrapper;
 
 import static edu.wpi.first.units.Units.*;
+import static frc.robot.subsystems.KickerSubsystem.HardwareConstants.MOTOR_ID;
+import static frc.robot.subsystems.KickerSubsystem.HardwareConstants.PID_CONTROLLER;
 import static frc.robot.subsystems.KickerSubsystem.HardwareConstants.*;
 
 public class KickerSubsystem extends SubsystemBase
@@ -44,41 +47,36 @@ public class KickerSubsystem extends SubsystemBase
         }
         public static final Time                                RAMP_RATE           = Seconds.of(0.25); // Time it takes to reach max speed from 0.
         public static final SimpleMotorFeedforward              FEED_FORWARD        = new SimpleMotorFeedforward(0, 0, 0); // Feed Forwards, likely to be left empty.
-        public static final Current                             CURRENT_LIMIT       = Amp.of(20); // Limits the current, this is a simple kicker. We want the limit low so we don't break things in the case of a jam.
-        /// Kicker Constants
-        public static final int                                 MAX_FUEL_CAPACITY   = 50;
-        public static final Distance                            INDEXER_DIAMETER    = Inches.of(3); // Diameter of the wheel, belt, whatever is spinning on the kicker.
-        public static final AngularVelocity                     INDEXER_MAX_SPEED   = RPM.of(200); // Max RPM soft limits
+        public static final Current                             CURRENT_LIMIT       = Amp.of(30); // Limits the current, this is a simple kicker. We want the limit low so we don't break things in the case of a jam.
     }
     /// Control Constants for the Kicker Mechanism.
     public static class ControlConstants {
         public static final boolean                             INFINITE_SIM_INTAKE = true; // Makes it so you can kicker more than the max capacity.
-        public static final AngularVelocity                     VELOCITY_TOLERANCE  = DegreesPerSecond.of(1); // How accurate the velocity should be.
-        public static final AngularVelocity                     TARGET_VELOCITY     = DegreesPerSecond.of(60); // How fast the flywheel should spin.
     }
-    private final SparkMax                                      kickerMotor    = new SparkMax(MOTOR_ID, MotorType.kBrushed); /// The Normal Rev Vendor SparkMax Object.
+    //    private final SparkMax                                      kickerMotor    = new SparkMax(HardwareConstants.MOTOR_ID, MotorType.kBrushless); /// The Normal Rev Vendor SparkMax Object.
     private final SmartMotorControllerConfig                    motorConfig     = new SmartMotorControllerConfig(this) /// The Smart Motor Controller Configuration.
-                .withExponentialProfile(KickerSubsystem.HardwareConstants.Profiling.MAX_CONTROL_VOLTAGE, KickerSubsystem.HardwareConstants.Profiling.MAX_ANGULAR_VELOCITY, KickerSubsystem.HardwareConstants.Profiling.MAX_ANGULAR_ACCELERATION)
-                .withClosedLoopController(PID_CONTROLLER)
-                .withGearing(GEAR_RATIO)
-                .withIdleMode(MotorMode.BRAKE)
-                .withTelemetry("Kicker Motor", Telemetry.telemetryVerbosity.yamsVerbosity)
-                .withStatorCurrentLimit(CURRENT_LIMIT)
-                .withMotorInverted(MOTOR_INVERTED)
-                .withClosedLoopRampRate(RAMP_RATE)
-                .withOpenLoopRampRate(RAMP_RATE)
-                //.withFeedforward(FEED_FORWARD)
-                .withSimFeedforward(FEED_FORWARD)
-                .withControlMode(ControlMode.CLOSED_LOOP);
-    private final SmartMotorController                          motor           = new SparkWrapper(kickerMotor, DCMotor.getNEO(1), motorConfig); /// The new Smart Motor Controller
-    private final FlyWheelConfig                                kickerConfig    = new FlyWheelConfig(motor) /// The FlyWheel config for the Kicker.
-                .withDiameter(INDEXER_DIAMETER)
-                .withMass(Pounds.of(1)) // Kicker Doesn't need to specify weight.
-                .withTelemetry("Kicker", Telemetry.telemetryVerbosity.yamsVerbosity)
-                .withSoftLimit(INDEXER_MAX_SPEED.unaryMinus(), INDEXER_MAX_SPEED)
-                .withSpeedometerSimulation(INDEXER_MAX_SPEED);
-    @Getter
-    private final FlyWheel kicker = new FlyWheel(kickerConfig); /// The final FlyWheel Mechanism to use as the smart Kicker.
+            .withExponentialProfile(KickerSubsystem.HardwareConstants.Profiling.MAX_CONTROL_VOLTAGE, KickerSubsystem.HardwareConstants.Profiling.MAX_ANGULAR_VELOCITY, KickerSubsystem.HardwareConstants.Profiling.MAX_ANGULAR_ACCELERATION)
+            .withClosedLoopController(PID_CONTROLLER)
+            .withGearing(KickerSubsystem.HardwareConstants.GEAR_RATIO)
+            .withIdleMode(MotorMode.BRAKE)
+            .withTelemetry("Kicker Motor", Telemetry.telemetryVerbosity.yamsVerbosity)
+            .withStatorCurrentLimit(KickerSubsystem.HardwareConstants.CURRENT_LIMIT)
+            .withMotorInverted(KickerSubsystem.HardwareConstants.MOTOR_INVERTED)
+            .withClosedLoopRampRate(KickerSubsystem.HardwareConstants.RAMP_RATE)
+            .withOpenLoopRampRate(KickerSubsystem.HardwareConstants.RAMP_RATE)
+            //.withFeedforward(HardwareConstants.FEED_FORWARD)
+            .withSimFeedforward(KickerSubsystem.HardwareConstants.FEED_FORWARD)
+            .withControlMode(ControlMode.CLOSED_LOOP);
+    //    private final SmartMotorController                          motor           = new SparkWrapper(kickerMotor, DCMotor.getNEO(1), motorConfig); /// The new Smart Motor Controller
+//    private final FlyWheelConfig                                kickerConfig   = new FlyWheelConfig(motor) /// The FlyWheel config for the Kicker.
+//            .withDiameter(HardwareConstants.INDEXER_DIAMETER)
+//            .withMass(Pounds.of(1)) // Kicker Doesn't need to specify weight.
+//            .withTelemetry("Kicker", Telemetry.telemetryVerbosity.yamsVerbosity)
+//            .withSoftLimit(HardwareConstants.INDEXER_MAX_SPEED.unaryMinus(), HardwareConstants.INDEXER_MAX_SPEED)
+//            .withSpeedometerSimulation(HardwareConstants.INDEXER_MAX_SPEED);
+//    @Getter
+//    private final FlyWheel                                      kicker         = new FlyWheel(kickerConfig); /// The final FlyWheel Mechanism to use as the smart Kicker.
+    private final BrushedSparkWrapper kicker = new BrushedSparkWrapper(MOTOR_ID, motorConfig); /// Custom dumb brushed spark wrapper made to easily replace a YAMS Spark Max object.
 
     /// A trigger used to stop the motor when it is trying too hard.
     private final Trigger jammedTrigger = currentSensorTrigger(Amps.of(40), Seconds.of(0.5));

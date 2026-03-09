@@ -71,7 +71,8 @@ public class InputBuilder
                 StartingMethods
                 .defaultXboxDrive(TESTING.isMode,   driverXbox)
                 .SmartBindings
-                .withAutoShootOnTheMove()
+                .withTest(driverXbox.y())
+                //.withAutoShootOnTheMove()
                 .back().SwerveBindings              /// SwerveDrive Bindings
                 .setNormalRotation(.8)
                 .setNormalTranslation(.8)
@@ -253,7 +254,7 @@ public class InputBuilder
                 Pair.of(new Translation2d(11, 1.5), new Translation2d(12.75, 3.5)));
 
         public static ZoneTrigger aimingZone = new ZoneTrigger("Aiming",
-                Pair.of(new Translation2d(1.5, 0.5), new Translation2d(3.5, 7.5)));
+                Pair.of(new Translation2d(1.5, 0.5), new Translation2d(4.2, 7.5)));
 
         public static ZoneTrigger scoringZone = new ZoneTrigger("Scoring",
                 Pair.of(new Translation2d(1.5, 1), new Translation2d(2.5, 7)));
@@ -310,12 +311,7 @@ public class InputBuilder
                     .deadband(SwerveBindings.deadzone)
                     .robotRelative(true)
                     .allianceRelativeControl(false);
-            this.SwerveBindings.driveCommand = () -> subsystems.swerve.driveFieldOriented(() -> swerveInputStream.get());
-            isMode.and(DriverStation::isEnabled).onTrue(Commands.runOnce(() -> {
-                // Update some things on entry between inputs
-                subsystems.swerve.setDefaultCommand(SwerveBindings.driveCommand.get());
-                SwerveBindings.back();
-            }));
+            this.SwerveBindings.withDefaultCommand(() -> subsystems.swerve.driveFieldOriented(() -> swerveInputStream.get()));
         }
 
         /**
@@ -369,6 +365,20 @@ public class InputBuilder
          */
         public class SmartBindings {
 
+            public SmartBindings withTest(Trigger trigger) {
+                Pose2d outpostPose = new Pose2d(FieldConstants.Outpost.centerPoint, Rotation2d.kCCW_90deg);
+                isMode.and(trigger).whileTrue(
+                        scoring.shootOnTheMove().withTimeout(Seconds.of(1.5))
+                        .andThen(subsystems.swerve().pathfindToPath("Right Bump"))
+                        .andThen(subsystems.swerve().driveToNearestFuel()
+                                .alongWith(subsystems.intake().intake(0.75, true))
+                                .withTimeout(Seconds.of(2)))
+                        .andThen(subsystems.swerve().driveToPose(() -> AllianceFlipUtil.apply(outpostPose))
+                                .alongWith(scoring.shootOnTheMove())
+                                .andThen(scoring.shootOnTheMove())));
+                return this;
+            }
+
             /**
              * Shoots while moving using double interpolating maps while calculating for ToF, Phase Delay, Velocity, ect.
              * Active while inside a preset zone while the hub is active.
@@ -389,9 +399,83 @@ public class InputBuilder
              */
             public SmartBindings withShootOnTheMove(Trigger shootOnTheMoveWhile) {
                 if (!TurretBindings.isPresent || !HoodBindings.isPresent || !FlyWheelBindings.isPresent) {return this;}
-
                 isMode.and(shootOnTheMoveWhile).whileTrue(scoring.shootOnTheMove());
+                return this;
+            }
 
+            /**
+             * Runs all PID Subsystems to various goals.
+             * Set any as null if you don't want it to move.
+             *
+             * @param runAll the button to map.
+             * @param hoodAngle the hood angle to set.
+             * @param turretAngle the turret angle to set.
+             * @param flyWheelSpeed the flywheel speed to run.
+             * @return this, for chaining.
+             */
+            public SmartBindings withRunAll(
+                    Trigger runAll,
+                    Angle hoodAngle,
+                    Angle turretAngle,
+                    AngularVelocity flyWheelSpeed) {
+                if (!TurretBindings.isPresent || !HoodBindings.isPresent || !FlyWheelBindings.isPresent) {return this;}
+                isMode.and(runAll).whileTrue(
+                        subsystems.hood.getHood().run(hoodAngle).onlyIf(() -> hoodAngle != null)
+                                .alongWith(subsystems.turret.getTurret().run(turretAngle).onlyIf(() -> turretAngle != null))
+                                .alongWith(subsystems.flywheel.getFlyWheel().run(flyWheelSpeed).onlyIf(() -> flyWheelSpeed != null)));
+                return this;
+            }
+
+            /**
+             * Runs intake in while running the kicker and indexer in reverse. This should help fill the hopper up.
+             *
+             * @param intake the button to map.
+             * @return this, for chaining.
+             */
+            public SmartBindings withIntakeIntoHopper(Trigger intake) {
+                if (!IndexerBindings.isPresent || !IntakeBindings.isPresent || !KickerBindings.isPresent) {return this;}
+                // Runs intake in while running the kicker and indexer in reverse. This should help fill the hopper up.
+                isMode.and(intake).whileTrue(subsystems.intake.intake(IntakeBindings.intakeSpeed, true)
+                                .alongWith(subsystems.indexer().runIndexer(IndexerBindings.indexSpeed, false))
+                                .alongWith(subsystems.kicker.runKicker(KickerBindings.kickerSpeed, false)));
+                return this;
+            }
+
+            /**
+             * THIS DOES NOT RUN THE FLYWHEEL
+             * This indexes the hopper into the shooter.
+             * Runs the indexer in and kicker in.
+             * Intake does not run.
+             *
+             * @param index the button to map.
+             * @return this, for chaining.
+             */
+            public SmartBindings withIndexIntoFlyWheel(Trigger index) {
+                if (!IndexerBindings.isPresent || !IntakeBindings.isPresent || !KickerBindings.isPresent) {return this;}
+                isMode.and(index).whileTrue(subsystems.indexer().runIndexer(IndexerBindings.indexSpeed, true)
+                                .alongWith(subsystems.kicker.runKicker(KickerBindings.kickerSpeed, true)));
+                return this;
+            }
+
+            /**
+             * Turns all spinners on to take a fuel from the intake and fire it right away.
+             * This is for manual testing
+             * <p>
+             * Starts Flywheel and kicker, waits a second.
+             * Then it turns on the indexer and intake.
+             *
+             * @param turnOnAll the button to map.
+             * @return this, for chaining
+             */
+            public SmartBindings withDutyCycleAll(Trigger turnOnAll) {
+                if (!IntakeBindings.isPresent || !IndexerBindings.isPresent || !KickerBindings.isPresent || !FlyWheelBindings.isPresent) {return this;}
+                isMode.and(turnOnAll).whileTrue(
+                        subsystems.flywheel.runFlyWheel(FlyWheelBindings.flyWheelSpeed, true)
+                                .alongWith(subsystems.kicker.runKicker(KickerBindings.kickerSpeed,  true))
+                                .alongWith(
+                                        Commands.waitSeconds(1)
+                                                .alongWith(subsystems.indexer.runIndexer(IndexerBindings.indexSpeed,  true))
+                                                .alongWith(subsystems.intake.intake(IntakeBindings.intakeSpeed, true))));
                 return this;
             }
 
@@ -470,7 +554,7 @@ public class InputBuilder
             /**
              * The default duty cycle speed to run at.
              */
-            @Setter private double indexSpeed = 0.5;
+            @Setter private double indexSpeed = 0.75;
 
 
             private IndexerBindings() {
@@ -525,7 +609,7 @@ public class InputBuilder
             /**
              * The default duty cycle speed to run at.
              */
-            @Setter private double kickerSpeed = 0.5;
+            @Setter private double kickerSpeed = 0.75;
 
             /**
              * Runs the kicker at preset speed, stopping when finished.
@@ -576,7 +660,7 @@ public class InputBuilder
             /**
              * The default duty cycle speed to run at.
              */
-            @Setter private double flyWheelSpeed = 0.5;
+            @Setter private double flyWheelSpeed = 0.75;
 
             private FlyWheelBindings() {
                 this.isPresent = subsystems.flywheel != null;
@@ -654,7 +738,7 @@ public class InputBuilder
             /**
              * The default duty cycle speed to run at.
              */
-            @Setter private double hoodSpeed = 0.5;
+            @Setter private double hoodSpeed = 0.25;
 
             private HoodBindings() {
                 this.isPresent = subsystems.hood != null;
@@ -721,7 +805,7 @@ public class InputBuilder
             /**
              * The default duty cycle speed to run at.
              */
-            @Setter private double turretSpeed = .6;
+            @Setter private double turretSpeed = .25;
 
             private TurretBindings() {
                 this.isPresent = subsystems.turret != null;
@@ -792,24 +876,23 @@ public class InputBuilder
             /**
              * Rotation Speed Scalar when slowing drive speed.
              */
-            @Setter private double slowRotation = 0.2;
+            @Setter private double slowRotation = 0.4;
             /**
              * Move Speed Scalar when driving normally.
              */
-            @Setter private double normalTranslation = .8;
+            @Setter private double normalTranslation = .6;
             /**
              * Rotation Speed Scalar when driving normally.
              */
-            @Setter private double normalRotation = .8;
+            @Setter private double normalRotation = .6;
             /**
              * Move Speed Scalar when boosting drive speed.
              */
-            @Setter private double boostTranslation = 1.0;
+            @Setter private double boostTranslation = 0.8;
             /**
              * Rotation Speed Scalar when boosting drive speed.
              */
-            @Setter private double boostRotation = 0.75;
-            @Setter @Getter private Supplier<Command> driveCommand; // Default drive command.
+            @Setter private double boostRotation = 0.85;
 
             private final boolean isPresent;
             private SwerveBindings() {

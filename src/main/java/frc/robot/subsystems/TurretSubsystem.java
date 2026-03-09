@@ -106,7 +106,7 @@ public class TurretSubsystem extends SubsystemBase
     private final PivotConfig                       config            = new PivotConfig(motor)
             .withHardLimit(HARD_LIMIT_REVERSE, HARD_LIMIT_FORWARD)
             .withSoftLimits(SOFT_LIMIT_REVERSE, SOFT_LIMIT_FORWARD)
-            .withTelemetry("Turret", Telemetry.telemetryVerbosity.yamsVerbosity)
+            .withTelemetry(Telemetry.yamsMechPath + "Turret", Telemetry.telemetryVerbosity.yamsVerbosity)
             .withStartingPosition(SIM_STARTING_ANGLE)
             .withMechanismPositionConfig(robotToMechanism)
             .withMOI(KilogramSquareMeters.of(0.001));

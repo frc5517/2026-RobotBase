@@ -77,7 +77,7 @@ public class IntakeSubsystem extends SubsystemBase {
     private final FlyWheelConfig                                intakeConfig   = new FlyWheelConfig(motor) /// The FlyWheel config for the Intake.
                     .withDiameter(INDEXER_DIAMETER)
                     .withMass(Pounds.of(1)) // Intake Doesn't need to specify weight.
-                    .withTelemetry("Intake", Telemetry.telemetryVerbosity.yamsVerbosity)
+                    .withTelemetry(Telemetry.yamsMechPath + "Intake", Telemetry.telemetryVerbosity.yamsVerbosity)
                     .withSoftLimit(INDEXER_MAX_SPEED.unaryMinus(), INDEXER_MAX_SPEED)
                     .withSpeedometerSimulation(INDEXER_MAX_SPEED);
     @Getter

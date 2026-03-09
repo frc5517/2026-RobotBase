@@ -28,6 +28,7 @@ public class Telemetry
     public static final String telemetryPath = "SmartDashboard/Telemetry"; // Make access public for other telemetry.
     public static final String smartDashboardPath = "Telemetry/";
     public static final NetworkTable telemetryTable = NetworkTableInstance.getDefault().getTable(telemetryPath);
+    public static final String yamsMechPath = "Telemetry/Mechanisms/";
 
     /// Publishers
     public static class Publishers
@@ -47,7 +48,7 @@ public class Telemetry
             /// Telemetry Paths
             // Zones
             public static final NetworkTable zoneTable = telemetryTable.getSubTable("Zones");
-            public static final String smartDashboardBrushedPath = smartDashboardPath + "Brushed Telemetry/";
+            public static final String smartDashboardBrushedPath = yamsMechPath + "Brushed Telemetry/";
             // Input Selection
             public static final SmartDashboardPublisher inputPublisher = new SmartDashboardPublisher(smartDashboardPath + "Input Selector");
             public static final StringPublisher inputOverride = zoneTable.getSubTable("Input Selector").getStringTopic("selected").publish();

@@ -64,7 +64,7 @@ public class FlyWheelSubsystem extends SubsystemBase
         public static final Distance                    FLYWHEEL_DIAMETER           = Inches.of(4); // Diameter of the wheel, belt, whatever is spinning on the flywheel.
         public static final Mass                        FLYWHEEL_MASS               = Pounds.of(1); // Weight of the flywheel, just what gets spun.
         public static final AngularVelocity             FLYWHEEL_MAX_SPEED          = RPM.of(80000); // Max RPM soft limits
-        public static final double                      FLYWHEEL_EFFICIENCY         = .39; // Multiplicity factor used to determine how much speed was transferred,
+        public static final double                      FLYWHEEL_EFFICIENCY         = .38; // Multiplicity factor used to determine how much speed was transferred,
     }
     /// Control Constants for the FlyWheel Mechanism
     public static class ControlConstants {
@@ -89,7 +89,7 @@ public class FlyWheelSubsystem extends SubsystemBase
     private final FlyWheelConfig                        flyWheelConfig              = new FlyWheelConfig(motor) /// The FlyWheel config.
             .withDiameter(HardwareConstants.FLYWHEEL_DIAMETER)
             .withMass(HardwareConstants.FLYWHEEL_MASS)
-            .withTelemetry("FlyWheel", Telemetry.telemetryVerbosity.yamsVerbosity)
+            .withTelemetry(Telemetry.yamsMechPath + "FlyWheel", Telemetry.telemetryVerbosity.yamsVerbosity)
             .withSoftLimit(HardwareConstants.FLYWHEEL_MAX_SPEED.unaryMinus(), HardwareConstants.FLYWHEEL_MAX_SPEED)
             .withSpeedometerSimulation(HardwareConstants.FLYWHEEL_MAX_SPEED);
     @Getter

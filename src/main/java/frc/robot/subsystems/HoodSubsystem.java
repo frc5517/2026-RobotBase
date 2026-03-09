@@ -108,7 +108,7 @@ public class HoodSubsystem extends SubsystemBase {
             .withLength(HOOD_LENGTH)
             .withHardLimit(HARD_LIMIT_REVERSE, HARD_LIMIT_FORWARD)
             .withSoftLimits(SOFT_LIMIT_REVERSE, SOFT_LIMIT_FORWARD)
-            .withTelemetry("Hood", Telemetry.telemetryVerbosity.yamsVerbosity)
+            .withTelemetry(Telemetry.yamsMechPath + "Hood", Telemetry.telemetryVerbosity.yamsVerbosity)
             .withMass(HOOD_MASS)
             .withStartingPosition(SIM_STARTING_ANGLE)
             //.withHorizontalZero(HardwareConstants.HORIZONTAL_OFFSET)

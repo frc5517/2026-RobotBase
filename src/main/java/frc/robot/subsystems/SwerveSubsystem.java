@@ -25,14 +25,18 @@ import edu.wpi.first.units.measure.AngularAcceleration;
 import edu.wpi.first.units.measure.LinearAcceleration;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Filesystem;
+import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import edu.wpi.first.wpilibj2.command.button.Trigger;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Config;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
@@ -114,6 +118,8 @@ public class SwerveSubsystem extends SubsystemBase
     }
     setupPathPlanner();
 
+    new Trigger(RobotBase::isSimulation).and(DriverStation::isTeleopEnabled).onTrue(Commands.runOnce(() -> swerveDrive.resetOdometry(AllianceFlipUtil.ifShouldFlip(INITIAL_SIM_POSE))));
+
     /// Set our SwerveState Suppliers
     SwerveState.setSwerveDrive(this::getSwerveDrive);
   }
@@ -150,11 +156,17 @@ public class SwerveSubsystem extends SubsystemBase
      * @return a command that drives to the nearest fuel target.
      */
   public Command driveToNearestFuel() {
+      // We can't sim fuel tracking yet. Just drive forward for autons.
+      if (RobotBase.isSimulation()) {
+          System.out.println("WARNING: Fuel tracking doesn't work in simulation. Just driving forward to better sim some autons.");
+          return Commands.run(() -> swerveDrive.drive(new ChassisSpeeds(1, 0, Math.toRadians(-20))));
+      }
+      if (vision == null) {return Commands.runOnce(() -> DriverStation.reportError("Target Fuel Not Found, Vision is not enabled!", false));}
       var target = vision.getBestGamePieceTransform();
       // No target found, report error.
       if (target == null) {return Commands.runOnce(() -> DriverStation.reportError("Target Fuel Not Found!", false));}
       // Drive to the target
-      return driveToPose(
+      return driveToPose(() ->
               getSwerveDrive().getPose().plus(
                       new Transform2d(
                               target.getX(),
@@ -223,18 +235,58 @@ public class SwerveSubsystem extends SubsystemBase
    * @param pose Target {@link Pose2d} to go to.
    * @return PathFinding command
    */
-  public Command driveToPose(Pose2d pose)
+  public Command driveToPose(Supplier<Pose2d> pose)
   {
     // Create the constraints to use while pathfinding
     PathConstraints constraints = new PathConstraints(
         swerveDrive.getMaximumChassisVelocity(), 4.0,
         swerveDrive.getMaximumChassisAngularVelocity(), Units.degreesToRadians(720));
     // Since AutoBuilder is configured, we can use it to build pathfinding commands
-    return AutoBuilder.pathfindToPose(
-        pose,
-        constraints,
-        edu.wpi.first.units.Units.MetersPerSecond.of(0)); // Goal end velocity in meters/sec
+    return Commands.defer(() ->
+            AutoBuilder.pathfindToPose(
+                    pose.get(),
+                    constraints,
+                    edu.wpi.first.units.Units.MetersPerSecond.of(0)),
+            Set.of(this)); // Goal end velocity in meters/sec
   }
+
+    /**
+     * Use PathPlanner Path finding to go to a point on the field.
+     *
+     * @param path Target {@link PathPlannerPath} to go find and follow.
+     * @return PathFinding command
+     */
+    public Command pathfindToPath(PathPlannerPath path)
+    {
+        // Create the constraints to use while pathfinding
+        PathConstraints constraints = new PathConstraints(
+                swerveDrive.getMaximumChassisVelocity(), 4.0,
+                swerveDrive.getMaximumChassisAngularVelocity(), Units.degreesToRadians(720));
+        // Since AutoBuilder is configured, we can use it to build pathfinding commands
+        return AutoBuilder.pathfindThenFollowPath(
+                path,
+                constraints);
+    }
+
+    /**
+     * Use PathPlanner Path finding to go to a point on the field.
+     *
+     * @param pathName The path name. Automatically hangles Exception.
+     * @return PathFinding command
+     */
+    public Command pathfindToPath(String pathName)
+    {
+        try{
+            // Load the path you want to follow using its name in the GUI
+            PathPlannerPath path = PathPlannerPath.fromPathFile(pathName);
+
+            // Create a path following command using AutoBuilder. This will also trigger event markers.
+            return pathfindToPath(path);
+        } catch (Exception e) {
+            DriverStation.reportError("PathPlannerPath " + pathName + " not found: " + e.getMessage(), e.getStackTrace());
+            return Commands.none();
+        }
+    }
 
   /**
    * Drive with {@link SwerveSetpointGenerator} from 254, implemented by PathPlanner.
