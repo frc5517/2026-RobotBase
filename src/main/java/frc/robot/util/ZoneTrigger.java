@@ -11,6 +11,7 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
+import frc.robot.InputBuilder;
 import frc.robot.Telemetry;
 import frc.robot.subsystems.SwerveSubsystem;
 import frc.robot.util.borrowed.math.AllianceFlipUtil;
@@ -81,13 +82,13 @@ public class ZoneTrigger
         this.rectangles = new ArrayList<>();
         this.zones = List.of(zones);
         // Load the latest rectangles at construction
-        loadRectangles();
+        //loadRectangles();
 
         // Sets the publishing path to the telemetry table in our Telemetry class.
         /// This should be changed on differing projects.
         this.setBothTables(Telemetry.Publishers.Robot.zoneTable); /// Sets the telemetry tables
         this.reloadPublishers(zoneName); // Reloads the publishers with our new tables.
-        this.setPoseSupplier(() -> SwerveSubsystem.SwerveState.CurrentPose); /// Sets the pose supplier
+        this.setPoseSupplier(SwerveSubsystem.SwerveState::getCurrentPose); /// Sets the pose supplier
 
         // Sets the trigger telling when our robot is within the zone.
         this.trigger = new Trigger(() -> containsPose(this.getPoseSupplier()));

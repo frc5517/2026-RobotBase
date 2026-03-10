@@ -84,13 +84,14 @@ public class Telemetry
     }
 
     /// Updates all of our custom telemetry
-    public static void updateTelemetry()
+    public static void updateTelemetry(InputBuilder.Subsystems subsystem)
     {
         // Input
         Publishers.Robot.inputPublisher.update();
-        Publishers.Robot.Mech3D.robotPose.set(SwerveSubsystem.SwerveState.CurrentPose);
+        Publishers.Robot.Mech3D.robotPose.set(subsystem.swerve().getSwerveDrive().getPose());
 
         if (RobotBase.isSimulation()) {
+            SmartDashboard.putBoolean("ALLIANCE ZONE", InputBuilder.CustomTriggers.allianceZone.getTrigger().getAsBoolean());
             // MapleSim
         Publishers.MapleSim.elementPublisher.accept(SimulatedArena.getInstance().getGamePiecesArrayByType("Fuel"));
         }

@@ -79,6 +79,7 @@ public class InputBuilder
                 .setSlowRotation(.4)
                 .setSlowTranslation(.4)
                 .withCollectFuel(driverXbox.b())
+                .withToggleZones(CustomTriggers.enteringBumpZone.getTrigger())
 
                 .withLookAtHubThenFire(             driverXbox.leftTrigger(), new Trigger(() -> false))
 
@@ -197,14 +198,41 @@ public class InputBuilder
                 .back().MiscBindings /// Miscellaneous Controller Bindings
                 .resetField(            driverXbox.start())
                 .back(); // Return to our InputStream.
+
+        final InputStream bradStream =  new InputStream()
+                .StartingMethods.headingXboxDrive(BRAD_CONTROL.isMode, driverXbox)
+                .SmartBindings
+                .withShootOnTheMove(driverXbox.b())
+                .back()
+                .SwerveBindings
+                .setSlowTranslation(0.5)
+                .setSlowRotation(0.6)
+                .setNormalTranslation(0.7)
+                .setNormalRotation(0.8)
+                .setBoostTranslation(1)
+                .setBoostRotation(1)
+                .setDeadzone(0.05)
+                .withSlowDrive(driverXbox.leftBumper())
+                .withBoostDrive(driverXbox.rightBumper())
+                .withResetSimOdometry(driverXbox.start())
+                .withToggleCentricity(driverXbox.back(), true)
+                .withToggleZones(CustomTriggers.enteringBumpZone.getTrigger())
+                .withToggleZones(driverXbox.a())
+                .withLookAtHubThenFire(driverXbox.y())
+                .back().IntakeBindings
+                .setIntakeSpeed(0.75)
+                .withRunIntake(driverXbox.leftTrigger(), true)
+                .back().MiscBindings
+                .resetField(driverXbox.start())
+                .back();
     }
 
     // Control binding type enum
     public enum InputSelections {
         /// Default Input Schema
         DISABLED("DISABLED - Temp", true),
-        SINGLE_XBOX("Single Xbox", false),
-        DUAL_XBOX("Dual Xbox"),
+        BRAD_CONTROL("Brad Xbox", false),
+        SINGLE_XBOX("Single Xbox - NC"),
         TESTING("Testing", false),
         MANUAL_CONTROL("Manual Control", false),
         PID_CONTROL("Basic PID Control", false),
@@ -247,6 +275,13 @@ public class InputBuilder
      *
      */
     public static class CustomTriggers {
+        public static ZoneTrigger allianceZone = new ZoneTrigger("Alliance",
+                Pair.of(new Translation2d(0, 0), new Translation2d(4, 8)));
+        public static ZoneTrigger neutralZone = new ZoneTrigger("Neutral",
+                Pair.of(new Translation2d(5.25, 0), new Translation2d(9, 8)));
+        public static ZoneTrigger enteringBumpZone = new ZoneTrigger("Entering Bump",
+                Pair.of(new Translation2d(3.25, 5), new Translation2d(6, 6.25)),
+                Pair.of(new Translation2d(3.25, 1.75), new Translation2d(6, 3)));
         public static ZoneTrigger bumpZone = new ZoneTrigger("Bump",
                 Pair.of(new Translation2d(3.75, 1.5), new Translation2d(5.5, 3.5)),
                 Pair.of(new Translation2d(3.75, 4.5), new Translation2d(5.5, 6.5)),
@@ -912,6 +947,12 @@ public class InputBuilder
                 return this;
             }
 
+            public SwerveBindings withToggleZones(Trigger toggleZones) {
+                if (!isPresent) {return this;}
+                isMode.and(toggleZones).whileTrue(subsystems.swerve.toggleZones());
+                return this;
+            }
+
             public SwerveBindings withCollectFuel(Trigger collectFuel) {
                 if (!isPresent || !SwerveSubsystem.ControlConstants.RUN_VISION) {return this;}
                 isMode.and(collectFuel).whileTrue(subsystems.swerve.driveToNearestFuel());
@@ -996,6 +1037,20 @@ public class InputBuilder
                 if (!isPresent) {return this;}
                 isMode.and(slowDrive)
                         .onTrue(Commands.runOnce(() -> swerveInputStream.scaleTranslation(slowTranslation).scaleRotation(slowRotation)))
+                        .onFalse(Commands.runOnce(() -> swerveInputStream.scaleTranslation(normalTranslation).scaleRotation(normalRotation)));
+                return this;
+            }
+
+            /**
+             * Holding the button speeds up the drive.
+             *
+             * @param boostDrive the button to map.
+             * @return this, for chaining.
+             */
+            public SwerveBindings withBoostDrive(Trigger boostDrive) {
+                if (!isPresent) {return this;}
+                isMode.and(boostDrive)
+                        .onTrue(Commands.runOnce(() -> swerveInputStream.scaleTranslation(boostTranslation).scaleRotation(boostRotation)))
                         .onFalse(Commands.runOnce(() -> swerveInputStream.scaleTranslation(normalTranslation).scaleRotation(normalRotation)));
                 return this;
             }

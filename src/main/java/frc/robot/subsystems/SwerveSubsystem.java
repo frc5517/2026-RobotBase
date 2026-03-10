@@ -40,6 +40,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
+import frc.robot.InputBuilder;
 import frc.robot.Telemetry;
 import frc.robot.util.borrowed.math.AllianceFlipUtil;
 import lombok.Getter;
@@ -67,7 +68,7 @@ public class SwerveSubsystem extends SubsystemBase
     }
     public static class ControlConstants {
         /// Enable vision odometry updates while driving.
-        public static final boolean RUN_VISION = false; // Run only in sim until real vision is ready.
+        public static final boolean RUN_VISION = RobotBase.isSimulation(); // Run only in sim until real vision is ready.
         // Simulation Starting Pose, flipping is handled by YAGSL.
         public static final Pose2d INITIAL_SIM_POSE = new Pose2d(new Translation2d(
                 Meter.of(2),
@@ -84,7 +85,7 @@ public class SwerveSubsystem extends SubsystemBase
   public static class SwerveState {
       @Setter
       public static Supplier<SwerveDrive> swerveDrive = () -> null;
-      @Setter
+      @Setter @Getter
       public static Pose2d CurrentPose = Pose2d.kZero;
       @Setter
       public static ChassisSpeeds CurrentSpeeds = new ChassisSpeeds();
@@ -148,6 +149,45 @@ public class SwerveSubsystem extends SubsystemBase
   @Override
   public void simulationPeriodic()
   {
+  }
+
+    /**
+     * Automatically decides how to get to the other zone.
+     *
+     * @return a command to toggle zones.
+     */
+  public Command toggleZones() {
+      return Commands.defer(() ->
+              changeZones(
+                      InputBuilder.CustomTriggers.allianceZone.getTrigger().getAsBoolean(), // If in allianceZone go to neutral.
+                      swerveDrive.getPose().getMeasureY().gte(Meters.of(4))), // If closer to left field go left.
+              Set.of(this));
+  }
+
+    /**
+     * Changes between our zone and the neutral zone automatically and safely.
+     * Uses booleans to determine the path.
+     *
+     * @param toNeutral
+     * @param isRightBump
+     * @return
+     */
+  public Command changeZones(boolean toNeutral, boolean isRightBump) {
+      String pathName;
+      if (toNeutral) {
+          if (isRightBump) {
+              pathName = "Right Bump Neutral";
+          } else {
+              pathName = "Left Bump Neutral";
+          }
+      } else {
+          if (isRightBump) {
+              pathName = "Right Bump Alliance";
+          } else  {
+              pathName = "Left Bump Alliance";
+          }
+      }
+      return pathfindToPath(pathName);
   }
 
     /**
