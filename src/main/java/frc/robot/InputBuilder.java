@@ -7,8 +7,11 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
+import edu.wpi.first.units.measure.Current;
+import edu.wpi.first.units.measure.Time;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.RobotBase;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -25,7 +28,10 @@ import lombok.experimental.Accessors;
 import swervelib.SwerveInputStream;
 import swervelib.simulation.ironmaple.simulation.SimulatedArena;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
@@ -65,49 +71,24 @@ public class InputBuilder
     public void configureBindings() {
         // Stop all movement.
         DISABLED.isMode.and(DriverStation::isEnabled).onTrue(Commands.runOnce(subsystems.swerve::removeDefaultCommand));
-
         /// Testing control gets randomly changed all the time.
         final InputStream testing = new InputStream().
                 StartingMethods
                 .defaultXboxDrive(TESTING.isMode,   driverXbox)
+                .FlyWheelBindings
+                .withSetVelocity(driverXbox.rightTrigger(), RPM.of(3250))
+                .back().SmartBindings
+                .withIntakeIntoHopper(driverXbox.leftBumper())
+                .withIndexIntoFlyWheel(driverXbox.rightBumper())
+                .back();
+        final InputStream sotmCalbration = new InputStream(SOTM_CALIBRATION.isMode)
                 .SmartBindings
-                .withTest(driverXbox.y())
-                //.withAutoShootOnTheMove()
-                .back().SwerveBindings              /// SwerveDrive Bindings
-                .setNormalRotation(.8)
-                .setNormalTranslation(.8)
-                .setSlowRotation(.4)
-                .setSlowTranslation(.4)
-                .withCollectFuel(driverXbox.b())
-                .withToggleZones(CustomTriggers.enteringBumpZone.getTrigger())
-
-                .withLookAtHubThenFire(             driverXbox.leftTrigger(), new Trigger(() -> false))
-
-                //.withLookAtHubThenFire(             CustomTriggers.aimingZone.getTrigger(), CustomTriggers.scoringZone.getTrigger()) // Decrease look ahead time
-
-                .withSlowDrive(                     CustomTriggers.bumpZone.getTrigger()) // Slows the drive when within the bump zone.
-                .withSlowDrive(                     driverXbox.rightBumper())
-                .withToggleCentricity(              driverXbox.back(), true)
-                .withResetSimOdometry(              driverXbox.start())
-                .back().HoodBindings                /// Hood
-                .withSetAngle(                      driverXbox.x(), Degrees.of(90))
-                .withRunHood(                       driverXbox.pov(0), true)
-                .withRunHood(                       driverXbox.pov(180), false)
-                .back().TurretBindings              /// Turret
-                .withDefaultCommand(                () -> subsystems.turret.getTurret().setAngle(Degrees.of(0))) // Lock the turret to center while not doing anything.
-                .withRunTurret(                     driverXbox.pov(270), true)
-                .withRunTurret(                     driverXbox.pov(90), false)
-                .back().IndexerBindings             /// Indexer
-                .withRunIndexer(                    driverXbox.leftBumper(), true)
-                .withRunIndexer(                    driverXbox.rightBumper(), false)
-                .back().IntakeBindings              /// Intake
-                .withRunIntake(                     driverXbox.leftBumper(), true)
-                .withRunIntake(                     driverXbox.rightBumper(), false)
-                .back().FlyWheelBindings            /// Flywheel
-                .withSimShoot(                      driverXbox.rightTrigger())
-                .back().MiscBindings                /// Misc Bindings
-                .withChangeInput(MANUAL_CONTROL,   driverXbox.a().and(driverXbox.back()).debounce(1)) // Change to manual control when a() and back() are held for 1 second.
-                .resetField(                        driverXbox.start())
+                .withSOTMCalibration(driverXbox.rightTrigger(), driverXbox.a(), Amps.of(60))
+                .withIntakeIntoHopper(driverXbox.leftTrigger())
+                .back().KickerBindings
+                .withRunKicker(driverXbox.rightBumper().toggleOnTrue(Commands.none()), true)
+                .back().HoodBindings
+                .back().FlyWheelBindings
                 .back();
         /// Single xbox controller with manual duty cycle control of all the subsystems.
         final InputStream singleManual = new InputStream(MANUAL_CONTROL.isMode)
@@ -234,6 +215,7 @@ public class InputBuilder
         BRAD_CONTROL("Brad Xbox", false),
         SINGLE_XBOX("Single Xbox - NC"),
         TESTING("Testing", false),
+        SOTM_CALIBRATION("SOTM Calibration", false),
         MANUAL_CONTROL("Manual Control", false),
         PID_CONTROL("Basic PID Control", false),
 
@@ -400,6 +382,30 @@ public class InputBuilder
          */
         public class SmartBindings {
 
+            public SmartBindings withSOTMCalibration(Trigger indexIntoFlywheel, Trigger ballHasHitFloor, Current threshold) {
+                final Timer timeOfFlightTimer = new Timer();
+                final List<Double> dataLog =  new ArrayList<>();
+
+                this.withIndexIntoFlyWheel(indexIntoFlywheel);
+                isMode.and(indexIntoFlywheel).and(subsystems.flywheel.currentSensorTrigger(threshold, Seconds.of(0)))
+                        .onTrue(Commands.runOnce(timeOfFlightTimer::start).andThen(Commands.waitUntil(ballHasHitFloor).andThen(
+                                () -> {
+                                    timeOfFlightTimer.stop();
+                                    final Time tofGuess = Seconds.of(timeOfFlightTimer.get());
+                                    final Angle hoodAngle = subsystems.hood.getHood().getAngle();
+                                    final AngularVelocity flyWheelSpeed = subsystems.flywheel.getFlyWheel().getSpeed();
+                                    timeOfFlightTimer.reset();
+
+                                    dataLog.add(tofGuess.in(Seconds));
+                                    dataLog.add(hoodAngle.in(Degrees));
+                                    dataLog.add(flyWheelSpeed.in(RPM));
+
+                                    DriverStation.reportWarning("SOTM Data - ToF: " + tofGuess + " hA: " + hoodAngle.in(Degrees) + " fV: " + flyWheelSpeed.in(RPM), false);
+                                })));
+                isMode.and(() -> !dataLog.isEmpty()).and(DriverStation::isDisabled).onTrue(Commands.runOnce(() -> DriverStation.reportWarning("SOTM DataLog: " + dataLog, false)).ignoringDisable(true));
+                return this;
+            }
+
             public SmartBindings withTest(Trigger trigger) {
                 Pose2d outpostPose = new Pose2d(FieldConstants.Outpost.centerPoint, Rotation2d.kCCW_90deg);
                 isMode.and(trigger).whileTrue(
@@ -450,9 +456,9 @@ public class InputBuilder
              */
             public SmartBindings withRunAll(
                     Trigger runAll,
-                    Angle hoodAngle,
-                    Angle turretAngle,
-                    AngularVelocity flyWheelSpeed) {
+                    Supplier<Angle> hoodAngle,
+                    Supplier<Angle> turretAngle,
+                    Supplier<AngularVelocity> flyWheelSpeed) {
                 if (!TurretBindings.isPresent || !HoodBindings.isPresent || !FlyWheelBindings.isPresent) {return this;}
                 isMode.and(runAll).whileTrue(
                         subsystems.hood.getHood().run(hoodAngle).onlyIf(() -> hoodAngle != null)

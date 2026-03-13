@@ -55,7 +55,7 @@ public class AutonSelector {
 
         return Commands.runOnce(() -> subsystems.swerve().getSwerveDrive().resetOdometry(AllianceFlipUtil.ifShouldFlip(startingPose)))
                 .andThen(scoring.shootOnTheMove().withTimeout(Seconds.of(1.5)))
-                .andThen(subsystems.swerve().pathfindToPath("Right Bump"))
+                .andThen(subsystems.swerve().pathfindToPath("Right Bump Neutral"))
                 .andThen(subsystems.swerve().driveToNearestFuel()
                         .alongWith(subsystems.intake().intake(0.75, true))
                         .withTimeout(Seconds.of(2)))
@@ -76,7 +76,7 @@ public class AutonSelector {
 
         return Commands.runOnce(() -> subsystems.swerve().getSwerveDrive().resetOdometry(AllianceFlipUtil.ifShouldFlip(startingPose)))
                 .andThen(scoring.shootOnTheMove().withTimeout(Seconds.of(1.5)))
-                .andThen(subsystems.swerve().pathfindToPath("Left Bump"))
+                .andThen(subsystems.swerve().pathfindToPath("Left Bump Neutral"))
                 .andThen(subsystems.swerve().driveToNearestFuel()
                         .alongWith(subsystems.intake().intake(0.75, true))
                         .withTimeout(Seconds.of(2)))
