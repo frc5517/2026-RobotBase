@@ -80,7 +80,7 @@ public class SwerveSubsystem extends SubsystemBase
   private final SwerveDrive swerveDrive;
   /// PhotonVision class to keep an accurate odometry.
   @Getter
-  private VisionSubsystem vision;
+  private PhotonSubsystem vision;
 
   public static class SwerveState {
       @Setter
@@ -130,7 +130,7 @@ public class SwerveSubsystem extends SubsystemBase
    */
   public void setupPhotonVision()
   {
-    vision = new VisionSubsystem(swerveDrive::getPose, swerveDrive.field);
+    vision = new PhotonSubsystem(swerveDrive::getPose, swerveDrive.field);
   }
 
   @Override
@@ -190,30 +190,6 @@ public class SwerveSubsystem extends SubsystemBase
       return pathfindToPath(pathName);
   }
 
-    /**
-     * Drives to the nearest fuel target.
-     *
-     * @return a command that drives to the nearest fuel target.
-     */
-  public Command driveToNearestFuel() {
-      // We can't sim fuel tracking yet. Just drive forward for autons.
-      if (RobotBase.isSimulation()) {
-          System.out.println("WARNING: Fuel tracking doesn't work in simulation. Just driving forward to better sim some autons.");
-          return Commands.run(() -> swerveDrive.drive(new ChassisSpeeds(1, 0, Math.toRadians(-20))));
-      }
-      if (vision == null) {return Commands.runOnce(() -> DriverStation.reportError("Target Fuel Not Found, Vision is not enabled!", false));}
-      var target = vision.getBestGamePieceTransform();
-      // No target found, report error.
-      if (target == null) {return Commands.runOnce(() -> DriverStation.reportError("Target Fuel Not Found!", false));}
-      // Drive to the target
-      return driveToPose(() ->
-              getSwerveDrive().getPose().plus(
-                      new Transform2d(
-                              target.getX(),
-                              target.getY(),
-                              target.getRotation().toRotation2d())));
-  }
-
   /**
    * Setup AutoBuilder for PathPlanner.
    */
@@ -240,9 +216,9 @@ public class SwerveSubsystem extends SubsystemBase
           // Method that will drive the robot given ROBOT RELATIVE ChassisSpeeds. Also optionally outputs individual module feedforwards
           new PPHolonomicDriveController(
               // PPHolonomicController is the built-in path-following controller for holonomic drive trains
-              new PIDConstants(5.0, 0.0, 0.0),
+              new PIDConstants(4.0, 0.0, 0.0),
               // Translation PID constants
-              new PIDConstants(5.0, 0.0, 0.0)
+              new PIDConstants(4.0, 0.0, 0.0)
               // Rotation PID constants
           ),
           RobotConfig.fromGUISettings(), // The pathplanner configuration

@@ -9,6 +9,8 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Distance;
+import edu.wpi.first.units.measure.Time;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.InputBuilder;
@@ -19,9 +21,14 @@ import frc.robot.subsystems.TurretSubsystem;
 import frc.robot.systems.ScoringSystem.ControlConstants.DoubleInterpolatingMaps;
 import frc.robot.util.borrowed.math.AllianceFlipUtil;
 import frc.robot.util.borrowed.math.FieldConstants;
+import lombok.Getter;
+import lombok.Setter;
 
+import javax.swing.*;
 import java.util.Map;
+import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import static edu.wpi.first.units.Units.*;
 
@@ -51,6 +58,19 @@ public class ScoringSystem {
         }
     }
 
+    public static class SOTMLatestGoals {
+        @Getter
+        private static Supplier<Angle> TurretGoal = () -> Degrees.of(0);
+        @Getter
+        private static Supplier<Angle> HoodGoal = () -> Degrees.of(0);
+        @Getter
+        private static Supplier<AngularVelocity> FlyWheelGoal = () -> RPM.of(0);
+        @Getter
+        private static Supplier<Time> TimeOfFlight = () -> Seconds.of(0);
+        @Getter
+        private static Supplier<Distance> DistanceToTarget = () -> Meters.of(0);
+    }
+
     private final InputBuilder.Subsystems subsystems;
 
     public ScoringSystem(InputBuilder.Subsystems subsystems) {
@@ -73,15 +93,13 @@ public class ScoringSystem {
                 .alongWith(subsystems.hood().getHood().run(() -> hoodGoal[0]))
                 .alongWith(subsystems.flywheel().getFlyWheel().run(() -> flyWheelGoal[0]))
                 // Score when safe
-                .alongWith(
+                .alongWith(Robot.isSimulation()
                         // To be replaced with isSim ? simShoot : index, indexing automatically stops when flywheel is not ready.
-                        subsystems.flywheel().simShoot(subsystems, () -> flyWheelGoal[0])
+                        ? subsystems.flywheel().simShoot(subsystems, () -> flyWheelGoal[0])
                                 // Only Index when all systems are ready
-                                .onlyIf(() -> subsystems.turret().getTurret().isNear(turretGoal[0], TurretSubsystem.ControlConstants.ANGLE_TOLERANCE).getAsBoolean()
-                                        && subsystems.hood().getHood().isNear(hoodGoal[0], HoodSubsystem.ControlConstants.ANGLE_TOLERANCE).getAsBoolean()
-                                        && subsystems.flywheel().getFlyWheel().isNear(flyWheelGoal[0], FlyWheelSubsystem.ControlConstants.VELOCITY_TOLERANCE).getAsBoolean())
-                                .andThen(Commands.waitSeconds(0.25)).repeatedly()
-                                .onlyIf(Robot::isSimulation));
+                                .onlyIf(() -> true).andThen(Commands.waitSeconds(0.2)).repeatedly()
+                        : subsystems.indexer().runIndexer(0.75, true)
+                        .onlyWhile(isReadyToFire()));
     }
 
     public void calculateSOTMGoals(Translation2d target, Consumer<Angle> turretGoal, Consumer<Angle> hoodGoal, Consumer<AngularVelocity> flyWheelGoal) {
@@ -108,10 +126,29 @@ public class ScoringSystem {
         Translation2d targetAdjustedForSpeed = target.minus(new Translation2d(turretSpeedsAtTime.vxMetersPerSecond, turretSpeedsAtTime.vyMetersPerSecond));
         // Distance from the updated target based on robot speeds.
         Distance adjustedDistance = Meters.of(targetAdjustedForSpeed.getNorm());
+        /// Set Latest SOTMGoals
         /// Turret goal is straightforward, angle from origin from our translation with the robot as the origin.
-        turretGoal.accept(subsystems.turret().angleToPose(subsystems.swerve().getSwerveDrive().getPose(), targetAdjustedForSpeed).get());
+        SOTMLatestGoals.TurretGoal = () -> subsystems.turret().angleToPose(subsystems.swerve().getSwerveDrive().getPose(), targetAdjustedForSpeed).get();
         /// Hood and Flywheel use the Double Interpolating Maps.
-        hoodGoal.accept(Degrees.of(DoubleInterpolatingMaps.HOOD_ANGLE.get(adjustedDistance.in(Meters))));
-        flyWheelGoal.accept(RPM.of(DoubleInterpolatingMaps.SHOOT_SPEED.get(adjustedDistance.in(Meters))));
+        SOTMLatestGoals.HoodGoal = () -> Degrees.of(DoubleInterpolatingMaps.HOOD_ANGLE.get(adjustedDistance.in(Meters)));
+        SOTMLatestGoals.FlyWheelGoal = () -> RPM.of(DoubleInterpolatingMaps.SHOOT_SPEED.get(adjustedDistance.in(Meters)));
+        /// Add other good data
+        SOTMLatestGoals.TimeOfFlight = () -> Seconds.of(timeOfFlight);
+        SOTMLatestGoals.DistanceToTarget = () -> adjustedDistance;
+        // They want consumers I guess.
+        turretGoal.accept(SOTMLatestGoals.getTurretGoal().get());
+        hoodGoal.accept(SOTMLatestGoals.getHoodGoal().get());
+        flyWheelGoal.accept(SOTMLatestGoals.getFlyWheelGoal().get());
+    }
+
+    public BooleanSupplier isReadyToFire() {
+        DriverStation.reportWarning("Goals:" + subsystems.turret().getTurret().getAngle().in(Rotations), false);
+        return () ->
+                subsystems.turret().getTurret().isNear(SOTMLatestGoals.getHoodGoal().get(), TurretSubsystem.ControlConstants.ANGLE_TOLERANCE)
+                        .and(subsystems.hood().getHood().isNear(SOTMLatestGoals.getHoodGoal().get(), HoodSubsystem.ControlConstants.ANGLE_TOLERANCE))
+                        .and(subsystems.flywheel().getFlyWheel().isNear(SOTMLatestGoals.getFlyWheelGoal().get(), FlyWheelSubsystem.ControlConstants.VELOCITY_TOLERANCE))
+                        .and(() -> SOTMLatestGoals.getDistanceToTarget().get().gte(Inches.of(6)))
+                        .and(() -> SOTMLatestGoals.getDistanceToTarget().get().lte(Meters.of(5)))
+                        .getAsBoolean();
     }
 }

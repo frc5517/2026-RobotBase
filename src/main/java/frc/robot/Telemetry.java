@@ -8,6 +8,7 @@ import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.subsystems.SwerveSubsystem;
+import frc.robot.systems.ScoringSystem;
 import lombok.Getter;
 import swervelib.simulation.ironmaple.simulation.SimulatedArena;
 import swervelib.simulation.ironmaple.simulation.seasonspecific.rebuilt2026.Arena2026Rebuilt;
@@ -17,6 +18,7 @@ import yams.motorcontrollers.SmartMotorControllerConfig;
 import java.util.Optional;
 import java.util.function.Supplier;
 
+import static edu.wpi.first.units.Units.Seconds;
 import static edu.wpi.first.wpilibj.DriverStation.Alliance.Blue;
 import static edu.wpi.first.wpilibj.DriverStation.Alliance.Red;
 
@@ -91,7 +93,6 @@ public class Telemetry
         Publishers.Robot.Mech3D.robotPose.set(subsystem.swerve().getSwerveDrive().getPose());
 
         if (RobotBase.isSimulation()) {
-            SmartDashboard.putBoolean("ALLIANCE ZONE", InputBuilder.CustomTriggers.allianceZone.getTrigger().getAsBoolean());
             // MapleSim
         Publishers.MapleSim.elementPublisher.accept(SimulatedArena.getInstance().getGamePiecesArrayByType("Fuel"));
         }
@@ -138,7 +139,7 @@ public class Telemetry
                 case Red -> !redInactiveFirst;
                 case Blue -> redInactiveFirst;
             };
-            final int preEmptiveScoringTime = 1;
+            final int preEmptiveScoringTime = (int) ScoringSystem.SOTMLatestGoals.getTimeOfFlight().get().in(Seconds);
             if (matchTime > 130) { // Match time left greater than 130sec
                 // Transition shift, hub is active.
                 return true;

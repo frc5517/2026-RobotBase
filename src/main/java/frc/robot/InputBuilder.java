@@ -165,7 +165,7 @@ public class InputBuilder
                 .back().KickerBindings /// Kicker Controller Bindings
                 .withRunKicker(         driverXbox.a(), true)
                 .back().TurretBindings /// Turret Controller Bindings
-                .withDefaultCommand(() -> subsystems.turret.getTurret().setAngle(Degrees.of(MathUtil.interpolate(TurretSubsystem.HardwareConstants.HARD_LIMIT_REVERSE.in(Degrees), TurretSubsystem.HardwareConstants.HARD_LIMIT_FORWARD.in(Degrees), 0.5))))
+                //.withDefaultCommand(() -> subsystems.turret.getTurret().setAngle(Degrees.of(MathUtil.interpolate(TurretSubsystem.HardwareConstants.HARD_LIMIT_REVERSE.in(Degrees), TurretSubsystem.HardwareConstants.HARD_LIMIT_FORWARD.in(Degrees), 0.5))))
                 .withSetAngle(          driverXbox.pov(90), Degrees.of(MathUtil.interpolate(TurretSubsystem.HardwareConstants.HARD_LIMIT_REVERSE.in(Degrees), TurretSubsystem.HardwareConstants.HARD_LIMIT_FORWARD.in(Degrees), 0.25)))
                 .withSetAngle(          driverXbox.pov(270), Degrees.of(MathUtil.interpolate(TurretSubsystem.HardwareConstants.HARD_LIMIT_REVERSE.in(Degrees), TurretSubsystem.HardwareConstants.HARD_LIMIT_FORWARD.in(Degrees), 0.75)))
                 .back().HoodBindings /// Hood Controller Bindings
@@ -403,20 +403,6 @@ public class InputBuilder
                                     DriverStation.reportWarning("SOTM Data - ToF: " + tofGuess + " hA: " + hoodAngle.in(Degrees) + " fV: " + flyWheelSpeed.in(RPM), false);
                                 })));
                 isMode.and(() -> !dataLog.isEmpty()).and(DriverStation::isDisabled).onTrue(Commands.runOnce(() -> DriverStation.reportWarning("SOTM DataLog: " + dataLog, false)).ignoringDisable(true));
-                return this;
-            }
-
-            public SmartBindings withTest(Trigger trigger) {
-                Pose2d outpostPose = new Pose2d(FieldConstants.Outpost.centerPoint, Rotation2d.kCCW_90deg);
-                isMode.and(trigger).whileTrue(
-                        scoring.shootOnTheMove().withTimeout(Seconds.of(1.5))
-                        .andThen(subsystems.swerve().pathfindToPath("Right Bump"))
-                        .andThen(subsystems.swerve().driveToNearestFuel()
-                                .alongWith(subsystems.intake().intake(0.75, true))
-                                .withTimeout(Seconds.of(2)))
-                        .andThen(subsystems.swerve().driveToPose(() -> AllianceFlipUtil.apply(outpostPose))
-                                .alongWith(scoring.shootOnTheMove())
-                                .andThen(scoring.shootOnTheMove())));
                 return this;
             }
 
@@ -953,15 +939,27 @@ public class InputBuilder
                 return this;
             }
 
+            /**
+             * Automatically swap between the Neutral and Alliance zone crossing tbe bump.
+             *
+             * @param toggleZones the button to map.
+             * @return this, for chaining.
+             */
             public SwerveBindings withToggleZones(Trigger toggleZones) {
                 if (!isPresent) {return this;}
                 isMode.and(toggleZones).whileTrue(subsystems.swerve.toggleZones());
                 return this;
             }
 
+            /**
+             * Theoretically uses vision to track fuel if present.
+             *
+             * @param collectFuel the button to map.
+             * @return this for chaining.
+             */
             public SwerveBindings withCollectFuel(Trigger collectFuel) {
                 if (!isPresent || !SwerveSubsystem.ControlConstants.RUN_VISION) {return this;}
-                isMode.and(collectFuel).whileTrue(subsystems.swerve.driveToNearestFuel());
+                //isMode.and(collectFuel).whileTrue(subsystems.swerve.driveToNearestFuel());
                 return this;
             }
 

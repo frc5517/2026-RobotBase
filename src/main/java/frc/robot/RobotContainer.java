@@ -60,8 +60,6 @@ public class RobotContainer {
     }
 
     public void periodic() {
-        SimulatedArena.getInstance().simulationPeriodic();
-        SmartDashboard.putNumber("Red Score", SimulatedArena.getInstance().getScore(false));
         Telemetry.updateTelemetry(subsystems);
     }
 

@@ -22,13 +22,20 @@ public class AutonSelector {
     private final InputBuilder.Subsystems subsystems;
     private final ScoringSystem scoring;
 
+    private static class StartingPoses {
+        private static final Pose2d RIGHT_BUMP = new Pose2d(FieldConstants.LeftBump.nearLeftCorner.interpolate(FieldConstants.LeftBump.nearRightCorner, 0.5)
+                .plus(new Translation2d(-.15, -3.15)), new Rotation2d(45)); // Right Bump Constants are broken
+        private static final Pose2d LEFT_BUMP = new Pose2d(FieldConstants.LeftBump.nearLeftCorner.interpolate(FieldConstants.LeftBump.nearRightCorner
+                .plus(new Translation2d(-0.15, 0)), 0.5), new Rotation2d(-45));
+    }
+
     AutonSelector(InputBuilder.Subsystems subsystems, ScoringSystem scoring) {
         this.autonSelector = new SendableChooser<>();
         this.subsystems = subsystems;
         this.scoring = scoring;
 
-        autonSelector.setDefaultOption("Score, Collect, Outpost Right", scoreBumpCollectScoreOutPostRight());
-        autonSelector.addOption("Score, Collect, Outpost Left", scoreBumpCollectScoreOutPostLeft());
+        autonSelector.setDefaultOption("Right to Left - Collect then Outpost", rightToLeftOutpost());
+        autonSelector.addOption("Left to Right - Collect then Outpost", leftToRightOutpost());
 
         SmartDashboard.putData("AutonSelector", autonSelector);
     }
@@ -47,41 +54,43 @@ public class AutonSelector {
      * Then to the outpost while scoring.
      * @return a Right side Auton.
      */
-    public Command scoreBumpCollectScoreOutPostRight() {
-        // The Starting pose is interpolated between right and left of bump
-        Pose2d startingPose = new Pose2d(FieldConstants.LeftBump.nearLeftCorner.interpolate(FieldConstants.LeftBump.nearRightCorner, 0.5)
-                .plus(new Translation2d(-.15, -3.15)), new Rotation2d(45)); // Right Bump Constants are broken
-        Pose2d outpostPose = new Pose2d(FieldConstants.Outpost.centerPoint, Rotation2d.kCCW_90deg);
-
-        return Commands.runOnce(() -> subsystems.swerve().getSwerveDrive().resetOdometry(AllianceFlipUtil.ifShouldFlip(startingPose)))
-                .andThen(scoring.shootOnTheMove().withTimeout(Seconds.of(1.5)))
+    public Command rightToLeftOutpost() {
+        return Commands.runOnce(
+                // Update Odometry
+                () -> subsystems.swerve().getSwerveDrive().resetOdometry(AllianceFlipUtil.ifShouldFlip(StartingPoses.RIGHT_BUMP)))
+                // Cross bump
                 .andThen(subsystems.swerve().pathfindToPath("Right Bump Neutral"))
-                .andThen(subsystems.swerve().driveToNearestFuel()
-                        .alongWith(subsystems.intake().intake(0.75, true))
-                        .withTimeout(Seconds.of(2)))
-                .andThen(subsystems.swerve().driveToPose(() -> AllianceFlipUtil.apply(outpostPose))
-                        .alongWith(scoring.shootOnTheMove())
-                        .andThen(scoring.shootOnTheMove()));
+                // Fast Collect
+                .andThen(subsystems.swerve().pathfindToPath("Right to Left Centerline")
+                        // While intaking, stopping when path is over.
+                        .deadlineFor(subsystems.intake().intake(0.75, true)))
+                // Then move to outpost while firing.
+                .andThen(subsystems.swerve().pathfindToPath("Left to Outpost Aiming"))
+                // While firing
+                .alongWith(scoring.shootOnTheMove())
+                // Continue firing
+                .andThen(scoring.shootOnTheMove());
     }
     /**
-     * Start in front of the right bump then transfer to collect.
+     * Start in front of the left bump then transfer to collect.
      * Then to the outpost while scoring.
      * @return a Right side Auton.
      */
-    public Command scoreBumpCollectScoreOutPostLeft() {
-        // The Starting pose is interpolated between right and left of bump
-        Pose2d startingPose = new Pose2d(FieldConstants.LeftBump.nearLeftCorner.interpolate(FieldConstants.LeftBump.nearRightCorner
-                .plus(new Translation2d(-0.15, 0)), 0.5), new Rotation2d(-45));
-        Pose2d outpostPose = new Pose2d(FieldConstants.Outpost.centerPoint, Rotation2d.kCCW_90deg);
-
-        return Commands.runOnce(() -> subsystems.swerve().getSwerveDrive().resetOdometry(AllianceFlipUtil.ifShouldFlip(startingPose)))
-                .andThen(scoring.shootOnTheMove().withTimeout(Seconds.of(1.5)))
+    public Command leftToRightOutpost() {
+        return Commands.runOnce(
+                // Update Odometry
+                () -> subsystems.swerve().getSwerveDrive().resetOdometry(AllianceFlipUtil.ifShouldFlip(StartingPoses.LEFT_BUMP)))
+                // Cross bump
                 .andThen(subsystems.swerve().pathfindToPath("Left Bump Neutral"))
-                .andThen(subsystems.swerve().driveToNearestFuel()
-                        .alongWith(subsystems.intake().intake(0.75, true))
-                        .withTimeout(Seconds.of(2)))
-                .andThen(subsystems.swerve().driveToPose(() -> AllianceFlipUtil.apply(outpostPose))
-                        .alongWith(scoring.shootOnTheMove())
-                        .andThen(scoring.shootOnTheMove()));
+                // Fast Collect
+                .andThen(subsystems.swerve().pathfindToPath("Left to Right Centerline")
+                        // While intaking, stopping when path is over.
+                        .deadlineFor(subsystems.intake().intake(0.75, true)))
+                // Then move to outpost while firing.
+                .andThen(subsystems.swerve().pathfindToPath("To Outpost Aiming"))
+                // While firing
+                .alongWith(scoring.shootOnTheMove())
+                // Continue firing
+                .andThen(scoring.shootOnTheMove());
     }
 }
