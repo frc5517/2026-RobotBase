@@ -47,7 +47,7 @@ public class KickerSubsystem extends SubsystemBase
         }
         public static final Time                                RAMP_RATE           = Seconds.of(0.25); // Time it takes to reach max speed from 0.
         public static final SimpleMotorFeedforward              FEED_FORWARD        = new SimpleMotorFeedforward(0, 0, 0); // Feed Forwards, likely to be left empty.
-        public static final Current                             CURRENT_LIMIT       = Amp.of(30); // Limits the current, this is a simple kicker. We want the limit low so we don't break things in the case of a jam.
+        public static final Current                             CURRENT_LIMIT       = Amp.of(50); // Limits the current, this is a simple kicker. We want the limit low so we don't break things in the case of a jam.
     }
     /// Control Constants for the Kicker Mechanism.
     public static class ControlConstants {
@@ -79,7 +79,7 @@ public class KickerSubsystem extends SubsystemBase
     private final BrushedSparkWrapper kicker = new BrushedSparkWrapper(MOTOR_ID, motorConfig); /// Custom dumb brushed spark wrapper made to easily replace a YAMS Spark Max object.
 
     /// A trigger used to stop the motor when it is trying too hard.
-    private final Trigger jammedTrigger = currentSensorTrigger(Amps.of(40), Seconds.of(0.5));
+    private final Trigger jammedTrigger = currentSensorTrigger(Amps.of(40), Seconds.of(1));
 
     /**
      *

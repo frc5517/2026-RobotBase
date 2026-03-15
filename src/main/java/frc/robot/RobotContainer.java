@@ -6,7 +6,6 @@ package frc.robot;
 
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.RobotBase;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.subsystems.*;
 import frc.robot.systems.ScoringSystem;
@@ -30,15 +29,9 @@ public class RobotContainer {
      */
     public RobotContainer() {
         /// Disable not hardware finished subsystems unless it is sim.
-        if (RobotBase.isSimulation()) {
-            ///  If in Simulation enable all
-            final var turretSubsystem = new TurretSubsystem();
-            subsystems = new InputBuilder.Subsystems(new SwerveSubsystem(), new FlyWheelSubsystem(), new HoodSubsystem(turretSubsystem), new IndexerSubsystem(), new IntakeSubsystem(), new KickerSubsystem(), turretSubsystem);
-        } else {
-            ///  If not in sim, disable not complete systems.
-            final TurretSubsystem turretSubsystem = null;
-            subsystems = new InputBuilder.Subsystems(new SwerveSubsystem(), new FlyWheelSubsystem(), new HoodSubsystem(turretSubsystem), new IndexerSubsystem(), new IntakeSubsystem(), new KickerSubsystem(), turretSubsystem);
-        }
+        final var turretSubsystem = new TurretSubsystem();
+        subsystems = new InputBuilder.Subsystems(new SwerveSubsystem(), new FlyWheelSubsystem(), new HoodSubsystem(turretSubsystem), new IndexerSubsystem(), new IntakeSubsystem(), new AgitatorSubsystem(), new KickerSubsystem(), turretSubsystem);
+
         scoring = new ScoringSystem(subsystems);
         inputBuilder = new InputBuilder(subsystems, scoring);
         autonSelector = new AutonSelector(subsystems, scoring);

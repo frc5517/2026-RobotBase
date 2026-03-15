@@ -4,8 +4,7 @@
     "id": 0,
     "canbus": null
   },
-  "gyroAxis": "yaw",
-  "invertedIMU": false,
+  "invertedIMU": true,
   "modules": [
     "frontleft.json",
     "frontright.json",

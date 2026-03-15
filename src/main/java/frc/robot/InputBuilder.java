@@ -74,12 +74,21 @@ public class InputBuilder
         /// Testing control gets randomly changed all the time.
         final InputStream testing = new InputStream().
                 StartingMethods
-                .defaultXboxDrive(TESTING.isMode,   driverXbox)
+                .defaultXboxDrive(TESTING.isMode, driverXbox)
                 .FlyWheelBindings
-                .withSetVelocity(driverXbox.rightTrigger(), RPM.of(3250))
+                .withSetVelocity(driverXbox.rightTrigger(), RPM.of(3500))
+                .back().KickerBindings
+                .withRunKicker(driverXbox.rightTrigger(), true)
                 .back().SmartBindings
                 .withIntakeIntoHopper(driverXbox.leftBumper())
                 .withIndexIntoFlyWheel(driverXbox.rightBumper())
+                .back().HoodBindings
+                .withSetAngle(driverXbox.pov(0), Degrees.of(45))
+                .withSetAngle(driverXbox.pov(180), Degrees.of(15))
+                .back().TurretBindings
+                .withRunTurret(driverXbox.pov(270), true)
+                .withRunTurret(driverXbox.pov(90), false)
+                .back().AgitatorBindings.withRunAgitator(driverXbox.a(), true)
                 .back();
         final InputStream sotmCalbration = new InputStream(SOTM_CALIBRATION.isMode)
                 .SmartBindings
@@ -296,6 +305,7 @@ public class InputBuilder
         public final SmartBindings SmartBindings = new SmartBindings();
         public final IntakeBindings IntakeBindings = new IntakeBindings();
         public final IndexerBindings IndexerBindings = new IndexerBindings();
+        public final AgitatorBindings AgitatorBindings = new AgitatorBindings();
         public final KickerBindings KickerBindings = new KickerBindings();
         public final FlyWheelBindings FlyWheelBindings = new FlyWheelBindings();
         public final HoodBindings HoodBindings = new HoodBindings();
@@ -434,7 +444,7 @@ public class InputBuilder
              * Runs all PID Subsystems to various goals.
              * Set any as null if you don't want it to move.
              *
-             * @param runAll the button to map.
+             * @param `runAll` the button to map.
              * @param hoodAngle the hood angle to set.
              * @param turretAngle the turret angle to set.
              * @param flyWheelSpeed the flywheel speed to run.
@@ -462,16 +472,20 @@ public class InputBuilder
             public SmartBindings withIntakeIntoHopper(Trigger intake) {
                 if (!IndexerBindings.isPresent || !IntakeBindings.isPresent || !KickerBindings.isPresent) {return this;}
                 // Runs intake in while running the kicker and indexer in reverse. This should help fill the hopper up.
-                isMode.and(intake).whileTrue(subsystems.intake.intake(IntakeBindings.intakeSpeed, true)
-                                .alongWith(subsystems.indexer().runIndexer(IndexerBindings.indexSpeed, false))
-                                .alongWith(subsystems.kicker.runKicker(KickerBindings.kickerSpeed, false)));
+                this.back().IndexerBindings
+                        .withRunIndexer(intake, true)
+                        .back().IntakeBindings
+                        .withRunIntake(intake, true)
+                        .back().AgitatorBindings
+                        .withRunAgitator(intake, true)
+                        .back().KickerBindings.withRunKicker(intake, false, 0.25);
                 return this;
             }
 
             /**
              * THIS DOES NOT RUN THE FLYWHEEL
              * This indexes the hopper into the shooter.
-             * Runs the indexer in and kicker in.
+             * Runs the indexer in.
              * Intake does not run.
              *
              * @param index the button to map.
@@ -479,8 +493,9 @@ public class InputBuilder
              */
             public SmartBindings withIndexIntoFlyWheel(Trigger index) {
                 if (!IndexerBindings.isPresent || !IntakeBindings.isPresent || !KickerBindings.isPresent) {return this;}
-                isMode.and(index).whileTrue(subsystems.indexer().runIndexer(IndexerBindings.indexSpeed, true)
-                                .alongWith(subsystems.kicker.runKicker(KickerBindings.kickerSpeed, true)));
+                this.back().IndexerBindings
+                        .withRunIndexer(index, true)
+                        .back().AgitatorBindings.withRunAgitator(index, true);
                 return this;
             }
 
@@ -530,7 +545,7 @@ public class InputBuilder
             /**
              * The default duty cycle speed to run at.
              */
-            @Setter private double intakeSpeed = 0.5;
+            @Setter private double intakeSpeed = 0.65;
 
             private IntakeBindings() {
                 this.isPresent = subsystems.intake != null;
@@ -581,7 +596,7 @@ public class InputBuilder
             /**
              * The default duty cycle speed to run at.
              */
-            @Setter private double indexSpeed = 0.75;
+            @Setter private double indexSpeed = 0.5;
 
 
             private IndexerBindings() {
@@ -624,6 +639,57 @@ public class InputBuilder
             }
         }
 
+        private class AgitatorBindings {
+            /**
+             * Checks if this subsystem is present, if not, don't bind anything.
+             */
+            private final boolean isPresent;
+            /**
+             * The default duty cycle speed to run at.
+             */
+            @Setter private double agitatorSpeed = 0.5;
+
+
+            private AgitatorBindings() {
+                this.isPresent = subsystems.agitator != null;
+            }
+
+            /**
+             * Runs the agitator at preset speed, stopping when finished.
+             *
+             * @param runAgitator then button to map.
+             * @param isIn whether to spin in or out.
+             * @return this, for chaining.
+             */
+            public AgitatorBindings withRunAgitator(Trigger runAgitator, boolean isIn) {
+                if (!isPresent) {return this;}
+                isMode.and(runAgitator).whileTrue(subsystems.agitator.runAgitator(agitatorSpeed, isIn))
+                        .onFalse(subsystems.agitator.stopAgitator());
+                return this;
+            }
+
+            /**
+             * Sets a default command for this subsystem.
+             *
+             * @param defaultCommand the default command to set.
+             * @return this, for chaining.
+             */
+            public AgitatorBindings withDefaultCommand(Supplier<Command> defaultCommand) {
+                if (!isPresent) {return this;}
+                isMode.and(DriverStation::isEnabled).onTrue(Commands.runOnce(() -> subsystems.agitator.setDefaultCommand(defaultCommand.get())));
+                return this;
+            }
+
+            /**
+             * Leaves AgitatorBindings going back to the InputStream.
+             *
+             * @return this InputStream.
+             */
+            public InputStream back() {
+                return InputStream.this;
+            }
+        }
+
         private class KickerBindings {
             /**
              * Checks if this subsystem is present, if not, don't bind anything.
@@ -643,12 +709,26 @@ public class InputBuilder
              *
              * @param runkicker then button to map.
              * @param isOut whether to spin out.
+             * @param speed duty cycle speed to run. [-1, 1]
+             * @return this, for chaining.
+             */
+            public KickerBindings withRunKicker(Trigger runkicker, boolean isOut, double speed) {
+                if (!isPresent) {return this;}
+                isMode.and(runkicker).whileTrue(subsystems.kicker.runKicker(speed, isOut))
+                        .onFalse(subsystems.kicker.stopKicker());
+                return this;
+            }
+
+            /**
+             * Runs the kicker at preset speed, stopping when finished.
+             *
+             * @param runkicker then button to map.
+             * @param isOut whether to spin out.
              * @return this, for chaining.
              */
             public KickerBindings withRunKicker(Trigger runkicker, boolean isOut) {
                 if (!isPresent) {return this;}
-                isMode.and(runkicker).whileTrue(subsystems.kicker.runKicker(kickerSpeed, isOut))
-                        .onFalse(subsystems.kicker.stopKicker());
+                this.withRunKicker(runkicker, isOut, kickerSpeed);
                 return this;
             }
 
@@ -702,7 +782,8 @@ public class InputBuilder
              */
             public FlyWheelBindings withSetVelocity(Trigger setVelocity, AngularVelocity flywheelVelocity) {
                 if (!isPresent) {return this;}
-                isMode.and(setVelocity).whileTrue(subsystems.flywheel.getFlyWheel().run(flywheelVelocity));
+                isMode.and(setVelocity).whileTrue(subsystems.flywheel.getFlyWheel().run(flywheelVelocity))
+                        .onFalse(subsystems.flywheel.stopFlyWheel());
                 return this;
             }
 
@@ -1147,6 +1228,7 @@ public class InputBuilder
             HoodSubsystem hood,
             IndexerSubsystem indexer,
             IntakeSubsystem intake,
+            AgitatorSubsystem agitator,
             KickerSubsystem kicker,
             TurretSubsystem turret) {}
 }

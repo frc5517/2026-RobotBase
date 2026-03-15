@@ -4,8 +4,7 @@ package frc.robot.subsystems;
 import static edu.wpi.first.units.Units.*;
 import static edu.wpi.first.units.Units.Amp;
 import static edu.wpi.first.units.Units.Inches;
-import static frc.robot.subsystems.HoodSubsystem.ControlConstants.ANGLE_TOLERANCE;
-import static frc.robot.subsystems.HoodSubsystem.ControlConstants.PHYSICAL_STARTING_ANGLE;
+import static frc.robot.subsystems.TurretSubsystem.ControlConstants.*;
 import static frc.robot.subsystems.TurretSubsystem.HardwareConstants.*;
 import static yams.motorcontrollers.SmartMotorControllerConfig.MotorMode.BRAKE;
 
@@ -43,9 +42,9 @@ public class TurretSubsystem extends SubsystemBase
     /// Hardware Constants for the Turret Mechanism.
     public static class HardwareConstants {
         /// Motor Constants
-        public static final int                     MOTOR_ID            = 21; // Spark Max CAN ID
-        public static final boolean                 MOTOR_INVERTED      = false; // Inverts control direction.
-        public static final MechanismGearing        GEAR_RATIO          = new MechanismGearing(GearBox.fromReductionStages(3, 4, 5)); // FlyWheel Gear Ratio
+        public static final int                     MOTOR_ID            = 17; // Spark Max CAN ID
+        public static final boolean                 MOTOR_INVERTED      = true; // Inverts control direction.
+        public static final MechanismGearing        GEAR_RATIO          = new MechanismGearing(GearBox.fromReductionStages(5, 10)); // Turret Gear Ratio
         /// Motor Tuning Values
         public static final PIDController PID_CONTROLLER              = new PIDController( // Exponential Motion Profiling
                 60, 0, 0.01); // PID - Proportional, Integral, Derivative.
@@ -57,13 +56,13 @@ public class TurretSubsystem extends SubsystemBase
         }
         public static final Time                    RAMP_RATE           = Seconds.of(0.25); // Time it takes to reach max speed from 0.
         public static final SimpleMotorFeedforward  FEED_FORWARD        = new SimpleMotorFeedforward(0, 0, 0); // Feed Forwards.
-        public static final Current                 CURRENT_LIMIT       = Amp.of(40); // Current limit, Higher for faster control.
-        public static final Angle                   HARD_LIMIT_REVERSE  = Degrees.of(-75); // The hard limit should be a metal physical stop, not the cable chain.
-        public static final Angle                   HARD_LIMIT_FORWARD  = Degrees.of(80);
-        public static final Angle                   SOFT_LIMIT_REVERSE  = Degrees.of(-75); // A soft limit so we don't constantly hit the hard limit without reason.
-        public static final Angle                   SOFT_LIMIT_FORWARD  = Degrees.of(80);
+        public static final Current                 CURRENT_LIMIT       = Amp.of(30); // Current limit, Higher for faster control.
+        public static final Angle                   HARD_LIMIT_REVERSE  = Degrees.of(-80); // The hard limit should be a metal physical stop, not the cable chain.
+        public static final Angle                   HARD_LIMIT_FORWARD  = Degrees.of(90);
+        public static final Angle                   SOFT_LIMIT_REVERSE  = Degrees.of(-80); // A soft limit so we don't constantly hit the hard limit without reason.
+        public static final Angle                   SOFT_LIMIT_FORWARD  = Degrees.of(90);
         /// Sim Constants
-        public static final Angle                   SIM_STARTING_ANGLE  = Degrees.of(0); // Starting turret angle in sim.
+        public static final Angle                   SIM_STARTING_ANGLE  = Degrees.of(-80); // Starting turret angle in sim.
         public static final Distance                MAX_ROBOT_HEIGHT    = Inches.of(30); // Max robot height for visualization. TODO Push to swerve constants
         public static final Distance                MAX_ROBOT_WIDTH     = Inches.of(29); // Max robot width for visualization.
         public static final Translation3d           TURRET_POSITION     = new Translation3d( /// Turret position for visualization.
@@ -73,6 +72,7 @@ public class TurretSubsystem extends SubsystemBase
     }
     /// Control Constants for the Turret Mechanism
     public static class ControlConstants {
+        public static final Angle                   PHYSICAL_STARTING_ANGLE     = Degrees.of(-80);
         public static final Angle                   IDLE_ANGLE          = SIM_STARTING_ANGLE;
 
         public static final Angle                   ANGLE_TOLERANCE     = Degrees.of(5);
@@ -104,6 +104,7 @@ public class TurretSubsystem extends SubsystemBase
             .withRelativePosition(TURRET_POSITION);
     /// The Pivot Config for the Turret
     private final PivotConfig                       config            = new PivotConfig(motor)
+            .withStartingPosition(ControlConstants.PHYSICAL_STARTING_ANGLE)
             .withHardLimit(HARD_LIMIT_REVERSE, HARD_LIMIT_FORWARD)
             .withSoftLimits(SOFT_LIMIT_REVERSE, SOFT_LIMIT_FORWARD)
             .withTelemetry(Telemetry.yamsMechPath + "Turret", Telemetry.telemetryVerbosity.yamsVerbosity)
@@ -115,7 +116,7 @@ public class TurretSubsystem extends SubsystemBase
     private final Pivot                             turret              = new Pivot(config);
 
     /// A trigger used to stop the motor when it is trying too hard.
-    private final Trigger jammedTrigger = currentSensorTrigger(Amps.of(20), Seconds.of(0.1));
+    private final Trigger jammedTrigger = currentSensorTrigger(Amps.of(30), Seconds.of(0.1));
 
     public TurretSubsystem() {
         /// A safety to automatically stop the motor if it starts trying too hard.
@@ -153,7 +154,7 @@ public class TurretSubsystem extends SubsystemBase
                 // Until we hit something, the something should be our hard stop, but it shouldn't hurt to get your hand stuck.
                 .until(currentSensorTrigger(Amps.of(1.5), Seconds.of(0)))
                 .finallyDo(() -> { // Then we set our new zero point and restart the closed loop.
-                    motor.setPosition(PHYSICAL_STARTING_ANGLE);
+                    motor.setPosition(ControlConstants.PHYSICAL_STARTING_ANGLE);
                     motor.startClosedLoopController();
                 });
     }
