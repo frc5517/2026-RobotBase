@@ -119,7 +119,7 @@ public class HoodSubsystem extends SubsystemBase {
     private final TurretSubsystem turret;
 
     /// A trigger used to stop the motor when it is trying too hard.
-    private final Trigger jammedTrigger = currentSensorTrigger(Amps.of(20), Seconds.of(0.1));
+    private final Trigger jammedTrigger = currentSensorTrigger(Amps.of(20), Seconds.of(0.25));
 
     public HoodSubsystem(TurretSubsystem turretSubsystem) {
         this.turret = turretSubsystem;

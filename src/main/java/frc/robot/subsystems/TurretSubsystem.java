@@ -56,7 +56,7 @@ public class TurretSubsystem extends SubsystemBase
         }
         public static final Time                    RAMP_RATE           = Seconds.of(0.25); // Time it takes to reach max speed from 0.
         public static final SimpleMotorFeedforward  FEED_FORWARD        = new SimpleMotorFeedforward(0, 0, 0); // Feed Forwards.
-        public static final Current                 CURRENT_LIMIT       = Amp.of(30); // Current limit, Higher for faster control.
+        public static final Current                 CURRENT_LIMIT       = Amp.of(40); // Current limit, Higher for faster control.
         public static final Angle                   HARD_LIMIT_REVERSE  = Degrees.of(-80); // The hard limit should be a metal physical stop, not the cable chain.
         public static final Angle                   HARD_LIMIT_FORWARD  = Degrees.of(90);
         public static final Angle                   SOFT_LIMIT_REVERSE  = Degrees.of(-80); // A soft limit so we don't constantly hit the hard limit without reason.
@@ -116,7 +116,7 @@ public class TurretSubsystem extends SubsystemBase
     private final Pivot                             turret              = new Pivot(config);
 
     /// A trigger used to stop the motor when it is trying too hard.
-    private final Trigger jammedTrigger = currentSensorTrigger(Amps.of(30), Seconds.of(0.1));
+    private final Trigger jammedTrigger = currentSensorTrigger(Amps.of(30), Seconds.of(0.25));
 
     public TurretSubsystem() {
         /// A safety to automatically stop the motor if it starts trying too hard.

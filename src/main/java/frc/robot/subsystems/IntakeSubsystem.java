@@ -47,7 +47,7 @@ public class IntakeSubsystem extends SubsystemBase {
         }
         public static final Time                                RAMP_RATE           = Seconds.of(0.25); // Time it takes to reach max speed from 0.
         public static final SimpleMotorFeedforward              FEED_FORWARD        = new SimpleMotorFeedforward(0, 0, 0); // Feed Forwards, likely to be left empty.
-        public static final Current                             CURRENT_LIMIT       = Amp.of(30); // Limits the current, this is a simple intake. We want the limit low so we don't break things in the case of a jam.
+        public static final Current                             CURRENT_LIMIT       = Amp.of(40); // Limits the current, this is a simple intake. We want the limit low so we don't break things in the case of a jam.
         /// Intake Constants
         public static final int                                 MAX_FUEL_CAPACITY   = 50;
         public static final Distance                            INDEXER_DIAMETER    = Inches.of(3); // Diameter of the wheel, belt, whatever is spinning on the intake.
@@ -94,7 +94,7 @@ public class IntakeSubsystem extends SubsystemBase {
      */
     public IntakeSubsystem() {
         /// A safety to automatically stop the motor if it starts trying too hard.
-        jammedTrigger.whileTrue(stopIntake());
+        //jammedTrigger.whileTrue(stopIntake());
 
         // If in sim
         if (RobotBase.isSimulation()) {

@@ -25,7 +25,7 @@ public class IndexerSubsystem extends SubsystemBase {
         /// Motor Constants
         public static final int                                 MOTOR_ID            = 12; // Spark Max CAN ID
         public static final boolean                             MOTOR_INVERTED      = false; // Inverts control direction.
-        public static final MechanismGearing                    GEAR_RATIO          = new MechanismGearing(GearBox.fromReductionStages(3, 4)); // Indexer Gear Ratio
+        public static final MechanismGearing                    GEAR_RATIO          = new MechanismGearing(GearBox.fromReductionStages(5, 3)); // Indexer Gear Ratio
         /// Motor Tuning Values
         public static final PIDController PID_CONTROLLER              = new PIDController( // Exponential Motion Profiling
                 20, 0, 0.01); // PID - Proportional, Integral, Derivative.
@@ -78,7 +78,7 @@ public class IndexerSubsystem extends SubsystemBase {
 
     public IndexerSubsystem() {
         /// A safety to automatically stop the motor if it starts trying too hard.
-        jammedTrigger.whileTrue(stopIndexer());
+        //jammedTrigger.whileTrue(stopIndexer());
     }
 
     /**

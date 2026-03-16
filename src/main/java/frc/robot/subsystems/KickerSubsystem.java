@@ -35,7 +35,7 @@ public class KickerSubsystem extends SubsystemBase
         /// Motor Constants
         public static final int                                 MOTOR_ID            = 13; // Spark Max CAN ID
         public static final boolean                             MOTOR_INVERTED      = false; // Inverts control direction.
-        public static final MechanismGearing                    GEAR_RATIO          = new MechanismGearing(GearBox.fromReductionStages(3, 4)); // Kicker Gear Ratio
+        public static final MechanismGearing                    GEAR_RATIO          = new MechanismGearing(GearBox.fromReductionStages(3, 3)); // Kicker Gear Ratio
         /// Motor Tuning Values
         public static final PIDController PID_CONTROLLER              = new PIDController( // Exponential Motion Profiling
                 20, 0, 0.01); // PID - Proportional, Integral, Derivative.
@@ -47,11 +47,10 @@ public class KickerSubsystem extends SubsystemBase
         }
         public static final Time                                RAMP_RATE           = Seconds.of(0.25); // Time it takes to reach max speed from 0.
         public static final SimpleMotorFeedforward              FEED_FORWARD        = new SimpleMotorFeedforward(0, 0, 0); // Feed Forwards, likely to be left empty.
-        public static final Current                             CURRENT_LIMIT       = Amp.of(50); // Limits the current, this is a simple kicker. We want the limit low so we don't break things in the case of a jam.
+        public static final Current                             CURRENT_LIMIT       = Amp.of(40); // Limits the current, this is a simple kicker. We want the limit low so we don't break things in the case of a jam.
     }
     /// Control Constants for the Kicker Mechanism.
     public static class ControlConstants {
-        public static final boolean                             INFINITE_SIM_INTAKE = true; // Makes it so you can kicker more than the max capacity.
     }
     //    private final SparkMax                                      kickerMotor    = new SparkMax(HardwareConstants.MOTOR_ID, MotorType.kBrushless); /// The Normal Rev Vendor SparkMax Object.
     private final SmartMotorControllerConfig                    motorConfig     = new SmartMotorControllerConfig(this) /// The Smart Motor Controller Configuration.
@@ -86,7 +85,7 @@ public class KickerSubsystem extends SubsystemBase
      */
     public KickerSubsystem() {
         /// A safety to automatically stop the motor if it starts trying too hard.
-        jammedTrigger.whileTrue(stopKicker());
+        //jammedTrigger.whileTrue(stopKicker());
     }
 
     /**

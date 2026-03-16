@@ -51,14 +51,14 @@ public class FlyWheelSubsystem extends SubsystemBase
 
         /// Motor Tuning Values
         public static final PIDController               PID_CONTROLLER              = new PIDController( // Exponential Motion Profiling
-                                                                                    60, 0, 0.0); // PID - Proportional, Integral, Derivative.
+                                                                                    30, 0, 0.0); // PID - Proportional, Integral, Derivative.
         /// Trapezoidal Motion Profiling Constraints.
         public static final class Profiling {
             public static final AngularVelocity         MAX_ANGULAR_VELOCITY        = RPM.of(5000); // Max Angular Velocity
             public static final AngularAcceleration     MAX_ANGULAR_ACCELERATION    = DegreesPerSecondPerSecond.of(15000); // Max Angular Acceleration
         }
         public static final Time                        RAMP_RATE                   = Seconds.of(0.25); // Time it takes to reach max speed from 0.
-        public static final SimpleMotorFeedforward      FEED_FORWARD                = new SimpleMotorFeedforward(0, 1, 0); // Feed Forwards.
+        public static final SimpleMotorFeedforward      FEED_FORWARD                = new SimpleMotorFeedforward(0, .085, 0); // Feed Forwards.
         public static final Current                     CURRENT_LIMIT               = Amp.of(60); // Current limit, Higher for faster control.
         /// FlyWheel Constants
         public static final Distance                    FLYWHEEL_DIAMETER           = Inches.of(4); // Diameter of the wheel, belt, whatever is spinning on the flywheel.

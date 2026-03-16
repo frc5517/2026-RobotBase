@@ -75,8 +75,11 @@ public class InputBuilder
         final InputStream testing = new InputStream().
                 StartingMethods
                 .defaultXboxDrive(TESTING.isMode, driverXbox)
-                .FlyWheelBindings
-                .withSetVelocity(driverXbox.rightTrigger(), RPM.of(3500))
+                .SwerveBindings
+                .withToggleCentricity(driverXbox.start(), false)
+                .withResetSimOdometry(driverXbox.back())
+                .back().FlyWheelBindings
+                .withSetVelocity(driverXbox.rightTrigger(), RPM.of(5000))
                 .back().KickerBindings
                 .withRunKicker(driverXbox.rightTrigger(), true)
                 .back().SmartBindings
@@ -88,7 +91,9 @@ public class InputBuilder
                 .back().TurretBindings
                 .withRunTurret(driverXbox.pov(270), true)
                 .withRunTurret(driverXbox.pov(90), false)
-                .back().AgitatorBindings.withRunAgitator(driverXbox.a(), true)
+                .back().AgitatorBindings
+                .setAgitatorSpeed(1)
+                .withRunAgitator(driverXbox.a(), true)
                 .back();
         final InputStream sotmCalbration = new InputStream(SOTM_CALIBRATION.isMode)
                 .SmartBindings
@@ -495,7 +500,7 @@ public class InputBuilder
                 if (!IndexerBindings.isPresent || !IntakeBindings.isPresent || !KickerBindings.isPresent) {return this;}
                 this.back().IndexerBindings
                         .withRunIndexer(index, true)
-                        .back().AgitatorBindings.withRunAgitator(index, true);
+                        .back().AgitatorBindings.withRunAgitator(index, false);
                 return this;
             }
 
