@@ -23,6 +23,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
+
+import frc.robot.Telemetry;
 import org.photonvision.EstimatedRobotPose;
 import org.photonvision.PhotonCamera;
 import org.photonvision.PhotonPoseEstimator;
@@ -36,6 +38,8 @@ import org.photonvision.targeting.PhotonTrackedTarget;
 import swervelib.SwerveDrive;
 import swervelib.telemetry.SwerveDriveTelemetry;
 
+import static edu.wpi.first.units.Units.Inches;
+
 /**
  * Example PhotonVision class to aid in the pursuit of accurate odometry. Taken from
  * https://gitlab.com/ironclad_code/ironclad-2024/-/blob/master/src/main/java/frc/robot/vision/Vision.java?ref_type=heads
@@ -46,7 +50,7 @@ public class PhotonSubsystem {
     public static final AprilTagFieldLayout fieldLayout =
             AprilTagFieldLayout.loadField(AprilTagFields.k2026RebuiltWelded);
 
-    /** Ambiguity defined as a value between (0,1). Used in {@link Vision#filterPose}. */
+    /** Ambiguity defined as a value between (0,1). Used in {@link PhotonSubsystem#filterPose}. */
     private final double maximumAmbiguity = 0.25;
 
     /** Photon Vision Simulation */
@@ -307,38 +311,37 @@ public class PhotonSubsystem {
     /** Camera Enum to select each camera */
     enum Cameras {
         /** Left Camera */
-        FRONT_RIGHT_CAM(
-                "FRONT_RIGHT_CAM",
-                new Rotation3d(Math.toRadians(0), Math.toRadians(0), Math.toRadians(0)),
-                new Translation3d(
-                        Units.inchesToMeters(0.71),
-                        -Units.inchesToMeters(11.605),
-                        Units.inchesToMeters(26.875)),
-                VecBuilder.fill(4, 4, 8),
-                VecBuilder.fill(0.5, 0.5, 1)),
+//        FRONT_RIGHT_CAM(
+//                "FRONT_RIGHT_CAM",
+//                new Rotation3d(Math.toRadians(0), Math.toRadians(0), Math.toRadians(0)),
+//                new Translation3d(
+//                        Units.inchesToMeters(0.71),
+//                        -Units.inchesToMeters(11.605),
+//                        Units.inchesToMeters(26.875)),
+//                VecBuilder.fill(4, 4, 8),
+//                VecBuilder.fill(0.5, 0.5, 1)),
 
         FRONT_LEFT_CAM(
                 "FRONT_LEFT_CAM",
-                new Rotation3d(Math.toRadians(0), Math.toRadians(0), Math.toRadians(0)),
-                new Translation3d(
-                        Units.inchesToMeters(3.877), Units.inchesToMeters(7.7375), Units.inchesToMeters(19.5)),
-                VecBuilder.fill(4, 4, 8),
-                VecBuilder.fill(0.5, 0.5, 1)),
-        RIGHT_SIDE_CAM(
-                "RIGHT_SIDE_CAM",
-                new Rotation3d(Math.toRadians(15), Math.toRadians(0), -Math.toRadians(90)),
-                new Translation3d(
-                        -Units.inchesToMeters(2), -Units.inchesToMeters(12.5), Units.inchesToMeters(15.75)),
-                VecBuilder.fill(4, 4, 8),
-                VecBuilder.fill(0.5, 0.5, 1)),
-
-        LEFT_SIDE_CAM(
-                "LEFT_SIDE_CAM",
-                new Rotation3d(-Math.toRadians(15), Math.toRadians(0), Math.toRadians(90)),
-                new Translation3d(
-                        -Units.inchesToMeters(2), Units.inchesToMeters(12.), Units.inchesToMeters(15.25)),
+                new Rotation3d(Math.toRadians(0), Math.toRadians(0), Math.toRadians(35)),
+                new Translation3d(Inches.of(10), Inches.of(10), Inches.of(16)),
                 VecBuilder.fill(4, 4, 8),
                 VecBuilder.fill(0.5, 0.5, 1));
+//        RIGHT_SIDE_CAM(
+//                "RIGHT_SIDE_CAM",
+//                new Rotation3d(Math.toRadians(15), Math.toRadians(0), -Math.toRadians(90)),
+//                new Translation3d(
+//                        -Units.inchesToMeters(2), -Units.inchesToMeters(12.5), Units.inchesToMeters(15.75)),
+//                VecBuilder.fill(4, 4, 8),
+//                VecBuilder.fill(0.5, 0.5, 1)),
+//
+//        LEFT_SIDE_CAM(
+//                "LEFT_SIDE_CAM",
+//                new Rotation3d(-Math.toRadians(15), Math.toRadians(0), Math.toRadians(90)),
+//                new Translation3d(
+//                        -Units.inchesToMeters(2), Units.inchesToMeters(12.), Units.inchesToMeters(15.25)),
+//                VecBuilder.fill(4, 4, 8),
+//                VecBuilder.fill(0.5, 0.5, 1)
 
         /** Latency alert to use when high latency is detected. */
         public final Alert latencyAlert;
@@ -391,6 +394,8 @@ public class PhotonSubsystem {
             latencyAlert =
                     new Alert("'" + name + "' Camera is experiencing high latency.", AlertType.kWarning);
 
+            Telemetry.Publishers.Robot.Vision.publishCameraPose(name, robotToCamRotation, robotToCamTranslation);
+
             camera = new PhotonCamera(name);
 
             // https://docs.wpilib.org/en/stable/docs/software/basic-programming/coordinate-system.html
@@ -409,13 +414,13 @@ public class PhotonSubsystem {
             if (Robot.isSimulation()) {
                 SimCameraProperties cameraProp = new SimCameraProperties();
                 // A 640 x 480 camera with a 100 degree diagonal FOV.
-                cameraProp.setCalibration(960, 720, Rotation2d.fromDegrees(100));
+                cameraProp.setCalibration(640, 480, Rotation2d.fromDegrees(70));
                 // Approximate detection noise with average and standard deviation error in pixels.
                 cameraProp.setCalibError(0.25, 0.08);
                 // Set the camera image capture framerate (Note: this is limited by robot loop rate).
-                cameraProp.setFPS(30);
+                cameraProp.setFPS(60);
                 // The average and standard deviation in milliseconds of image data latency.
-                cameraProp.setAvgLatencyMs(35);
+                cameraProp.setAvgLatencyMs(20);
                 cameraProp.setLatencyStdDevMs(5);
 
                 cameraSim = new PhotonCameraSim(camera, cameraProp);

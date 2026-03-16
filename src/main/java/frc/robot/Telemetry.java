@@ -1,26 +1,25 @@
 package frc.robot;
 
+import edu.wpi.first.math.Pair;
 import edu.wpi.first.math.geometry.*;
 import edu.wpi.first.networktables.*;
 import edu.wpi.first.util.sendable.Sendable;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
-import frc.robot.subsystems.SwerveSubsystem;
-import frc.robot.systems.ScoringSystem;
 import lombok.Getter;
 import swervelib.simulation.ironmaple.simulation.SimulatedArena;
 import swervelib.simulation.ironmaple.simulation.seasonspecific.rebuilt2026.Arena2026Rebuilt;
 import swervelib.telemetry.SwerveDriveTelemetry;
 import yams.motorcontrollers.SmartMotorControllerConfig;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Supplier;
-
-import static edu.wpi.first.units.Units.Seconds;
-import static edu.wpi.first.wpilibj.DriverStation.Alliance.Blue;
-import static edu.wpi.first.wpilibj.DriverStation.Alliance.Red;
 
 public class Telemetry
 {
@@ -38,8 +37,9 @@ public class Telemetry
 
         public static class Field {
             public static final NetworkTable fieldTable = telemetryTable.getSubTable("Field");
+            public static final BooleanPublisher wasActiveFirst = fieldTable.getBooleanTopic("Was Active First").publish(); // True when our hub is active
             public static final BooleanPublisher activeHub = fieldTable.getBooleanTopic("Hub Active").publish(); // True when our hub is active
-            public static final BooleanPublisher blinkTimer = fieldTable.getBooleanTopic("Blink Timer").publish(); // Flashes whenever close to a time change. Auton, shift change, end game.
+            //public static final BooleanPublisher blinkTimer = fieldTable.getBooleanTopic("Blink Timer").publish(); // Flashes whenever close to a time change. Auton, shift change, end game.
             public static final DoublePublisher shiftTime = fieldTable.getDoubleTopic("Shift Timer").publish(); // Relays time until shift change
             public static final DoublePublisher matchTime = fieldTable.getDoubleTopic("Match Timer").publish(); // Match timer.
         }
@@ -63,6 +63,15 @@ public class Telemetry
                 public static final StructPublisher<Pose3d> hoodPose = mechTable.getStructTopic("Hood Pose", Pose3d.struct).publish();
                 public static final StructPublisher<Pose3d> turretPose = mechTable.getStructTopic("Turret Pose", Pose3d.struct).publish();
                 public static final StructArrayPublisher<Pose3d> fuelTrajectory = mechTable.getStructArrayTopic("Shot Trajectory", Pose3d.struct).publish();
+            }
+
+            public static class Vision {
+                private static final NetworkTable visionTable = telemetryTable.getSubTable("Vision");
+                private static final List<Pair<Pose3d, StructPublisher<Pose3d>>> cameraPosePublishers = new ArrayList<>();
+
+                public static void publishCameraPose(String camName, Rotation3d camAngle, Translation3d camPose) {
+                    cameraPosePublishers.add(Pair.of(new Pose3d(camPose, camAngle), visionTable.getStructTopic(camName + " Pose", Pose3d.struct).publish()));
+                }
             }
 
         }
@@ -92,9 +101,124 @@ public class Telemetry
         Publishers.Robot.inputPublisher.update();
         Publishers.Robot.Mech3D.robotPose.set(subsystem.swerve().getSwerveDrive().getPose());
 
+        // Field
+        Publishers.Field.activeHub.accept(FMSTriggers.getWasActiveFirst());
+        Publishers.Field.activeHub.accept(FMSTriggers.isHubActive());
+        Publishers.Field.shiftTime.accept(FMSTriggers.getCurrentShift().getNextShift().timeUntilThisShift());
+        Publishers.Field.matchTime.accept((int) (DriverStation.getMatchTime()));
+
         if (RobotBase.isSimulation()) {
             // MapleSim
-        Publishers.MapleSim.elementPublisher.accept(SimulatedArena.getInstance().getGamePiecesArrayByType("Fuel"));
+            Publishers.MapleSim.elementPublisher.accept(SimulatedArena.getInstance().getGamePiecesArrayByType("Fuel"));
+        }
+    }
+
+    /**
+     * Updates camera 3D poses based on the swerve position.
+     *
+     * @param swervePose the swerve pose.
+     */
+    public static void updateCameraPoses(Pose3d swervePose) {
+        for (Pair<Pose3d, StructPublisher<Pose3d>> pair : Publishers.Robot.Vision.cameraPosePublishers) {
+            // Publish the camera pose relative to the robot.
+            pair.getSecond().accept(swervePose.plus(new Transform3d(pair.getFirst().getTranslation(), pair.getFirst().getRotation())));
+        }
+    }
+
+    /**
+     * Time Constants
+     * The event happens when the match timer is at this integer.
+     */
+    public enum Shifts {
+        AUTONOMOUS(160),
+        TRANSITION_SHIFT(140),
+        FIRST_SHIFT(130),
+        SECOND_SHIFT(105),
+        THIRD_SHIFT(80),
+        FOURTH_SHIFT(55),
+        END_GAME(30);
+
+        /// Match timer when this shift starts
+        @Getter
+        private final int matchTimeLeft;
+
+        /**
+         * Shift time management
+         *
+         * @param matchTimeLeft match timer when this shift starts.
+         */
+        Shifts(int matchTimeLeft) {
+            this.matchTimeLeft = matchTimeLeft;
+        }
+
+        /**
+         * A boolean check for whether the shift change has passed minus* this time.
+         * *Match timer counts down, this adds seconds to the time left value.
+         *
+         * @param timeBefore time to add to the matchTimeLeft timer
+         * @return whether the timeBefore the shift has passed.
+         */
+        public boolean timeUntilWithin(int timeBefore) {
+            return DriverStation.getMatchTime() <= timeBefore + matchTimeLeft;
+        }
+
+        /**
+         * Time until this shift will start.
+         *
+         * @return time until this shift will change.
+         */
+        public int timeUntilThisShift() {
+            return (int) (DriverStation.getMatchTime() - matchTimeLeft);
+        }
+
+        /**
+         * Checks if the hub was active given wasActiveFirst.
+         *
+         * @param wasActiveFirst whether our hub was active first.
+         * @return whether the hub is active during this shift.
+         */
+        public boolean isHubActive(boolean wasActiveFirst) {
+            return switch (this) {
+                case FIRST_SHIFT, THIRD_SHIFT -> wasActiveFirst;
+                case SECOND_SHIFT, FOURTH_SHIFT -> !wasActiveFirst;
+                default -> true;
+            };
+        }
+
+        /**
+         * Whether this shift is active.
+         *
+         * @return whether this shift is active.
+         */
+        public boolean isCurrentShift() {
+            final int matchTime = (int) (DriverStation.getMatchTime());
+            // start time left is greater than current time left.
+            return matchTimeLeft >= matchTime
+                    // and match time is less then next shift start.
+                    && matchTime <= getNextShift().getMatchTimeLeft();
+        }
+
+        /**
+         * Whether this shift is active.
+         *
+         * @param timeBefore time to add to the matchTimeLeft timer
+         * @return whether this shift is active.
+         */
+        public boolean isCurrentShift(int timeBefore) {
+            final int matchTime = (int) (DriverStation.getMatchTime());
+            // start time left is greater than current time left.
+            return timeBefore + matchTimeLeft >= matchTime
+                    // and match time is less then next shift start.
+                    && matchTime <= getNextShift().getMatchTimeLeft();
+        }
+
+        /**
+         * Get the next shift
+         *
+         * @return the next shift.
+         */
+        public Shifts getNextShift() {
+            return Shifts.values()[ordinal() + 1];
         }
     }
 
@@ -102,9 +226,61 @@ public class Telemetry
      * Quick Helper since RobotModeTriggers only has a few triggers.
      */
     public static class FMSTriggers {
+        private static final int preemptiveHubActiveTime = 1;
         public static final Trigger isHubActive = new Trigger(FMSTriggers::isHubActive);
+        public static int currentShift;
+        public static int nextShift;
+        public static Boolean wasActiveFirst = null; // Fancy boolean for null
 
-        private static boolean isHubActive() {
+        static {
+            // Update whether we were the first active shift after the first shift starts.
+            new Trigger(() -> Shifts.FIRST_SHIFT.getMatchTimeLeft() >= DriverStation.getMatchTime())
+                    .onTrue(Commands.runOnce(FMSTriggers::updateWasActiveFirst));
+        }
+
+        /**
+         * Safely gets wasActiveFirst.
+         *
+         * @return whether our hub was active during the first shift.
+         */
+        public static boolean getWasActiveFirst() {
+            return Objects.requireNonNullElse(wasActiveFirst, false);
+        }
+
+        /**
+         * Checks to see which shift is currently active.
+         *
+         * @return the current shift.
+         */
+        public static Shifts getCurrentShift() {
+            for (Shifts shift : Shifts.values()) {
+                if (shift.isCurrentShift()) {
+                    return shift;
+                }
+            }
+            return Shifts.AUTONOMOUS;
+        }
+
+        /**
+         * Checks to see which shift is currently active using the preemptiveHubActiveTime
+         *
+         * @return the current shift.
+         */
+        public static Shifts getPreemptiveCurrentShift() {
+            for (Shifts shift : Shifts.values()) {
+                if (shift.isCurrentShift(preemptiveHubActiveTime)) {
+                    return shift;
+                }
+            }
+            return Shifts.AUTONOMOUS;
+        }
+
+        /**
+         * Updates the was active first static boolean.
+         *
+         * @return a fresh wasActiveFirst
+         */
+        public static boolean updateWasActiveFirst() {
             Optional<DriverStation.Alliance> alliance = DriverStation.getAlliance();
             // If we have no alliance, we cannot be enabled, therefore no hub.
             if (alliance.isEmpty()) {
@@ -135,30 +311,25 @@ public class Telemetry
                 }
             }
             // Shift was active for blue if red won auto, or red if blue won auto.
-            boolean shift1Active = switch (alliance.get()) {
+            wasActiveFirst = switch (alliance.get()) {
                 case Red -> !redInactiveFirst;
                 case Blue -> redInactiveFirst;
             };
-            final int preEmptiveScoringTime = (int) ScoringSystem.SOTMLatestGoals.getTimeOfFlight().get().in(Seconds);
-            if (matchTime > 130) { // Match time left greater than 130sec
-                // Transition shift, hub is active.
-                return true;
-            } else if (matchTime > 105 + preEmptiveScoringTime) {
-                // Shift 1
-                return shift1Active;
-            } else if (matchTime > 80 + preEmptiveScoringTime) {
-                // Shift 2
-                return !shift1Active;
-            } else if (matchTime > 55 + preEmptiveScoringTime) {
-                // Shift 3
-                return shift1Active;
-            } else if (matchTime > 30 + preEmptiveScoringTime) {
-                // Shift 4
-                return !shift1Active;
-            } else {
-                // End game, hub always active.
+            return wasActiveFirst;
+        }
+
+        /**
+         * Checks whether the hub is active.
+         * Adds the preemptive scoring delay.
+         *
+         * @return whether the hub is active.
+         */
+        public static boolean isHubActive() {
+            // If not set, it's before the First Shift.
+            if (wasActiveFirst == null) {
                 return true;
             }
+            return getPreemptiveCurrentShift().isHubActive(wasActiveFirst);
         }
     }
 

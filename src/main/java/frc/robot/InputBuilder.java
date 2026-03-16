@@ -197,7 +197,7 @@ public class InputBuilder
         final InputStream bradStream =  new InputStream()
                 .StartingMethods.headingXboxDrive(BRAD_CONTROL.isMode, driverXbox)
                 .SmartBindings
-                .withShootOnTheMove(driverXbox.b())
+                .withShootOnTheMove(driverXbox.b().or(driverXbox.y()))
                 .back()
                 .SwerveBindings
                 .setSlowTranslation(0.5)
@@ -213,7 +213,7 @@ public class InputBuilder
                 .withToggleCentricity(driverXbox.back(), true)
                 .withToggleZones(CustomTriggers.enteringBumpZone.getTrigger())
                 .withToggleZones(driverXbox.a())
-                .withLookAtHubThenFire(driverXbox.y())
+                .withLookAtHubThenFire(driverXbox.y(), new Trigger(() -> false)) // Double SOTM aiming
                 .back().IntakeBindings
                 .setIntakeSpeed(0.75)
                 .withRunIntake(driverXbox.leftTrigger(), true)
