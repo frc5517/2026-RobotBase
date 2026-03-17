@@ -83,7 +83,7 @@ public class InputBuilder
                 .back().KickerBindings
                 .withRunKicker(driverXbox.rightTrigger(), true)
                 .back().SmartBindings
-                .withIntakeIntoHopper(driverXbox.leftBumper())
+                .withBlockingIntakeIntoHopper(driverXbox.leftBumper())
                 .withIndexIntoFlyWheel(driverXbox.rightBumper())
                 .back().HoodBindings
                 .withSetAngle(driverXbox.pov(0), Degrees.of(45))
@@ -98,7 +98,7 @@ public class InputBuilder
         final InputStream sotmCalbration = new InputStream(SOTM_CALIBRATION.isMode)
                 .SmartBindings
                 .withSOTMCalibration(driverXbox.rightTrigger(), driverXbox.a(), Amps.of(60))
-                .withIntakeIntoHopper(driverXbox.leftTrigger())
+                .withBlockingIntakeIntoHopper(driverXbox.leftTrigger())
                 .back().KickerBindings
                 .withRunKicker(driverXbox.rightBumper().toggleOnTrue(Commands.none()), true)
                 .back().HoodBindings
@@ -276,19 +276,10 @@ public class InputBuilder
         public static ZoneTrigger neutralZone = new ZoneTrigger("Neutral",
                 Pair.of(new Translation2d(5.25, 0), new Translation2d(9, 8)));
         public static ZoneTrigger enteringBumpZone = new ZoneTrigger("Entering Bump",
-                Pair.of(new Translation2d(3.25, 5), new Translation2d(6, 6.25)),
-                Pair.of(new Translation2d(3.25, 1.75), new Translation2d(6, 3)));
-        public static ZoneTrigger bumpZone = new ZoneTrigger("Bump",
-                Pair.of(new Translation2d(3.75, 1.5), new Translation2d(5.5, 3.5)),
-                Pair.of(new Translation2d(3.75, 4.5), new Translation2d(5.5, 6.5)),
-                Pair.of(new Translation2d(11, 4.5), new Translation2d(12.75, 6.5)),
-                Pair.of(new Translation2d(11, 1.5), new Translation2d(12.75, 3.5)));
-
-        public static ZoneTrigger aimingZone = new ZoneTrigger("Aiming",
-                Pair.of(new Translation2d(1.5, 0.5), new Translation2d(4.2, 7.5)));
-
+                Pair.of(new Translation2d(3.5, 5), new Translation2d(5.75, 6.25)),
+                Pair.of(new Translation2d(3.5, 1.75), new Translation2d(5.75, 3)));
         public static ZoneTrigger scoringZone = new ZoneTrigger("Scoring",
-                Pair.of(new Translation2d(1.5, 1), new Translation2d(2.5, 7)));
+                Pair.of(new Translation2d(1.5, 1), new Translation2d(3.5, 7)));
     }
 
     /**
@@ -396,7 +387,6 @@ public class InputBuilder
          * Smart controls that make use of automatic sequencing controls.
          */
         public class SmartBindings {
-
             public SmartBindings withSOTMCalibration(Trigger indexIntoFlywheel, Trigger ballHasHitFloor, Current threshold) {
                 final Timer timeOfFlightTimer = new Timer();
                 final List<Double> dataLog =  new ArrayList<>();
@@ -429,7 +419,7 @@ public class InputBuilder
              */
             public SmartBindings withAutoShootOnTheMove() {
                 if (!TurretBindings.isPresent || !HoodBindings.isPresent || !FlyWheelBindings.isPresent) {return this;}
-                withShootOnTheMove(isMode.and(CustomTriggers.aimingZone.getTrigger()).and(Telemetry.FMSTriggers.isHubActive));
+                withShootOnTheMove(isMode.and(CustomTriggers.scoringZone.getTrigger()).and(Telemetry.FMSTriggers.isHubActive));
                 return this;
             }
 
@@ -470,11 +460,13 @@ public class InputBuilder
 
             /**
              * Runs intake in while running the kicker and indexer in reverse. This should help fill the hopper up.
+             * WARNING: If Intake, Agitator, or Kicker have commands already running, this will interrupt.
+             * IE; If called while scoring balls suddenly will stop feeding into the flywheel because we are forcing it into the hopper instead.
              *
              * @param intake the button to map.
              * @return this, for chaining.
              */
-            public SmartBindings withIntakeIntoHopper(Trigger intake) {
+            public SmartBindings withBlockingIntakeIntoHopper(Trigger intake) {
                 if (!IndexerBindings.isPresent || !IntakeBindings.isPresent || !KickerBindings.isPresent) {return this;}
                 // Runs intake in while running the kicker and indexer in reverse. This should help fill the hopper up.
                 this.back().IndexerBindings
