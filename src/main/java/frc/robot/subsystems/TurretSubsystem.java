@@ -149,12 +149,12 @@ public class TurretSubsystem extends SubsystemBase
      */
     public Command home() {
         // Disable closed loop so we don't hit soft limits, then move backwards at a low power.
-        return Commands.startRun(() -> motor.setPosition(HARD_LIMIT_FORWARD),
+        return Commands.startRun(() -> motor.setEncoderPosition(HARD_LIMIT_FORWARD),
                         () -> motor.setVoltage(Volts.of(-2)))
                 // Until we hit something, the something should be our hard stop, but it shouldn't hurt to get your hand stuck.
                 .until(currentSensorTrigger(Amps.of(25), Seconds.of(0.1)))
                 .finallyDo(() -> { // Then we set our new zero point and restart the closed loop.
-                    motor.setPosition(ControlConstants.PHYSICAL_STARTING_ANGLE);
+                    motor.setEncoderPosition(ControlConstants.PHYSICAL_STARTING_ANGLE);
                     motor.startClosedLoopController();
                 });
     }

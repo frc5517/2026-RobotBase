@@ -190,7 +190,7 @@ public class InputBuilder
                 .back(); // Return to our InputStream.
 
         final InputStream bradStream =  new InputStream()
-                .StartingMethods.headingXboxDrive(BRAD_CONTROL.isMode, driverXbox)
+                .StartingMethods.defaultXboxDrive(BRAD_CONTROL.isMode, driverXbox)
                 .SmartBindings
                 .withShootOnTheMove(driverXbox.b().or(driverXbox.y()))
                 .back()

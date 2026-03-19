@@ -77,9 +77,6 @@ public class HoodSubsystem extends SubsystemBase {
         public static final double                              HOOD_SPEED                  = 0.3; // Predefined duty cycle speed.
         public static final Angle                               ANGLE_TOLERANCE             = Degrees.of(5); // How accurate the angle should be.
     }
-    public static final class MathConstants {
-        public static final LinearVelocity                      kExitVelocity               = MetersPerSecond.of(10);
-    }
     /// Finally, we can initialize our mechanism.
     private final SparkMax                                      hoodMotor                   = new SparkMax(MOTOR_ID, SparkLowLevel.MotorType.kBrushless); /// The Normal Rev Vendor SparkMax Object.
     private final SmartMotorControllerConfig                    motorConfig                 = new SmartMotorControllerConfig(this) /// The Smart Motor Controller Configuration.
@@ -150,16 +147,15 @@ public class HoodSubsystem extends SubsystemBase {
      */
     public Command home() {
         // Disable closed loop so we don't hit soft limits, then move backwards at a low power.
-        return Commands.startRun(() -> motor.setPosition(HardwareConstants.HARD_LIMIT_FORWARD),
+        return Commands.startRun(() -> motor.setEncoderPosition(HardwareConstants.HARD_LIMIT_FORWARD),
                         () -> motor.setVoltage(Volts.of(-2)))
                 // Until we hit something, the something should be our hard stop, but it shouldn't hurt to get your hand stuck.
                 .until(currentSensorTrigger(Amps.of(1.5), Seconds.of(0)))
                 .finallyDo(() -> { // Then we set our new zero point and restart the closed loop.
-                    motor.setPosition(PHYSICAL_STARTING_ANGLE);
+                    motor.setEncoderPosition(PHYSICAL_STARTING_ANGLE);
                     motor.startClosedLoopController();
                 });
     }
-
 
     /**
      * Runs the hood at the given speed.

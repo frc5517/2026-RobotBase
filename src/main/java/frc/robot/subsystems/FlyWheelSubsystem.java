@@ -39,6 +39,7 @@ import java.util.function.Supplier;
 import static edu.wpi.first.units.Units.*;
 import static frc.robot.subsystems.FlyWheelSubsystem.HardwareConstants.*;
 import static frc.robot.subsystems.FlyWheelSubsystem.ControlConstants.*;
+import static frc.robot.subsystems.FlyWheelSubsystem.HardwareConstants.Profiling.MAX_ANGULAR_VELOCITY;
 
 public class FlyWheelSubsystem extends SubsystemBase
 {
@@ -54,7 +55,7 @@ public class FlyWheelSubsystem extends SubsystemBase
                                                                                     0.1, 0.01, 0.0); // PID - Proportional, Integral, Derivative.
         /// Trapezoidal Motion Profiling Constraints.
         public static final class Profiling {
-            public static final AngularVelocity         MAX_ANGULAR_VELOCITY        = RPM.of(50000); // Max Angular Velocity
+            public static final AngularVelocity         MAX_ANGULAR_VELOCITY        = RotationsPerSecond.of(200); // Max Angular Velocity
             public static final AngularAcceleration     MAX_ANGULAR_ACCELERATION    = DegreesPerSecondPerSecond.of(150000); // Max Angular Acceleration
         }
         public static final Time                        RAMP_RATE                   = Seconds.of(0.25); // Time it takes to reach max speed from 0.
@@ -63,7 +64,6 @@ public class FlyWheelSubsystem extends SubsystemBase
         /// FlyWheel Constants
         public static final Distance                    FLYWHEEL_DIAMETER           = Inches.of(4); // Diameter of the wheel, belt, whatever is spinning on the flywheel.
         public static final Mass                        FLYWHEEL_MASS               = Pounds.of(1); // Weight of the flywheel, just what gets spun.
-        public static final AngularVelocity             FLYWHEEL_MAX_SPEED          = RPM.of(80000); // Max RPM soft limits
         public static final double                      FLYWHEEL_EFFICIENCY         = .38; // Multiplicity factor used to determine how much speed was transferred,
     }
     /// Control Constants for the FlyWheel Mechanism
@@ -73,8 +73,8 @@ public class FlyWheelSubsystem extends SubsystemBase
     /// Initialize the FlyWheel
     private final TalonFX                              indexerMotor                = new TalonFX(HardwareConstants.MOTOR_ID); /// The Normal Rev Vendor SparkMax Object.
     private final SmartMotorControllerConfig            motorConfig                 = new SmartMotorControllerConfig(this) /// The Smart Motor Controller Configuration.
-            .withTrapezoidalProfile(Profiling.MAX_ANGULAR_VELOCITY, Profiling.MAX_ANGULAR_ACCELERATION)
-                .withVelocityTrapezoidalProfile(true)
+            .withTrapezoidalProfile(MAX_ANGULAR_VELOCITY, Profiling.MAX_ANGULAR_ACCELERATION)
+            .withVelocityTrapezoidalProfile(true)
             .withClosedLoopController(PID_CONTROLLER)
             .withGearing(HardwareConstants.GEAR_RATIO)
             .withIdleMode(MotorMode.BRAKE)
@@ -90,9 +90,9 @@ public class FlyWheelSubsystem extends SubsystemBase
     private final FlyWheelConfig                        flyWheelConfig              = new FlyWheelConfig(motor) /// The FlyWheel config.
             .withDiameter(HardwareConstants.FLYWHEEL_DIAMETER)
             .withMass(HardwareConstants.FLYWHEEL_MASS)
-            .withTelemetry(Telemetry.yamsMechPath + "FlyWheel", Telemetry.telemetryVerbosity.yamsVerbosity)
-            .withSoftLimit(HardwareConstants.FLYWHEEL_MAX_SPEED.unaryMinus(), HardwareConstants.FLYWHEEL_MAX_SPEED)
-            .withSpeedometerSimulation(HardwareConstants.FLYWHEEL_MAX_SPEED);
+            .withTelemetry("FlyWheel", Telemetry.telemetryVerbosity.yamsVerbosity)
+            .withSoftLimit(MAX_ANGULAR_VELOCITY.unaryMinus(), MAX_ANGULAR_VELOCITY)
+            .withSpeedometerSimulation(MAX_ANGULAR_VELOCITY);
     @Getter
     private final FlyWheel                              flyWheel                    = new FlyWheel(flyWheelConfig); /// The final FlyWheel Mechanism.
 
@@ -145,6 +145,10 @@ public class FlyWheelSubsystem extends SubsystemBase
     public Command stopFlyWheel() {
         return flyWheel.set(0.0);
     }
+
+//    public Command setGoal(Supplier<AngularVelocity> goal) {
+//        return flyWheel.setSpeed()
+//    }
 
     /**
      * @return a {@link Command} that launches sim fuel.
