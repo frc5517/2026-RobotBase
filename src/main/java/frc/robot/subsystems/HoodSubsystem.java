@@ -45,20 +45,20 @@ public class HoodSubsystem extends SubsystemBase {
         /// Exponential Motion Profiling Constraints.
         public static final class Profiling {
             public static final Voltage                         MAX_CONTROL_VOLTAGE         = Volts.of(12); // Max Control Voltage
-            public static final AngularVelocity                 MAX_ANGULAR_VELOCITY        = DegreesPerSecond.of(360); // Max Angular Velocity
-            public static final AngularAcceleration             MAX_ANGULAR_ACCELERATION    = DegreesPerSecondPerSecond.of(720); // Max Angular Acceleration
+            public static final AngularVelocity                 MAX_ANGULAR_VELOCITY        = RotationsPerSecond.of(10); // Max Angular Velocity
+            public static final AngularAcceleration             MAX_ANGULAR_ACCELERATION    = RotationsPerSecondPerSecond.of(50); // Max Angular Acceleration
         }
         public static final Time                                RAMP_RATE                   = Seconds.of(0.15); // Time it takes to reach max speed from 0.
-        public static final ArmFeedforward                      FEED_FORWARD                = new ArmFeedforward(0.01, 0.2, 0.01); // Feed Forwards.
-        public static final Current                             CURRENT_LIMIT               = Amp.of(40); // Current limit, Higher for faster control.
+        public static final ArmFeedforward                      FEED_FORWARD                = new ArmFeedforward(0.1, 0.2, 0.0); // Feed Forwards.
+        public static final Current                             CURRENT_LIMIT               = Amp.of(30); // Current limit, Higher for faster control.
         /// Hood Constants
-        public static final Mass                                HOOD_MASS                   = Pounds.of(3); // Weight of the hood mechanism.
+        public static final Mass                                HOOD_MASS                   = Pounds.of(2); // Weight of the hood mechanism.
         public static final Distance                            HOOD_LENGTH                 = Inches.of(8); // Hood Length, used in calculations and to visualize in sim.
         public static final Angle                               HORIZONTAL_OFFSET           = Degrees.of(0); // Offset required making angle 0 horizontal and parallel to the ground.
         public static final Angle                               HARD_LIMIT_REVERSE          = Degrees.of(0); // The hard limit should be a metal physical stop.
-        public static final Angle                               HARD_LIMIT_FORWARD          = Degrees.of(80);
+        public static final Angle                               HARD_LIMIT_FORWARD          = Degrees.of(45);
         public static final Angle                               SOFT_LIMIT_REVERSE          = Degrees.of(0); // A soft limit so we don't constantly hit the hard limit without reason.
-        public static final Angle                               SOFT_LIMIT_FORWARD          = Degrees.of(80);
+        public static final Angle                               SOFT_LIMIT_FORWARD          = Degrees.of(45);
         /// IMPORTANT, this helps calculate the initial fuel velocity; it is the friction affecting on the ball from the hood.
         public static final double                              HOOD_COF_FACTOR             = 0.8;
         /// Sim Constants
@@ -74,7 +74,6 @@ public class HoodSubsystem extends SubsystemBase {
     /// The Control Constants for the Hood Mechanism.
     public static final class ControlConstants {
         public static final Angle                               PHYSICAL_STARTING_ANGLE     = Degrees.of(0);
-        public static final double                              HOOD_SPEED                  = 0.3; // Predefined duty cycle speed.
         public static final Angle                               ANGLE_TOLERANCE             = Degrees.of(5); // How accurate the angle should be.
     }
     /// Finally, we can initialize our mechanism.

@@ -81,7 +81,7 @@ public class InputBuilder
                 .withHomeAll(driverXbox.back())
                 .withFuelControl(driverXbox.leftBumper(), driverXbox.rightBumper(), driverXbox.rightTrigger(), RotationsPerSecond.of(60))
                 .back().HoodBindings
-                .withSetAngle(driverXbox.pov(0), Degrees.of(45))
+                .withSetAngle(driverXbox.pov(0), Degrees.of(30))
                 .withSetAngle(driverXbox.pov(180), Degrees.of(15))
                 .back().TurretBindings
                 .withRunTurret(driverXbox.pov(270), true)
@@ -95,6 +95,10 @@ public class InputBuilder
                 .back().KickerBindings
                 .withRunKicker(driverXbox.rightBumper().toggleOnTrue(Commands.none()), true)
                 .back().HoodBindings
+                .withSetAngle(driverXbox.a(), Degrees.of(0))
+                .withSetAngle(driverXbox.b(), Degrees.of(5))
+                .withSetAngle(driverXbox.x(), Degrees.of(10))
+                .withSetAngle(driverXbox.y(), Degrees.of(15))
                 .back().FlyWheelBindings
                 .back();
         // Default Single Xbox Control
