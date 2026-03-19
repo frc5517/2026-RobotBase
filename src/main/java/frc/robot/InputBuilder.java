@@ -76,24 +76,19 @@ public class InputBuilder
                 StartingMethods
                 .defaultXboxDrive(TESTING.isMode, driverXbox)
                 .SwerveBindings
+                .setNormalTranslation(.8)
+                .setNormalRotation(.8)
                 .withToggleCentricity(driverXbox.start(), false)
-                .withResetSimOdometry(driverXbox.back())
-                .back().FlyWheelBindings
-                .withSetVelocity(driverXbox.rightTrigger(), RPM.of(5000))
-                .back().KickerBindings
-                .withRunKicker(driverXbox.rightTrigger(), true)
                 .back().SmartBindings
-                .withBlockingIntakeIntoHopper(driverXbox.leftBumper())
-                .withIndexIntoFlyWheel(driverXbox.rightBumper())
+                .withShootOnTheMove(driverXbox.y())
+                .withHomeAll(driverXbox.back())
+                .withFuelControl(driverXbox.leftBumper(), driverXbox.rightBumper(), driverXbox.rightTrigger(), RotationsPerSecond.of(60))
                 .back().HoodBindings
                 .withSetAngle(driverXbox.pov(0), Degrees.of(45))
                 .withSetAngle(driverXbox.pov(180), Degrees.of(15))
                 .back().TurretBindings
                 .withRunTurret(driverXbox.pov(270), true)
                 .withRunTurret(driverXbox.pov(90), false)
-                .back().AgitatorBindings
-                .setAgitatorSpeed(1)
-                .withRunAgitator(driverXbox.a(), true)
                 .back();
         final InputStream sotmCalbration = new InputStream(SOTM_CALIBRATION.isMode)
                 .SmartBindings
@@ -387,6 +382,35 @@ public class InputBuilder
          * Smart controls that make use of automatic sequencing controls.
          */
         public class SmartBindings {
+
+            public SmartBindings withHomeAll(Trigger home) {
+                this.back().HoodBindings
+                        .withAutoHome(home)
+                        .back().TurretBindings
+                        .withAutoHome(home);
+                return this;
+            }
+
+            public SmartBindings withFuelControl(Trigger intake, Trigger index, Trigger spinUp) {
+                this.withBlockingIntakeIntoHopper(index.negate().and(intake)); // If not indexing, intake to hopper.
+                this.withIndexIntoFlyWheel(intake.negate()
+                        //.and(subsystems.flywheel.isNear(() -> flyWheelSpeed))
+                        .and(index)); // If not intaking, index into flywheel.
+                this.back().KickerBindings.withRunKicker(spinUp, true);
+
+                return this;
+            }
+
+            public SmartBindings withFuelControl(Trigger intake, Trigger index, Trigger spinUp, AngularVelocity flyWheelSpeed) {
+                this.withBlockingIntakeIntoHopper(index.negate().and(intake)); // If not indexing, intake to hopper.
+                this.withIndexIntoFlyWheel(intake.negate()
+                        .and(subsystems.flywheel.isNear(() -> flyWheelSpeed))
+                        .and(index)); // If not intaking, index into flywheel.
+                this.withSpinUp(spinUp, flyWheelSpeed);
+
+                return this;
+            }
+
             public SmartBindings withSOTMCalibration(Trigger indexIntoFlywheel, Trigger ballHasHitFloor, Current threshold) {
                 final Timer timeOfFlightTimer = new Timer();
                 final List<Double> dataLog =  new ArrayList<>();
@@ -431,7 +455,7 @@ public class InputBuilder
              */
             public SmartBindings withShootOnTheMove(Trigger shootOnTheMoveWhile) {
                 if (!TurretBindings.isPresent || !HoodBindings.isPresent || !FlyWheelBindings.isPresent) {return this;}
-                isMode.and(shootOnTheMoveWhile).whileTrue(scoring.shootOnTheMove());
+                isMode.and(shootOnTheMoveWhile).whileTrue(scoring.shootOnTheMove()).onFalse(subsystems.flywheel.stopFlyWheel());
                 return this;
             }
 
@@ -493,6 +517,40 @@ public class InputBuilder
                 this.back().IndexerBindings
                         .withRunIndexer(index, true)
                         .back().AgitatorBindings.withRunAgitator(index, false);
+                return this;
+            }
+
+            /**
+             * THIS DOES NOT RUN THE FLYWHEEL
+             * This intakes the hopper and intake into the shooter.
+             * Runs the indexer and intake in.
+             * Intake does not run.
+             *
+             * @param intake the button to map.
+             * @return this, for chaining.
+             */
+            public SmartBindings withIntakeIntoFlyWheel(Trigger intake) {
+                this.back().IndexerBindings
+                        .withRunIndexer(intake, true)
+                        .back().IntakeBindings
+                        .withRunIntake(intake, true)
+                        .back().AgitatorBindings
+                        .withRunAgitator(intake, false);
+                return this;
+            }
+
+            /**
+             * Spins up the kicker and flywheel at the same time.
+             *
+             * @param spinUp the button to map.
+             * @param angularVelocity flywheel velocity goal.
+             * @return this, for chaining.
+             */
+            public SmartBindings withSpinUp(Trigger spinUp, AngularVelocity angularVelocity) {
+                this.back().FlyWheelBindings
+                        .withSetVelocity(spinUp, angularVelocity)
+                        .back().KickerBindings
+                        .withRunKicker(spinUp, true);
                 return this;
             }
 
@@ -850,6 +908,18 @@ public class InputBuilder
             }
 
             /**
+             * Homes the mechanism using current sensing.
+             *
+             * @param home the button to map.
+             * @return this, for chaining.
+             */
+            public HoodBindings withAutoHome(Trigger home) {
+                if (!isPresent) {return this;}
+                isMode.and(home).whileTrue(subsystems.hood.home());
+                return this;
+            }
+
+            /**
              * Sets the hood angle to the given angle.
              * Horizontal to the floor is 0 degrees.
              *w
@@ -917,6 +987,18 @@ public class InputBuilder
             }
 
             /**
+             * Homes the mechanism using current sensing.
+             *
+             * @param home the button to map.
+             * @return this, for chaining.
+             */
+            public TurretBindings withAutoHome(Trigger home) {
+                if (!isPresent) {return this;}
+                isMode.and(home).whileTrue(subsystems.turret.home());
+                return this;
+            }
+
+            /**
              * Sets the turret angle to the given angle.
              * Horizontal to the floor is 0 degrees.
              *w
@@ -973,7 +1055,7 @@ public class InputBuilder
             /**
              * Controller Dead Zone
              */
-            @Setter private double deadzone = 0.01;
+            @Setter private double deadzone = 0.001;
             /**
              * Move Speed Scalar when slowing drive speed.
              */

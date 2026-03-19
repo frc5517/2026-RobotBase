@@ -65,7 +65,7 @@ public class SwerveSubsystem extends SubsystemBase
     }
     public static class ControlConstants {
         /// Enable vision odometry updates while driving.
-        public static final boolean RUN_VISION = RobotBase.isSimulation(); // Run only in sim until real vision is ready.
+        public static final boolean RUN_VISION = true; // Run only in sim until real vision is ready.
         // Simulation Starting Pose, flipping is handled by YAGSL.
         public static final Pose2d INITIAL_SIM_POSE = new Pose2d(new Translation2d(
                 Meter.of(2),
@@ -107,7 +107,7 @@ public class SwerveSubsystem extends SubsystemBase
     swerveDrive.setCosineCompensator(true);
     swerveDrive.setAngularVelocityCompensation(true,
                                                true,
-                                               0.1); //Correct for skew that gets worse as angular velocity increases. Start with a coefficient of 0.1.
+                                               0.15); //Correct for skew that gets worse as angular velocity increases. Start with a coefficient of 0.1.
     swerveDrive.setModuleEncoderAutoSynchronize(false,
                                                 3); // Enable if you want to resynchronize your absolute encoders and motor encoders periodically when they are not moving.
     if (RUN_VISION)

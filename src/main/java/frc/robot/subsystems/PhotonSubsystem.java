@@ -13,7 +13,6 @@ import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
-import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
@@ -311,18 +310,15 @@ public class PhotonSubsystem {
     /** Camera Enum to select each camera */
     enum Cameras {
         /** Left Camera */
-//        FRONT_RIGHT_CAM(
-//                "FRONT_RIGHT_CAM",
-//                new Rotation3d(Math.toRadians(0), Math.toRadians(0), Math.toRadians(0)),
-//                new Translation3d(
-//                        Units.inchesToMeters(0.71),
-//                        -Units.inchesToMeters(11.605),
-//                        Units.inchesToMeters(26.875)),
-//                VecBuilder.fill(4, 4, 8),
-//                VecBuilder.fill(0.5, 0.5, 1)),
+        FRONT_RIGHT_CAM(
+                "Right Camera",
+                new Rotation3d(Math.toRadians(0), Math.toRadians(0), Math.toRadians(-35)),
+                new Translation3d(Inches.of(10), Inches.of(-10), Inches.of(16)),
+                VecBuilder.fill(4, 4, 8),
+                VecBuilder.fill(0.5, 0.5, 1)),
 
-        FRONT_LEFT_CAM(
-                "FRONT_LEFT_CAM",
+        LEFT_CAM(
+                "Left Camera",
                 new Rotation3d(Math.toRadians(0), Math.toRadians(0), Math.toRadians(35)),
                 new Translation3d(Inches.of(10), Inches.of(10), Inches.of(16)),
                 VecBuilder.fill(4, 4, 8),

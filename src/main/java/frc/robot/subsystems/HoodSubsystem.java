@@ -12,13 +12,10 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
-import frc.robot.InputBuilder;
 import frc.robot.Telemetry;
 import lombok.Getter;
-import lombok.Setter;
 import yams.gearing.GearBox;
 import yams.gearing.MechanismGearing;
-import yams.gearing.Sprocket;
 import yams.mechanisms.config.ArmConfig;
 import yams.mechanisms.config.MechanismPositionConfig;
 import yams.mechanisms.positional.Arm;
@@ -153,7 +150,7 @@ public class HoodSubsystem extends SubsystemBase {
      */
     public Command home() {
         // Disable closed loop so we don't hit soft limits, then move backwards at a low power.
-        return Commands.startRun(motor::stopClosedLoopController,
+        return Commands.startRun(() -> motor.setPosition(HardwareConstants.HARD_LIMIT_FORWARD),
                         () -> motor.setVoltage(Volts.of(-2)))
                 // Until we hit something, the something should be our hard stop, but it shouldn't hurt to get your hand stuck.
                 .until(currentSensorTrigger(Amps.of(1.5), Seconds.of(0)))

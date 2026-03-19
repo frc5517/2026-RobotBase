@@ -91,15 +91,7 @@ public class ScoringSystem {
                 // Run goals
                 .alongWith(subsystems.turret().getTurret().run(() -> turretGoal[0]))
                 .alongWith(subsystems.hood().getHood().run(() -> hoodGoal[0]))
-                .alongWith(subsystems.flywheel().getFlyWheel().run(() -> flyWheelGoal[0]))
-                // Score when safe
-                .alongWith(Robot.isSimulation()
-                        // To be replaced with isSim ? simShoot : index, indexing automatically stops when flywheel is not ready.
-                        ? subsystems.flywheel().simShoot(subsystems, () -> flyWheelGoal[0])
-                                // Only Index when all systems are ready
-                                .onlyIf(() -> true).andThen(Commands.waitSeconds(0.2)).repeatedly()
-                        : subsystems.indexer().runIndexer(0.75, true)
-                        .onlyWhile(isReadyToFire()));
+                .alongWith(subsystems.flywheel().getFlyWheel().run(() -> flyWheelGoal[0]));
     }
 
     public void calculateSOTMGoals(Translation2d target, Consumer<Angle> turretGoal, Consumer<Angle> hoodGoal, Consumer<AngularVelocity> flyWheelGoal) {

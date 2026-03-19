@@ -47,19 +47,19 @@ public class FlyWheelSubsystem extends SubsystemBase
         /// Motor Constants
         public static final int                         MOTOR_ID                    = 15; // Spark Max CAN ID
         public static final boolean                     MOTOR_INVERTED              = true; // Inverts control direction.
-        public static final MechanismGearing            GEAR_RATIO                  = new MechanismGearing(36 / 60.0); // FlyWheel Gear Ratio
+        public static final MechanismGearing            GEAR_RATIO                  = new MechanismGearing(1); // FlyWheel Gear Ratio
 
         /// Motor Tuning Values
         public static final PIDController               PID_CONTROLLER              = new PIDController( // Exponential Motion Profiling
-                                                                                    30, 0, 0.0); // PID - Proportional, Integral, Derivative.
+                                                                                    0.1, 0.01, 0.0); // PID - Proportional, Integral, Derivative.
         /// Trapezoidal Motion Profiling Constraints.
         public static final class Profiling {
-            public static final AngularVelocity         MAX_ANGULAR_VELOCITY        = RPM.of(5000); // Max Angular Velocity
-            public static final AngularAcceleration     MAX_ANGULAR_ACCELERATION    = DegreesPerSecondPerSecond.of(15000); // Max Angular Acceleration
+            public static final AngularVelocity         MAX_ANGULAR_VELOCITY        = RPM.of(50000); // Max Angular Velocity
+            public static final AngularAcceleration     MAX_ANGULAR_ACCELERATION    = DegreesPerSecondPerSecond.of(150000); // Max Angular Acceleration
         }
         public static final Time                        RAMP_RATE                   = Seconds.of(0.25); // Time it takes to reach max speed from 0.
-        public static final SimpleMotorFeedforward      FEED_FORWARD                = new SimpleMotorFeedforward(0, .085, 0); // Feed Forwards.
-        public static final Current                     CURRENT_LIMIT               = Amp.of(60); // Current limit, Higher for faster control.
+        public static final SimpleMotorFeedforward      FEED_FORWARD                = new SimpleMotorFeedforward(0, .12, 0); // Feed Forwards.
+        public static final Current                     CURRENT_LIMIT               = Amp.of(65); // Current limit, Higher for faster control.
         /// FlyWheel Constants
         public static final Distance                    FLYWHEEL_DIAMETER           = Inches.of(4); // Diameter of the wheel, belt, whatever is spinning on the flywheel.
         public static final Mass                        FLYWHEEL_MASS               = Pounds.of(1); // Weight of the flywheel, just what gets spun.
