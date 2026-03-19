@@ -19,6 +19,7 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.InputBuilder;
 import frc.robot.Telemetry;
 import lombok.Getter;
+import lombok.Setter;
 import swervelib.simulation.ironmaple.simulation.SimulatedArena;
 import swervelib.simulation.ironmaple.simulation.seasonspecific.rebuilt2026.RebuiltFuelOnFly;
 import yams.gearing.GearBox;
@@ -33,6 +34,7 @@ import yams.motorcontrollers.SmartMotorControllerConfig.MotorMode;
 import yams.motorcontrollers.local.SparkWrapper;
 import yams.motorcontrollers.remote.TalonFXWrapper;
 
+import java.util.Optional;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
@@ -56,19 +58,19 @@ public class FlyWheelSubsystem extends SubsystemBase
         /// Trapezoidal Motion Profiling Constraints.
         public static final class Profiling {
             public static final AngularVelocity         MAX_ANGULAR_VELOCITY        = RotationsPerSecond.of(200); // Max Angular Velocity
-            public static final AngularAcceleration     MAX_ANGULAR_ACCELERATION    = DegreesPerSecondPerSecond.of(150000); // Max Angular Acceleration
+            public static final AngularAcceleration     MAX_ANGULAR_ACCELERATION    = RotationsPerSecondPerSecond.of(1500); // Max Angular Acceleration
         }
-        public static final Time                        RAMP_RATE                   = Seconds.of(0.25); // Time it takes to reach max speed from 0.
+        public static final Time                        RAMP_RATE                   = Seconds.of(0.0); // Time it takes to reach max speed from 0.
         public static final SimpleMotorFeedforward      FEED_FORWARD                = new SimpleMotorFeedforward(0, .12, 0); // Feed Forwards.
         public static final Current                     CURRENT_LIMIT               = Amp.of(65); // Current limit, Higher for faster control.
         /// FlyWheel Constants
         public static final Distance                    FLYWHEEL_DIAMETER           = Inches.of(4); // Diameter of the wheel, belt, whatever is spinning on the flywheel.
         public static final Mass                        FLYWHEEL_MASS               = Pounds.of(1); // Weight of the flywheel, just what gets spun.
-        public static final double                      FLYWHEEL_EFFICIENCY         = .38; // Multiplicity factor used to determine how much speed was transferred,
+        public static final double                      FLYWHEEL_EFFICIENCY         = .35; // Multiplicity factor used to determine how much speed was transferred,
     }
     /// Control Constants for the FlyWheel Mechanism
     public static class ControlConstants {
-        public static final AngularVelocity             VELOCITY_TOLERANCE          = RPM.of(100); // How accurate the velocity should be.
+        public static final AngularVelocity             VELOCITY_TOLERANCE          = RotationsPerSecond.of(2); // How accurate the velocity should be.
     }
     /// Initialize the FlyWheel
     private final TalonFX                              indexerMotor                = new TalonFX(HardwareConstants.MOTOR_ID); /// The Normal Rev Vendor SparkMax Object.
@@ -95,6 +97,9 @@ public class FlyWheelSubsystem extends SubsystemBase
             .withSpeedometerSimulation(MAX_ANGULAR_VELOCITY);
     @Getter
     private final FlyWheel                              flyWheel                    = new FlyWheel(flyWheelConfig); /// The final FlyWheel Mechanism.
+
+    @Getter @Setter
+    private AngularVelocity flyWheelGoal = RotationsPerSecond.of(0);
 
     /// A trigger used to stop the motor when it is trying too hard.
     private final Trigger jammedTrigger = currentSensorTrigger(Amps.of(40), Seconds.of(0.2));
@@ -143,12 +148,28 @@ public class FlyWheelSubsystem extends SubsystemBase
      * @return a command that stops the flywheel.
      */
     public Command stopFlyWheel() {
-        return flyWheel.set(0.0);
+        return flyWheel.set(0.0).beforeStarting(() -> flyWheelGoal =  RotationsPerSecond.of(0));
     }
 
-//    public Command setGoal(Supplier<AngularVelocity> goal) {
-//        return flyWheel.setSpeed()
-//    }
+    /**
+     * A Trigger to determine whether the flywheel is at the goal set with setGoal().
+     *
+     * @return a Trigger.
+     */
+    public Trigger atGoal() {
+        return flyWheel.isNear(flyWheelGoal, VELOCITY_TOLERANCE);
+    }
+
+    /**
+     * Runs the flywheel at the supplied speed while setting the global
+     *
+     * @param goal
+     * @return
+     */
+    public Command setGoal(Supplier<AngularVelocity> goal) {
+        return flyWheel.setSpeed(goal)
+                .alongWith(Commands.run(() -> flyWheelGoal =  goal.get()));
+    }
 
     /**
      * @return a {@link Command} that launches sim fuel.

@@ -167,6 +167,17 @@ public class SwerveSubsystem extends SubsystemBase
   }
 
     /**
+     * Automatically decides how to get to the other zone.
+     *
+     * @return a command to toggle zones.
+     */
+    public Pose2d getHoardingTarget() {
+        return swerveDrive.getPose().getMeasureY().gte(Meters.of(4)) // If closer to left, go left.
+                ? new Pose2d(2.75, 2, Rotation2d.kZero)
+                : new Pose2d(2.75, 6, Rotation2d.kZero);
+    }
+
+    /**
      * Changes between our zone and the neutral zone automatically and safely.
      * Uses booleans to determine the path.
      *

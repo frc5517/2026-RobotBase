@@ -11,8 +11,10 @@ import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.units.measure.Time;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.InputBuilder;
 import frc.robot.Robot;
 import frc.robot.subsystems.FlyWheelSubsystem;
@@ -56,6 +58,10 @@ public class ScoringSystem {
                     Map.entry(2.0, 24.0),
                     Map.entry(3.0, 35.0));
         }
+
+        public static final class SOTMTargets {
+            public static final Pose2d HUB = new Pose2d(FieldConstants.Hub.topCenterPoint.toTranslation2d(), Rotation2d.kZero);
+        }
     }
 
     public static class SOTMLatestGoals {
@@ -77,21 +83,23 @@ public class ScoringSystem {
         this.subsystems = subsystems;
     }
 
-    public Command shootOnTheMove() {
+    public Command shootOnTheMove(Supplier<Pose2d> target) {
         // Goal values
         Angle[] turretGoal = {subsystems.turret().getTurret().getAngle()};
         Angle[] hoodGoal = {subsystems.hood().getHood().getAngle()};
         AngularVelocity[] flyWheelGoal = {subsystems.flywheel().getFlyWheel().getSpeed()};
         return Commands.run(() -> calculateSOTMGoals(
                 // Calculate goals based on a flipped target
-                AllianceFlipUtil.ifShouldFlip(new Pose2d(FieldConstants.Hub.topCenterPoint.toTranslation2d(), Rotation2d.kZero)).getTranslation(),
+                AllianceFlipUtil.ifShouldFlip(target.get()).getTranslation(),
                 (newAngle) -> turretGoal[0] = newAngle,
                 (newAngle) -> hoodGoal[0] = newAngle,
                 (newSpeed) -> flyWheelGoal[0] = newSpeed))
                 // Run goals
                 .alongWith(subsystems.turret().getTurret().run(() -> turretGoal[0]))
                 .alongWith(subsystems.hood().getHood().run(() -> hoodGoal[0]))
-                .alongWith(subsystems.flywheel().getFlyWheel().run(() -> flyWheelGoal[0]));
+                .alongWith(RobotBase.isSimulation()
+                ? subsystems.flywheel().simShoot(subsystems, () -> flyWheelGoal[0]).andThen(Commands.waitSeconds(.2)).repeatedly()
+                        : subsystems.flywheel().setGoal(() -> flyWheelGoal[0]));
     }
 
     public void calculateSOTMGoals(Translation2d target, Consumer<Angle> turretGoal, Consumer<Angle> hoodGoal, Consumer<AngularVelocity> flyWheelGoal) {
@@ -133,14 +141,7 @@ public class ScoringSystem {
         flyWheelGoal.accept(SOTMLatestGoals.getFlyWheelGoal().get());
     }
 
-    public BooleanSupplier isReadyToFire() {
-        DriverStation.reportWarning("Goals:" + subsystems.turret().getTurret().getAngle().in(Rotations), false);
-        return () ->
-                subsystems.turret().getTurret().isNear(SOTMLatestGoals.getHoodGoal().get(), TurretSubsystem.ControlConstants.ANGLE_TOLERANCE)
-                        .and(subsystems.hood().getHood().isNear(SOTMLatestGoals.getHoodGoal().get(), HoodSubsystem.ControlConstants.ANGLE_TOLERANCE))
-                        .and(subsystems.flywheel().getFlyWheel().isNear(SOTMLatestGoals.getFlyWheelGoal().get(), FlyWheelSubsystem.ControlConstants.VELOCITY_TOLERANCE))
-                        .and(() -> SOTMLatestGoals.getDistanceToTarget().get().gte(Inches.of(6)))
-                        .and(() -> SOTMLatestGoals.getDistanceToTarget().get().lte(Meters.of(5)))
-                        .getAsBoolean();
+    public Trigger isReadyToFire() {
+        return new Trigger(subsystems.turret().isNear(SOTMLatestGoals.getTurretGoal())).and(subsystems.hood().isNear(SOTMLatestGoals.getHoodGoal()));
     }
 }

@@ -303,7 +303,6 @@ public class PhotonSubsystem {
                 poses.add(targetPose);
             }
         }
-
         field2d.getObject("tracked targets").setPoses(poses);
     }
 

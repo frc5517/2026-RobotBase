@@ -31,7 +31,6 @@ import swervelib.simulation.ironmaple.simulation.SimulatedArena;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
@@ -69,8 +68,6 @@ public class InputBuilder
      * Method used to construct input streams
      */
     public void configureBindings() {
-        // Stop all movement.
-        DISABLED.isMode.and(DriverStation::isEnabled).onTrue(Commands.runOnce(subsystems.swerve::removeDefaultCommand));
         /// Testing control gets randomly changed all the time.
         final InputStream testing = new InputStream().
                 StartingMethods
@@ -80,7 +77,7 @@ public class InputBuilder
                 .setNormalRotation(.8)
                 .withToggleCentricity(driverXbox.start(), false)
                 .back().SmartBindings
-                .withShootOnTheMove(driverXbox.y())
+                //.withShootOnTheMove(driverXbox.y())
                 .withHomeAll(driverXbox.back())
                 .withFuelControl(driverXbox.leftBumper(), driverXbox.rightBumper(), driverXbox.rightTrigger(), RotationsPerSecond.of(60))
                 .back().HoodBindings
@@ -90,6 +87,7 @@ public class InputBuilder
                 .withRunTurret(driverXbox.pov(270), true)
                 .withRunTurret(driverXbox.pov(90), false)
                 .back();
+        // Mode Specifically fot calibrating SOTM
         final InputStream sotmCalbration = new InputStream(SOTM_CALIBRATION.isMode)
                 .SmartBindings
                 .withSOTMCalibration(driverXbox.rightTrigger(), driverXbox.a(), Amps.of(60))
@@ -99,118 +97,29 @@ public class InputBuilder
                 .back().HoodBindings
                 .back().FlyWheelBindings
                 .back();
-        /// Single xbox controller with manual duty cycle control of all the subsystems.
-        final InputStream singleManual = new InputStream(MANUAL_CONTROL.isMode)
-                // A starting method should be set first.
-                //.StartingMethods
-                //.defaultXboxDrive(MANUAL_CONTROL.isMode, driverXbox)
-                // Now we can set .with our controller bindings.
-                .SwerveBindings /// Swerve Controller Bindings.
-                // When in the subsystem, set our desired constants with .set methods.
-                .setNormalRotation(.2)
-                .setNormalTranslation(.2)
-                .setSlowRotation(.4)
-                .setSlowTranslation(.4)
-                .setBoostRotation(1)
-                .setBoostTranslation(1)
-                // After any changes are made, we can then use .with methods to bind actions.
-                //.withSlowDrive(         driverXbox.b())
-                //.withToggleCentricity(  driverXbox.back(), true)
-                //.withResetSimOdometry(  driverXbox.start())
-                .back().IntakeBindings /// Intake Controller Bindings.
-                .setIntakeSpeed(0.75)
-                .withRunIntake(         driverXbox.leftBumper(), true)
-                .withRunIntake(         driverXbox.rightBumper(), false)
-                .back().IndexerBindings /// Indexer Controller Bindings
-                .setIndexSpeed(0.75)
-                .withRunIndexer(        driverXbox.x(), true)
-                .withRunIndexer(        driverXbox.y(), false)
-                .back().KickerBindings /// Kicker Controller Bindings
-                .setKickerSpeed(.75)
-                .withRunKicker(         driverXbox.a(), true)
-                .withRunKicker(         driverXbox.b(), false)
-                .back().TurretBindings /// Turret Controller Bindings
-                .setTurretSpeed(0.5)
-                .withRunTurret(         driverXbox.pov(90), true)
-                .withRunTurret(         driverXbox.pov(270), false)
-                .back().HoodBindings /// Hood Controller Bindings
-                .setHoodSpeed(0.15)
-                .withSetAngle(driverXbox.pov(0), Degrees.of(15))
-                .withSetAngle(driverXbox.pov(180), Degrees.of(30))
-                //.withRunHood(           driverXbox.pov(0), true)
-                //.withRunHood(           driverXbox.pov(180), false)
-                .back().FlyWheelBindings /// Turret Controller Bindings
-                .setFlyWheelSpeed(1)
-                .withRunFlyWheel(         driverXbox.rightTrigger(), true)
-                .withRunFlyWheel(         driverXbox.leftTrigger(), false)
-                .back().FlyWheelBindings
-                .back().MiscBindings /// Miscellaneous Controller Bindings
-                .resetField(            driverXbox.start())
-                .back(); // Return to our InputStream.
-        /// Single xbox controller with manual PID control of all the subsystems.
-        final InputStream singlePID = new InputStream()
-                // A starting method should be set first.
-                .StartingMethods
-                .headingXboxDrive(PID_CONTROL.isMode, driverXbox)
-                // Now we can set .with our controller bindings.
-                .SwerveBindings /// Swerve Controller Bindings.
-                // When in the subsystem, set our desired constants with .set methods.
-                .setNormalRotation(.8)
-                .setNormalTranslation(.8)
-                .setSlowRotation(.4)
-                .setSlowTranslation(.4)
-                .setBoostRotation(1)
-                .setBoostTranslation(1)
-                // After any changes are made, we can then use .with methods to bind actions.
-                .withSlowDrive(         driverXbox.b())
-                .withToggleCentricity(  driverXbox.back(), true)
-                .withResetSimOdometry(  driverXbox.start())
-                .back().IntakeBindings /// Intake Controller Bindings.
-                .withRunIntake(         driverXbox.leftBumper(), true)
-                .withRunIntake(         driverXbox.rightBumper(), false)
-                .back().IndexerBindings /// Indexer Controller Bindings
-                .withRunIndexer(        driverXbox.x(), true)
-                .withRunIndexer(        driverXbox.y(), false)
-                .back().KickerBindings /// Kicker Controller Bindings
-                .withRunKicker(         driverXbox.a(), true)
-                .back().TurretBindings /// Turret Controller Bindings
-                //.withDefaultCommand(() -> subsystems.turret.getTurret().setAngle(Degrees.of(MathUtil.interpolate(TurretSubsystem.HardwareConstants.HARD_LIMIT_REVERSE.in(Degrees), TurretSubsystem.HardwareConstants.HARD_LIMIT_FORWARD.in(Degrees), 0.5))))
-                .withSetAngle(          driverXbox.pov(90), Degrees.of(MathUtil.interpolate(TurretSubsystem.HardwareConstants.HARD_LIMIT_REVERSE.in(Degrees), TurretSubsystem.HardwareConstants.HARD_LIMIT_FORWARD.in(Degrees), 0.25)))
-                .withSetAngle(          driverXbox.pov(270), Degrees.of(MathUtil.interpolate(TurretSubsystem.HardwareConstants.HARD_LIMIT_REVERSE.in(Degrees), TurretSubsystem.HardwareConstants.HARD_LIMIT_FORWARD.in(Degrees), 0.75)))
-                .back().HoodBindings /// Hood Controller Bindings
-                .withDefaultCommand(() -> subsystems.hood.getHood().setAngle(Degrees.of(MathUtil.interpolate(HoodSubsystem.HardwareConstants.HARD_LIMIT_REVERSE.in(Degrees), HoodSubsystem.HardwareConstants.HARD_LIMIT_FORWARD.in(Degrees), 0.5))))
-                .withSetAngle(          driverXbox.pov(0), Degrees.of(MathUtil.interpolate(HoodSubsystem.HardwareConstants.HARD_LIMIT_REVERSE.in(Degrees), HoodSubsystem.HardwareConstants.HARD_LIMIT_FORWARD.in(Degrees), 0.25)))
-                .withSetAngle(          driverXbox.pov(180), Degrees.of(MathUtil.interpolate(HoodSubsystem.HardwareConstants.HARD_LIMIT_REVERSE.in(Degrees), HoodSubsystem.HardwareConstants.HARD_LIMIT_FORWARD.in(Degrees), 0.75)))
-                .back().FlyWheelBindings /// Turret Controller Bindings
-                .withRunFlyWheel(         driverXbox.rightTrigger(), true)
-                .withRunFlyWheel(         driverXbox.leftTrigger(), false)
-                .back().FlyWheelBindings
-                .back().MiscBindings /// Miscellaneous Controller Bindings
-                .resetField(            driverXbox.start())
-                .back(); // Return to our InputStream.
-
-        final InputStream bradStream =  new InputStream()
-                .StartingMethods.defaultXboxDrive(BRAD_CONTROL.isMode, driverXbox)
+        // Default Single Xbox Control
+        final InputStream singleStream =  new InputStream()
+                .StartingMethods.defaultXboxDrive(SINGLE_XBOX.isMode, driverXbox)
                 .SmartBindings
-                .withShootOnTheMove(driverXbox.b().or(driverXbox.y()))
+                .withToggleAutoScoreHub(driverXbox.b(), true, true)
+                .withToggleAutoScoreHub(driverXbox.y(), false, false)
+                .withToggleAutoHoardFuel(driverXbox.x(), true)
                 .back()
                 .SwerveBindings
                 .setSlowTranslation(0.5)
-                .setSlowRotation(0.6)
-                .setNormalTranslation(0.7)
-                .setNormalRotation(0.8)
+                .setSlowRotation(0.65)
+                .setNormalTranslation(0.8)
+                .setNormalRotation(1)
                 .setBoostTranslation(1)
                 .setBoostRotation(1)
-                .setDeadzone(0.05)
                 .withSlowDrive(driverXbox.leftBumper())
                 .withBoostDrive(driverXbox.rightBumper())
                 .withResetSimOdometry(driverXbox.start())
                 .withToggleCentricity(driverXbox.back(), true)
                 .withToggleZones(CustomTriggers.enteringBumpZone.getTrigger())
                 .withToggleZones(driverXbox.a())
-                .withLookAtHubThenFire(driverXbox.y(), new Trigger(() -> false)) // Double SOTM aiming
+                .withLookAtHub(driverXbox.y()) // Double SOTM aiming
                 .back().IntakeBindings
-                .setIntakeSpeed(0.75)
                 .withRunIntake(driverXbox.leftTrigger(), true)
                 .back().MiscBindings
                 .resetField(driverXbox.start())
@@ -220,17 +129,10 @@ public class InputBuilder
     // Control binding type enum
     public enum InputSelections {
         /// Default Input Schema
-        DISABLED("DISABLED - Temp", true),
-        BRAD_CONTROL("Brad Xbox", false),
-        SINGLE_XBOX("Single Xbox - NC"),
+        SINGLE_XBOX("Single Xbox", true),
         TESTING("Testing", false),
         SOTM_CALIBRATION("SOTM Calibration", false),
-        MANUAL_CONTROL("Manual Control", false),
-        PID_CONTROL("Basic PID Control", false),
-
-        /**  Define Student Input Selections here  */
-
-        NEW_INPUT("New Student Bindings");
+        MANUAL_CONTROL("Manual Control", false);
 
         // BindType Name
         public final String name;
@@ -397,7 +299,6 @@ public class InputBuilder
                         //.and(subsystems.flywheel.isNear(() -> flyWheelSpeed))
                         .and(index)); // If not intaking, index into flywheel.
                 this.back().KickerBindings.withRunKicker(spinUp, true);
-
                 return this;
             }
 
@@ -437,13 +338,17 @@ public class InputBuilder
 
             /**
              * Shoots while moving using double interpolating maps while calculating for ToF, Phase Delay, Velocity, ect.
-             * Active while inside a preset zone while the hub is active.
+             * Fires fuel to our side from the best spot.
              *
+             * @param shootOnTheMoveWhile the button to map.
              * @return this, for chaining.
              */
-            public SmartBindings withAutoShootOnTheMove() {
+            public SmartBindings withToggleAutoHoardFuel(Trigger shootOnTheMoveWhile, boolean startEnabled) {
                 if (!TurretBindings.isPresent || !HoodBindings.isPresent || !FlyWheelBindings.isPresent) {return this;}
-                withShootOnTheMove(isMode.and(CustomTriggers.scoringZone.getTrigger()).and(Telemetry.FMSTriggers.isHubActive));
+                final boolean[] isToggled = {startEnabled};
+                isMode.and(shootOnTheMoveWhile.toggleOnTrue(Commands.runOnce(() -> isToggled[0] = !isToggled[0])));
+                Trigger trigger = isMode.and(() -> isToggled[0]).and(CustomTriggers.neutralZone.getTrigger());
+                trigger.whileTrue(scoring.shootOnTheMove(() -> subsystems.swerve().getHoardingTarget()));
                 return this;
             }
 
@@ -451,11 +356,16 @@ public class InputBuilder
              * Shoots while moving using double interpolating maps while calculating for ToF, Phase Delay, Velocity, ect.
              *
              * @param shootOnTheMoveWhile the button to map.
+             * @param withDrive whether to aim the drive as well.
              * @return this, for chaining.
              */
-            public SmartBindings withShootOnTheMove(Trigger shootOnTheMoveWhile) {
+            public SmartBindings withToggleAutoScoreHub(Trigger shootOnTheMoveWhile, boolean withDrive, boolean startEnabled) {
                 if (!TurretBindings.isPresent || !HoodBindings.isPresent || !FlyWheelBindings.isPresent) {return this;}
-                isMode.and(shootOnTheMoveWhile).whileTrue(scoring.shootOnTheMove()).onFalse(subsystems.flywheel.stopFlyWheel());
+                final boolean[] isToggled = {startEnabled};
+                isMode.and(shootOnTheMoveWhile.toggleOnTrue(Commands.runOnce(() -> isToggled[0] = !isToggled[0])));
+                Trigger trigger = isMode.and(() -> isToggled[0]).and(CustomTriggers.allianceZone.getTrigger());
+                trigger.whileTrue(scoring.shootOnTheMove(() -> ScoringSystem.ControlConstants.SOTMTargets.HUB));
+                this.back().SwerveBindings.withLookAtHub(trigger.and(() -> withDrive));
                 return this;
             }
 
@@ -516,7 +426,8 @@ public class InputBuilder
                 if (!IndexerBindings.isPresent || !IntakeBindings.isPresent || !KickerBindings.isPresent) {return this;}
                 this.back().IndexerBindings
                         .withRunIndexer(index, true)
-                        .back().AgitatorBindings.withRunAgitator(index, false);
+                        .back().AgitatorBindings.withRunAgitator(index, false)
+                        .back().IntakeBindings.withRunWithDelays(index, true, Seconds.of(1), Seconds.of(2));
                 return this;
             }
 
@@ -600,10 +511,19 @@ public class InputBuilder
             /**
              * The default duty cycle speed to run at.
              */
-            @Setter private double intakeSpeed = 0.65;
+            @Setter private double intakeSpeed = 0.5;
 
             private IntakeBindings() {
                 this.isPresent = subsystems.intake != null;
+            }
+
+            public IntakeBindings withRunWithDelays(Trigger run, boolean isIn, Time onTime, Time offTime) {
+                if (!isPresent) {return this;}
+                isMode.and(run).whileTrue(
+                        subsystems.intake.intake(intakeSpeed, isIn).withTimeout(onTime)
+                                .andThen(Commands.waitSeconds(offTime.in(Seconds))).repeatedly())
+                        .onFalse(subsystems.intake.stopIntake());
+                return this;
             }
 
             /**
@@ -1124,34 +1044,17 @@ public class InputBuilder
             }
 
             /**
-             * Looks at the hub with the drive and scores while moving. Doesn't account for distance.
+             * Looks at the hub with the drive. Doesn't account for distance.
              *
              * @param autoAimDriveThenFireWhile the button to map.
-             * @param readyToScore additional {@link Trigger} to tell when it's ok to fire.
              * @return this, for chaining.
              */
-            public SwerveBindings withLookAtHubThenFire(Trigger autoAimDriveThenFireWhile, Trigger readyToScore) {
+            public SwerveBindings withLookAtHub(Trigger autoAimDriveThenFireWhile) {
                 if (!isPresent || !FlyWheelBindings.isPresent) {return this;}
                 // Aim at the hub with the drive
                 this.withAimWhile(autoAimDriveThenFireWhile,
-                        new Pose2d(FieldConstants.Hub.topCenterPoint.toTranslation2d(), Rotation2d.kZero),
-                        new Trigger(() -> false),
-                        new Trigger(() -> false)); // Leave look ahead time alone.
-                // Score when aim is locked.
-                this.back().FlyWheelBindings
-                        .withSimShoot(isMode.and(readyToScore).and(swerveInputStream.aimLock(Degrees.of(1.5))));
+                        new Pose2d(FieldConstants.Hub.topCenterPoint.toTranslation2d(), Rotation2d.kZero)); // Leave look ahead time alone.
                 return this;
-            }
-
-            /**
-             * Looks at the hub with the drive and scores while moving. Doesn't account for distance.
-             *
-             * @param autoAimDriveThenFireWhile the button to map.
-             * @return this, for chaining.
-             */
-            public SwerveBindings withLookAtHubThenFire(Trigger autoAimDriveThenFireWhile) {
-                if (!isPresent) {return this;}
-                return withLookAtHubThenFire(autoAimDriveThenFireWhile, new Trigger(() -> true));
             }
 
             /**
@@ -1159,27 +1062,13 @@ public class InputBuilder
              *
              * @param aimWhile the button to map.
              * @param aimWhilePose the pose to aim at.
-             * @param lookAheadUp increase look ahead time.
-             * @param lookAheadDown decrease look ahead time.
              * @return this, for chaining.
              */
-            public SwerveBindings withAimWhile(Trigger aimWhile, Pose2d aimWhilePose, Trigger lookAheadUp, Trigger lookAheadDown) {
+            public SwerveBindings withAimWhile(Trigger aimWhile, Pose2d aimWhilePose) {
                 if (!isPresent) {return this;}
                 // Update Telemetry Continuously
                 isMode.and(DriverStation::isEnabled).whileTrue(Commands.run(() -> {
                     SmartDashboard.putBoolean("Telemetry/RobotTelemetry/Swerve/Drive is Aimed", swerveInputStream.aimLock(Degrees.of(1)).getAsBoolean());
-                }));
-                // Save an adjustable atomic time.
-                final int[] lookAheadTime = {0};
-                // Add 1s to lookAheadTime
-                isMode.and(lookAheadUp).onTrue(Commands.runOnce(() -> {
-                    lookAheadTime[0]++;
-                    swerveInputStream.aimLookahead(Seconds.of(lookAheadTime[0]));
-                }));
-                // Remove 1s from lookAheadTime
-                isMode.and(lookAheadDown).onTrue(Commands.runOnce(() -> {
-                    lookAheadTime[0]--;
-                    swerveInputStream.aimLookahead(Seconds.of(lookAheadTime[0]));
                 }));
                 // Aim while held
                 isMode.and(aimWhile).onTrue(Commands.runOnce(() -> {

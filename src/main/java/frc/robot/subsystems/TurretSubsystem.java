@@ -75,7 +75,7 @@ public class TurretSubsystem extends SubsystemBase
         public static final Angle                   PHYSICAL_STARTING_ANGLE     = Degrees.of(-80);
         public static final Angle                   IDLE_ANGLE          = SIM_STARTING_ANGLE;
 
-        public static final Angle                   ANGLE_TOLERANCE     = Degrees.of(5);
+        public static final Angle                   ANGLE_TOLERANCE     = Degrees.of(8);
 
     }
     /// The Normal Rev Vendor SparkMax Object.
@@ -159,7 +159,13 @@ public class TurretSubsystem extends SubsystemBase
                 });
     }
 
-
+    /**
+     * Finds the angle to target a position directly.
+     *
+     * @param swervePose
+     * @param position
+     * @return
+     */
     public Supplier<Angle> angleToPose(Pose2d swervePose, Translation2d position) {
         // Find the error between the turret and goal.
         Translation2d error = position.minus(swervePose.getTranslation());

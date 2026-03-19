@@ -67,9 +67,9 @@ public class AutonSelector {
                 // Then move to outpost while firing.
                 .andThen(subsystems.swerve().pathfindToPath("Left to Outpost Aiming"))
                 // While firing
-                .alongWith(scoring.shootOnTheMove())
+                .alongWith(scoring.shootOnTheMove(() -> ScoringSystem.ControlConstants.SOTMTargets.HUB))
                 // Continue firing
-                .andThen(scoring.shootOnTheMove());
+                .andThen(scoring.shootOnTheMove(() -> ScoringSystem.ControlConstants.SOTMTargets.HUB));
     }
     /**
      * Start in front of the left bump then transfer to collect.
@@ -89,8 +89,8 @@ public class AutonSelector {
                 // Then move to outpost while firing.
                 .andThen(subsystems.swerve().pathfindToPath("To Outpost Aiming"))
                 // While firing
-                .alongWith(scoring.shootOnTheMove())
+                .alongWith(scoring.shootOnTheMove(() -> ScoringSystem.ControlConstants.SOTMTargets.HUB))
                 // Continue firing
-                .andThen(scoring.shootOnTheMove());
+                .andThen(scoring.shootOnTheMove(() -> ScoringSystem.ControlConstants.SOTMTargets.HUB));
     }
 }
