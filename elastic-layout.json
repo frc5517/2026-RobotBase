@@ -9,7 +9,7 @@
         "containers": [
           {
             "title": "Hub Active",
-            "x": 896.0,
+            "x": 640.0,
             "y": 0.0,
             "width": 256.0,
             "height": 128.0,
@@ -26,7 +26,7 @@
           },
           {
             "title": "Shift Timer",
-            "x": 896.0,
+            "x": 384.0,
             "y": 128.0,
             "width": 256.0,
             "height": 128.0,
@@ -40,7 +40,7 @@
           },
           {
             "title": "Was Active First",
-            "x": 1152.0,
+            "x": 896.0,
             "y": 0.0,
             "width": 128.0,
             "height": 128.0,
@@ -57,7 +57,7 @@
           },
           {
             "title": "Match Timer",
-            "x": 640.0,
+            "x": 384.0,
             "y": 0.0,
             "width": 256.0,
             "height": 128.0,
@@ -71,9 +71,9 @@
           },
           {
             "title": "Alliance Trigger",
-            "x": 384.0,
-            "y": 128.0,
-            "width": 256.0,
+            "x": 640.0,
+            "y": 384.0,
+            "width": 128.0,
             "height": 128.0,
             "type": "Boolean Box",
             "properties": {
@@ -88,9 +88,9 @@
           },
           {
             "title": "Neutral Trigger",
-            "x": 384.0,
-            "y": 0.0,
-            "width": 256.0,
+            "x": 640.0,
+            "y": 256.0,
+            "width": 128.0,
             "height": 128.0,
             "type": "Boolean Box",
             "properties": {
@@ -108,7 +108,7 @@
             "x": 0.0,
             "y": 0.0,
             "width": 384.0,
-            "height": 384.0,
+            "height": 256.0,
             "type": "YAGSL Swerve Drive",
             "properties": {
               "topic": "/SmartDashboard/swerve",
@@ -120,9 +120,9 @@
           },
           {
             "title": "Scoring Trigger",
-            "x": 384.0,
-            "y": 256.0,
-            "width": 256.0,
+            "x": 640.0,
+            "y": 512.0,
+            "width": 128.0,
             "height": 128.0,
             "type": "Boolean Box",
             "properties": {
@@ -137,10 +137,10 @@
           },
           {
             "title": "Field",
-            "x": 1280.0,
+            "x": 1408.0,
             "y": 0.0,
-            "width": 640.0,
-            "height": 1024.0,
+            "width": 512.0,
+            "height": 896.0,
             "type": "Field",
             "properties": {
               "topic": "/SmartDashboard/Field",
@@ -159,7 +159,7 @@
           {
             "title": "photonvision_Port_1182_Output_MJPEG_Server",
             "x": 0.0,
-            "y": 384.0,
+            "y": 256.0,
             "width": 640.0,
             "height": 512.0,
             "type": "Camera Stream",
@@ -171,8 +171,8 @@
           },
           {
             "title": "photonvision_Port_1184_Output_MJPEG_Server",
-            "x": 640.0,
-            "y": 384.0,
+            "x": 768.0,
+            "y": 256.0,
             "width": 640.0,
             "height": 512.0,
             "type": "Camera Stream",
