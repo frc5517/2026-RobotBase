@@ -117,7 +117,7 @@ public class TurretSubsystem extends SubsystemBase {
     private final Pivot turret = new Pivot(config);
 
     /// A trigger used to stop the motor when it is trying too hard.
-    private final Trigger jammedTrigger = currentSensorTrigger(Amps.of(30), Seconds.of(0.25));
+    private final Trigger jammedTrigger = currentSensorTrigger(Amps.of(32), Seconds.of(0.25));
 
     public TurretSubsystem() {
         /// A safety to automatically stop the motor if it starts trying too hard.
@@ -150,10 +150,11 @@ public class TurretSubsystem extends SubsystemBase {
      */
     public Command home() {
         // Disable closed loop so we don't hit soft limits, then move backwards at a low power.
-        return Commands.startRun(() -> motor.setEncoderPosition(HARD_LIMIT_FORWARD),
-                        () -> motor.setVoltage(Volts.of(-2)))
+        return Commands.startRun(() -> motor.setEncoderPosition(HARD_LIMIT_FORWARD.times(2)),
+                        () -> motor.setVoltage(Volts.of(-3)))
                 // Until we hit something, the something should be our hard stop, but it shouldn't hurt to get your hand stuck.
-                .until(currentSensorTrigger(Amps.of(25), Seconds.of(0.1)))
+                .until(currentSensorTrigger(Amps.of(30), Seconds.of(0.1)))
+                .andThen(stopTurret())
                 .finallyDo(() -> { // Then we set our new zero point and restart the closed loop.
                     motor.setEncoderPosition(ControlConstants.PHYSICAL_STARTING_ANGLE);
                 });

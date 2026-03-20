@@ -9,7 +9,7 @@
         "containers": [
           {
             "title": "Hub Active",
-            "x": 1152.0,
+            "x": 896.0,
             "y": 0.0,
             "width": 256.0,
             "height": 128.0,
@@ -26,7 +26,7 @@
           },
           {
             "title": "Shift Timer",
-            "x": 1152.0,
+            "x": 896.0,
             "y": 128.0,
             "width": 256.0,
             "height": 128.0,
@@ -40,7 +40,7 @@
           },
           {
             "title": "Was Active First",
-            "x": 1408.0,
+            "x": 1152.0,
             "y": 0.0,
             "width": 128.0,
             "height": 128.0,
@@ -57,7 +57,7 @@
           },
           {
             "title": "Match Timer",
-            "x": 896.0,
+            "x": 640.0,
             "y": 0.0,
             "width": 256.0,
             "height": 128.0,
@@ -71,8 +71,8 @@
           },
           {
             "title": "Alliance Trigger",
-            "x": 1280.0,
-            "y": 512.0,
+            "x": 384.0,
+            "y": 128.0,
             "width": 256.0,
             "height": 128.0,
             "type": "Boolean Box",
@@ -88,8 +88,8 @@
           },
           {
             "title": "Neutral Trigger",
-            "x": 1280.0,
-            "y": 384.0,
+            "x": 384.0,
+            "y": 0.0,
             "width": 256.0,
             "height": 128.0,
             "type": "Boolean Box",
@@ -119,35 +119,9 @@
             }
           },
           {
-            "title": "Left Camera-processed",
-            "x": 0.0,
-            "y": 384.0,
-            "width": 640.0,
-            "height": 512.0,
-            "type": "Camera Stream",
-            "properties": {
-              "topic": "/CameraPublisher/Left Camera-processed",
-              "period": 0.06,
-              "rotation_turns": 0
-            }
-          },
-          {
-            "title": "Right Camera-processed",
-            "x": 640.0,
-            "y": 384.0,
-            "width": 640.0,
-            "height": 512.0,
-            "type": "Camera Stream",
-            "properties": {
-              "topic": "/CameraPublisher/Right Camera-processed",
-              "period": 0.06,
-              "rotation_turns": 0
-            }
-          },
-          {
             "title": "Scoring Trigger",
-            "x": 1280.0,
-            "y": 640.0,
+            "x": 384.0,
+            "y": 256.0,
             "width": 256.0,
             "height": 128.0,
             "type": "Boolean Box",
@@ -163,10 +137,10 @@
           },
           {
             "title": "Field",
-            "x": 1536.0,
+            "x": 1280.0,
             "y": 0.0,
-            "width": 512.0,
-            "height": 1280.0,
+            "width": 640.0,
+            "height": 1024.0,
             "type": "Field",
             "properties": {
               "topic": "/SmartDashboard/Field",
@@ -181,6 +155,32 @@
               "trajectory_color": 4294967295,
               "show_robot_outside_widget": true
             }
+          },
+          {
+            "title": "photonvision_Port_1182_Output_MJPEG_Server",
+            "x": 0.0,
+            "y": 384.0,
+            "width": 640.0,
+            "height": 512.0,
+            "type": "Camera Stream",
+            "properties": {
+              "topic": "/CameraPublisher/photonvision_Port_1182_Output_MJPEG_Server",
+              "period": 0.06,
+              "rotation_turns": 0
+            }
+          },
+          {
+            "title": "photonvision_Port_1184_Output_MJPEG_Server",
+            "x": 640.0,
+            "y": 384.0,
+            "width": 640.0,
+            "height": 512.0,
+            "type": "Camera Stream",
+            "properties": {
+              "topic": "/CameraPublisher/photonvision_Port_1184_Output_MJPEG_Server",
+              "period": 0.06,
+              "rotation_turns": 0
+            }
           }
         ]
       }
@@ -189,7 +189,55 @@
       "name": "Autonomous",
       "grid_layout": {
         "layouts": [],
-        "containers": []
+        "containers": [
+          {
+            "title": "Input Selector",
+            "x": 0.0,
+            "y": 0.0,
+            "width": 512.0,
+            "height": 256.0,
+            "type": "ComboBox Chooser",
+            "properties": {
+              "topic": "/SmartDashboard/Telemetry/Input Selector",
+              "period": 0.06,
+              "sort_options": false
+            }
+          },
+          {
+            "title": "AutonSelector",
+            "x": 0.0,
+            "y": 256.0,
+            "width": 512.0,
+            "height": 256.0,
+            "type": "ComboBox Chooser",
+            "properties": {
+              "topic": "/SmartDashboard/AutonSelector",
+              "period": 0.06,
+              "sort_options": false
+            }
+          },
+          {
+            "title": "Field",
+            "x": 512.0,
+            "y": 0.0,
+            "width": 1408.0,
+            "height": 640.0,
+            "type": "Field",
+            "properties": {
+              "topic": "/SmartDashboard/Field",
+              "period": 0.06,
+              "field_game": "Rebuilt",
+              "robot_width": 0.85,
+              "robot_length": 0.85,
+              "show_other_objects": true,
+              "show_trajectories": true,
+              "field_rotation": 0.0,
+              "robot_color": 4294198070,
+              "trajectory_color": 4294967295,
+              "show_robot_outside_widget": true
+            }
+          }
+        ]
       }
     }
   ]
