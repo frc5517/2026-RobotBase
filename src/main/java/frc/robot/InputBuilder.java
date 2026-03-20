@@ -103,9 +103,14 @@ public class InputBuilder {
         final InputStream singleStream = new InputStream()
                 .StartingMethods.defaultXboxDrive(SINGLE_XBOX.isMode, driverXbox)
                 .SmartBindings
-                .withToggleAutoScoreHub(driverXbox.b(), true, true)
-                .withToggleAutoScoreHub(driverXbox.y(), false, false)
-                .withToggleAutoHoardFuel(driverXbox.x(), true)
+                .withToggleAutoScoreHub(    driverXbox.leftStick(), true, true)
+                .withToggleAutoScoreHub(    driverXbox.rightStick(), false, false)
+                .withToggleAutoHoardFuel(   driverXbox.x(), true)
+                .withFuelControl(           driverXbox.leftTrigger(),
+                                            driverXbox.a(),
+                                            driverXbox.rightTrigger())
+                .withBasicAim(              driverXbox.y())
+                .withHomeAll(               driverXbox.back())
                 .back()
                 .SwerveBindings
                 .setSlowTranslation(0.5)
@@ -114,17 +119,14 @@ public class InputBuilder {
                 .setNormalRotation(1)
                 .setBoostTranslation(1)
                 .setBoostRotation(1)
-                .withSlowDrive(driverXbox.leftBumper())
-                .withBoostDrive(driverXbox.rightBumper())
-                .withResetSimOdometry(driverXbox.start())
-                .withToggleCentricity(driverXbox.back(), true)
-                .withToggleZones(CustomTriggers.enteringBumpZone.getTrigger())
-                .withToggleZones(driverXbox.a())
-                .withLookAtHub(driverXbox.y()) // Double SOTM aiming
+                .withSlowDrive(             driverXbox.leftBumper())
+                .withBoostDrive(            driverXbox.rightBumper())
+                .withToggleCentricity(      driverXbox.start(), true)
+                .withToggleZones(           CustomTriggers.enteringBumpZone.getTrigger())
+                .withToggleZones(           driverXbox.b())
                 .back().IntakeBindings
-                .withRunIntake(driverXbox.leftTrigger(), true)
+                .withRunIntake(             driverXbox.leftTrigger(), true)
                 .back().MiscBindings
-                .resetField(driverXbox.start())
                 .back();
     }
 
@@ -291,6 +293,14 @@ public class InputBuilder {
          */
         public class SmartBindings {
 
+            public SmartBindings withBasicAim(Trigger basicAim) {
+                this.back().TurretBindings.withSetAngle(basicAim, Degrees.of(0))
+                        .back().HoodBindings.withSetAngle(basicAim, Degrees.of(15))
+                        .back().FlyWheelBindings.withSetVelocity(basicAim, RotationsPerSecond.of(60))
+                        .back().SwerveBindings.withLookAtHub(basicAim);
+                return this;
+            }
+
             public SmartBindings withHomeAll(Trigger home) {
                 this.back().HoodBindings
                         .withAutoHome(home)
@@ -302,7 +312,7 @@ public class InputBuilder {
             public SmartBindings withFuelControl(Trigger intake, Trigger index, Trigger spinUp) {
                 this.withBlockingIntakeIntoHopper(index.negate().and(intake)); // If not indexing, intake to hopper.
                 this.withIndexIntoFlyWheel(intake.negate()
-                        //.and(subsystems.flywheel.isNear(() -> flyWheelSpeed))
+                        .and(subsystems.flywheel.isNear(ScoringSystem.SOTMLatestGoals::getFlyWheelGoal))
                         .and(index)); // If not intaking, index into flywheel.
                 this.back().KickerBindings.withRunKicker(spinUp, true);
                 return this;
