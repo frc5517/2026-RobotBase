@@ -41,7 +41,7 @@ public class RobotContainer {
             // Enable Simulated Scoring Data
             SimulatedArena.getInstance().enableBreakdownPublishing();
 
-            DriverStation.Alliance opponentAlliance= DriverStation.Alliance.Blue;
+            DriverStation.Alliance opponentAlliance = DriverStation.Alliance.Blue;
             if (DriverStation.getAlliance().isPresent()) {
                 if (DriverStation.getAlliance().get().equals(DriverStation.Alliance.Blue)) {
                     opponentAlliance = DriverStation.Alliance.Red;
@@ -57,6 +57,6 @@ public class RobotContainer {
     }
 
     public Command getAutonomousCommand() {
-    return autonSelector.getSelected();
-  }
+        return autonSelector.getSelected();
+    }
 }

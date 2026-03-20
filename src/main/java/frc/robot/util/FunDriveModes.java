@@ -9,7 +9,7 @@ import edu.wpi.first.units.measure.LinearVelocity;
 import java.util.function.DoubleSupplier;
 
 import static edu.wpi.first.units.Units.*;
-import static edu.wpi.first.wpilibj.drive.DifferentialDrive.*;
+import static edu.wpi.first.wpilibj.drive.DifferentialDrive.WheelSpeeds;
 
 public class FunDriveModes {
     /**
@@ -19,7 +19,7 @@ public class FunDriveModes {
      * <pre><code>runStates(new differentialDrive(tankDriveIK(leftThrottle, rightThrottle, bool)));</code></pre>
      *
      * @param wheelSpeeds the wheelSpeeds to transform.
-     * @param maxSpeed max {@link LinearVelocity} to multiply wheel speeds by. Wheel speeds are -1 to 1, states are velocity.
+     * @param maxSpeed    max {@link LinearVelocity} to multiply wheel speeds by. Wheel speeds are -1 to 1, states are velocity.
      * @return the states to run.
      */
     public static SwerveModuleState[] differentialDrive(WheelSpeeds wheelSpeeds, LinearVelocity maxSpeed) {
@@ -51,8 +51,8 @@ public class FunDriveModes {
      *                  .beforeStarting(controller.reset());
      * </code></pre>
      *
-     * @param type basic FWD and RWD options.
-     * @param speed basic throttle speeds.
+     * @param type     basic FWD and RWD options.
+     * @param speed    basic throttle speeds.
      * @param rotation rotation input.
      * @param maxSpeed max {@link LinearVelocity} to abide by.
      * @return the states to run.
@@ -107,20 +107,19 @@ public class FunDriveModes {
         /**
          * A speed controller that imitates the acceleration and braking of a real car.
          *
-         * @param gas the gas pedal inputs [-1 to 1], uses negative instead of a reverse gear for simplicity.
-         *            Can be mapped to two separate triggers for a forward and reverse.
-         * @param brake the brake pedal inputs [0 to 1]
-         * @param maxAccel the max acceleration of the car.
-         * @param maxDeccel the max deceleration of the car. Braking force.
-         * @param maxSpeed the max velocity of the drive train.
+         * @param gas           the gas pedal inputs [-1 to 1], uses negative instead of a reverse gear for simplicity.
+         *                      Can be mapped to two separate triggers for a forward and reverse.
+         * @param brake         the brake pedal inputs [0 to 1]
+         * @param maxAccel      the max acceleration of the car.
+         * @param maxDeccel     the max deceleration of the car. Braking force.
+         * @param maxSpeed      the max velocity of the drive train.
          * @param decelFriction the engine braking friction when not accelerating or braking.
-         * @param deadzone the speed threshold (m/s) below which the robot stops completely.
+         * @param deadzone      the speed threshold (m/s) below which the robot stops completely.
          */
         public CarSpeedsController(DoubleSupplier gas, DoubleSupplier brake,
                                    LinearAcceleration maxAccel, LinearAcceleration maxDeccel,
                                    LinearVelocity maxSpeed, LinearAcceleration decelFriction,
-                                   double deadzone)
-        {
+                                   double deadzone) {
             this.gas = gas;
             this.brake = brake;
             this.MAX_ACCELERATION = maxAccel;

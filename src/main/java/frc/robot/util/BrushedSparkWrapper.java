@@ -8,7 +8,9 @@ import edu.wpi.first.math.system.plant.LinearSystemId;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.measure.Current;
 import edu.wpi.first.wpilibj.RobotBase;
-import edu.wpi.first.wpilibj.simulation.*;
+import edu.wpi.first.wpilibj.simulation.BatterySim;
+import edu.wpi.first.wpilibj.simulation.DCMotorSim;
+import edu.wpi.first.wpilibj.simulation.RoboRioSim;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
@@ -48,7 +50,7 @@ public class BrushedSparkWrapper {
                     dcMotor, 0.01, 0.01);
             // Rev SparkMaxSim
             this.simMotor = new SparkMaxSim(motor, dcMotor);
-        } else  {
+        } else {
             // Else null
             this.physSim = null;
             this.simMotor = null;

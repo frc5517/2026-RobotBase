@@ -11,7 +11,6 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
-import frc.robot.InputBuilder;
 import frc.robot.Telemetry;
 import frc.robot.subsystems.SwerveSubsystem;
 import frc.robot.util.borrowed.math.AllianceFlipUtil;
@@ -26,8 +25,7 @@ import java.util.function.Supplier;
 /**
  * Zone Helper class to handle flipping n such.
  */
-public class ZoneTrigger
-{
+public class ZoneTrigger {
     /**
      * The list of rectangle zones.
      */
@@ -39,34 +37,40 @@ public class ZoneTrigger
     /**
      * The pose supplier used to check whether the pose is inside the zone.
      */
-    @Getter @Setter
+    @Getter
+    @Setter
     private Supplier<Pose2d> poseSupplier;
     /**
      * A trigger that reads whether the robot is within the zone.
      * Robot pose is supplied from the SwerveState.
      */
-    @Getter @Setter
+    @Getter
+    @Setter
     private Trigger trigger;
     /**
      * The zone publisher. Advantage Scope trajectory shows a zone outline on the field.
      */
-    @Getter @Setter
+    @Getter
+    @Setter
     private StructArrayPublisher<Translation2d> zonePublisher;
     /**
      * The zone trigger, telling when the robot is in the zone.
      */
-    @Getter @Setter
+    @Getter
+    @Setter
     private BooleanPublisher triggerPublisher;
     /**
      * The network table telling where to publish the zone.
      */
-    @Getter @Setter
+    @Getter
+    @Setter
     private NetworkTable zoneTable;
     /**
      * The network table telling where to publish the zone.
      * Typically defaults to a subtable of "Triggers" where the zone is published.
      */
-    @Getter @Setter
+    @Getter
+    @Setter
     private NetworkTable triggerTable;
 
     /**
@@ -179,8 +183,7 @@ public class ZoneTrigger
      * @param table pointing to where things should be published.
      * @return this, for chaining.
      */
-    public ZoneTrigger setBothTables(NetworkTable table)
-    {
+    public ZoneTrigger setBothTables(NetworkTable table) {
         // Set the zone table with the given path.
         this.setZoneTable(table);
         // Set the trigger table in a "Triggers" sub table.
@@ -196,8 +199,7 @@ public class ZoneTrigger
      * @param path pointing to where things should be published.
      * @return this, for chaining.
      */
-    public ZoneTrigger setBothTables(String path)
-    {
+    public ZoneTrigger setBothTables(String path) {
         // Just calls setBothTables(NetworkTable) using the given path.
         return this.setBothTables(NetworkTableInstance.getDefault().getTable(path));
     }

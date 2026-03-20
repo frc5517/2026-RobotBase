@@ -33,58 +33,65 @@ public class IntakeSubsystem extends SubsystemBase {
     /// Hardware Constants for the Intake Mechanism.
     public static class HardwareConstants {
         /// Motor Constants
-        public static final int                                 MOTOR_ID            = 11; // Spark Max CAN ID
-        public static final boolean                             MOTOR_INVERTED      = false; // Inverts control direction.
-        public static final MechanismGearing                    GEAR_RATIO          = new MechanismGearing(GearBox.fromReductionStages(3, 4)); // Intake Gear Ratio
+        public static final int MOTOR_ID = 11; // Spark Max CAN ID
+        public static final boolean MOTOR_INVERTED = false; // Inverts control direction.
+        public static final MechanismGearing GEAR_RATIO = new MechanismGearing(GearBox.fromReductionStages(3, 4)); // Intake Gear Ratio
         /// Motor Tuning Values
-        public static final PIDController PID_CONTROLLER              = new PIDController( // Exponential Motion Profiling
+        public static final PIDController PID_CONTROLLER = new PIDController( // Exponential Motion Profiling
                 20, 0, 0.01); // PID - Proportional, Integral, Derivative.
+
         /// Exponential Motion Profiling Constraints.
         public static final class Profiling {
-            public static final Voltage                         MAX_CONTROL_VOLTAGE         = Volts.of(12); // Max Control Voltage
-            public static final AngularVelocity                 MAX_ANGULAR_VELOCITY        = DegreesPerSecond.of(180); // Max Angular Velocity
-            public static final AngularAcceleration             MAX_ANGULAR_ACCELERATION    = DegreesPerSecondPerSecond.of(360); // Max Angular Acceleration
+            public static final Voltage MAX_CONTROL_VOLTAGE = Volts.of(12); // Max Control Voltage
+            public static final AngularVelocity MAX_ANGULAR_VELOCITY = DegreesPerSecond.of(180); // Max Angular Velocity
+            public static final AngularAcceleration MAX_ANGULAR_ACCELERATION = DegreesPerSecondPerSecond.of(360); // Max Angular Acceleration
         }
-        public static final Time                                RAMP_RATE           = Seconds.of(0.25); // Time it takes to reach max speed from 0.
-        public static final SimpleMotorFeedforward              FEED_FORWARD        = new SimpleMotorFeedforward(0, 0, 0); // Feed Forwards, likely to be left empty.
-        public static final Current                             CURRENT_LIMIT       = Amp.of(40); // Limits the current, this is a simple intake. We want the limit low so we don't break things in the case of a jam.
+
+        public static final Time RAMP_RATE = Seconds.of(0.25); // Time it takes to reach max speed from 0.
+        public static final SimpleMotorFeedforward FEED_FORWARD = new SimpleMotorFeedforward(0, 0, 0); // Feed Forwards, likely to be left empty.
+        public static final Current CURRENT_LIMIT = Amp.of(40); // Limits the current, this is a simple intake. We want the limit low so we don't break things in the case of a jam.
         /// Intake Constants
-        public static final int                                 MAX_FUEL_CAPACITY   = 50;
-        public static final Distance                            INDEXER_DIAMETER    = Inches.of(3); // Diameter of the wheel, belt, whatever is spinning on the intake.
-        public static final AngularVelocity                     INDEXER_MAX_SPEED   = RPM.of(200); // Max RPM soft limits
+        public static final int MAX_FUEL_CAPACITY = 50;
+        public static final Distance INDEXER_DIAMETER = Inches.of(3); // Diameter of the wheel, belt, whatever is spinning on the intake.
+        public static final AngularVelocity INDEXER_MAX_SPEED = RPM.of(200); // Max RPM soft limits
     }
+
     /// Control Constants for the Intake Mechanism.
     public static class ControlConstants {
-        public static final boolean                             INFINITE_SIM_INTAKE = true; // Makes it so you can intake more than the max capacity.
-        public static final AngularVelocity                     VELOCITY_TOLERANCE  = DegreesPerSecond.of(1); // How accurate the velocity should be.
-        public static final AngularVelocity                     TARGET_VELOCITY     = DegreesPerSecond.of(60); // How fast the flywheel should spin.
+        public static final boolean INFINITE_SIM_INTAKE = true; // Makes it so you can intake more than the max capacity.
+        public static final AngularVelocity VELOCITY_TOLERANCE = DegreesPerSecond.of(1); // How accurate the velocity should be.
+        public static final AngularVelocity TARGET_VELOCITY = DegreesPerSecond.of(60); // How fast the flywheel should spin.
     }
-    private final SparkMax                                      intakeMotor    = new SparkMax(MOTOR_ID, MotorType.kBrushless); /// The Normal Rev Vendor SparkMax Object.
-    private final SmartMotorControllerConfig                    motorConfig     = new SmartMotorControllerConfig(this) /// The Smart Motor Controller Configuration.
-                    .withExponentialProfile(Profiling.MAX_CONTROL_VOLTAGE, Profiling.MAX_ANGULAR_VELOCITY, Profiling.MAX_ANGULAR_ACCELERATION)
-                    .withClosedLoopController(PID_CONTROLLER)
-                    .withGearing(GEAR_RATIO)
-                    .withIdleMode(MotorMode.BRAKE)
-                    .withTelemetry("Intake Motor", Telemetry.telemetryVerbosity.yamsVerbosity)
-                    .withStatorCurrentLimit(CURRENT_LIMIT)
-                    .withMotorInverted(MOTOR_INVERTED)
-                    .withClosedLoopRampRate(RAMP_RATE)
-                    .withOpenLoopRampRate(RAMP_RATE)
-                    //.withFeedforward(FEED_FORWARD)
-                    .withSimFeedforward(FEED_FORWARD)
-                    .withControlMode(ControlMode.CLOSED_LOOP);
-    private final SmartMotorController                          motor           = new SparkWrapper(intakeMotor, DCMotor.getNEO(1), motorConfig); /// The new Smart Motor Controller
-    private final FlyWheelConfig                                intakeConfig   = new FlyWheelConfig(motor) /// The FlyWheel config for the Intake.
-                    .withDiameter(INDEXER_DIAMETER)
-                    .withMass(Pounds.of(1)) // Intake Doesn't need to specify weight.
-                    .withTelemetry(Telemetry.yamsMechPath + "Intake", Telemetry.telemetryVerbosity.yamsVerbosity)
-                    .withSoftLimit(INDEXER_MAX_SPEED.unaryMinus(), INDEXER_MAX_SPEED)
-                    .withSpeedometerSimulation(INDEXER_MAX_SPEED);
+
+    private final SparkMax intakeMotor = new SparkMax(MOTOR_ID, MotorType.kBrushless);
+    /// The Normal Rev Vendor SparkMax Object.
+    private final SmartMotorControllerConfig motorConfig = new SmartMotorControllerConfig(this) /// The Smart Motor Controller Configuration.
+            .withExponentialProfile(Profiling.MAX_CONTROL_VOLTAGE, Profiling.MAX_ANGULAR_VELOCITY, Profiling.MAX_ANGULAR_ACCELERATION)
+            .withClosedLoopController(PID_CONTROLLER)
+            .withGearing(GEAR_RATIO)
+            .withIdleMode(MotorMode.BRAKE)
+            .withTelemetry("Intake Motor", Telemetry.telemetryVerbosity.yamsVerbosity)
+            .withStatorCurrentLimit(CURRENT_LIMIT)
+            .withMotorInverted(MOTOR_INVERTED)
+            .withClosedLoopRampRate(RAMP_RATE)
+            .withOpenLoopRampRate(RAMP_RATE)
+            //.withFeedforward(FEED_FORWARD)
+            .withSimFeedforward(FEED_FORWARD)
+            .withControlMode(ControlMode.CLOSED_LOOP);
+    private final SmartMotorController motor = new SparkWrapper(intakeMotor, DCMotor.getNEO(1), motorConfig);
+    /// The new Smart Motor Controller
+    private final FlyWheelConfig intakeConfig = new FlyWheelConfig(motor) /// The FlyWheel config for the Intake.
+            .withDiameter(INDEXER_DIAMETER)
+            .withMass(Pounds.of(1)) // Intake Doesn't need to specify weight.
+            .withTelemetry(Telemetry.yamsMechPath + "Intake", Telemetry.telemetryVerbosity.yamsVerbosity)
+            .withSoftLimit(INDEXER_MAX_SPEED.unaryMinus(), INDEXER_MAX_SPEED)
+            .withSpeedometerSimulation(INDEXER_MAX_SPEED);
     @Getter
-    private final FlyWheel                                      intake          = new FlyWheel(intakeConfig); /// The final FlyWheel Mechanism to use as the smart Intake.
+    private final FlyWheel intake = new FlyWheel(intakeConfig);
+    /// The final FlyWheel Mechanism to use as the smart Intake.
 
     @Getter
-    private final IntakeSimulation                              intakeSim;
+    private final IntakeSimulation intakeSim;
 
     /// A trigger used to stop the motor when it is trying too hard.
     private final Trigger jammedTrigger = currentSensorTrigger(Amps.of(CURRENT_LIMIT.in(Amps)), Seconds.of(0.5));
@@ -119,8 +126,7 @@ public class IntakeSubsystem extends SubsystemBase {
      * it can be used to home the absolute position.
      *
      * @param triggerCurrent how high the current draw should be before triggering.
-     * @param debounceTime how long the current should be above the threshold before triggering.
-     *
+     * @param debounceTime   how long the current should be above the threshold before triggering.
      * @return a new {@link Trigger} to sense current.
      */
     public Trigger currentSensorTrigger(Current triggerCurrent, Time debounceTime) {
@@ -136,7 +142,7 @@ public class IntakeSubsystem extends SubsystemBase {
      * Runs the intake at the given speed.
      *
      * @param intakeSpeed the DutyCycle speed to run at.
-     * @param isIn whether to spin in or out.
+     * @param isIn        whether to spin in or out.
      * @return a command.
      */
     public Command runIntake(double intakeSpeed, boolean isIn) {
@@ -151,7 +157,7 @@ public class IntakeSubsystem extends SubsystemBase {
     public Command stopIntake() {
         return intake.set(0.0);
     }
-    
+
     public Command runSimIntake() {
         return Commands.run(intakeSim::startIntake).alongWith(Commands.run(() -> intakeSim.setGamePiecesCount(MAX_FUEL_CAPACITY - 10))).finallyDo(intakeSim::stopIntake);
     }
@@ -161,7 +167,7 @@ public class IntakeSubsystem extends SubsystemBase {
      * If in sim runs SimIntake
      *
      * @param intakeSpeed the DutyCycle speed to run at.
-     * @param isIn whether to spin in or out.
+     * @param isIn        whether to spin in or out.
      * @return a command.
      */
     public Command intake(double intakeSpeed, boolean isIn) {

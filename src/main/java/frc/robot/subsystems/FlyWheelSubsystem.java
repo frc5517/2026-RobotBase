@@ -1,8 +1,6 @@
 package frc.robot.subsystems;
 
 import com.ctre.phoenix6.hardware.TalonFX;
-import com.revrobotics.spark.SparkLowLevel.MotorType;
-import com.revrobotics.spark.SparkMax;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.geometry.Pose3d;
@@ -22,59 +20,59 @@ import lombok.Getter;
 import lombok.Setter;
 import swervelib.simulation.ironmaple.simulation.SimulatedArena;
 import swervelib.simulation.ironmaple.simulation.seasonspecific.rebuilt2026.RebuiltFuelOnFly;
-import yams.gearing.GearBox;
 import yams.gearing.MechanismGearing;
-import yams.gearing.Sprocket;
 import yams.mechanisms.config.FlyWheelConfig;
 import yams.mechanisms.velocity.FlyWheel;
 import yams.motorcontrollers.SmartMotorController;
 import yams.motorcontrollers.SmartMotorControllerConfig;
 import yams.motorcontrollers.SmartMotorControllerConfig.ControlMode;
 import yams.motorcontrollers.SmartMotorControllerConfig.MotorMode;
-import yams.motorcontrollers.local.SparkWrapper;
 import yams.motorcontrollers.remote.TalonFXWrapper;
 
-import java.util.Optional;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
 import static edu.wpi.first.units.Units.*;
+import static frc.robot.subsystems.FlyWheelSubsystem.ControlConstants.VELOCITY_TOLERANCE;
 import static frc.robot.subsystems.FlyWheelSubsystem.HardwareConstants.*;
-import static frc.robot.subsystems.FlyWheelSubsystem.ControlConstants.*;
 import static frc.robot.subsystems.FlyWheelSubsystem.HardwareConstants.Profiling.MAX_ANGULAR_VELOCITY;
 
-public class FlyWheelSubsystem extends SubsystemBase
-{
+public class FlyWheelSubsystem extends SubsystemBase {
     /// Hardware Constants for the FlyWheel Mechanism.
     public static class HardwareConstants {
         /// Motor Constants
-        public static final int                         MOTOR_ID                    = 15; // Spark Max CAN ID
-        public static final boolean                     MOTOR_INVERTED              = true; // Inverts control direction.
-        public static final MechanismGearing            GEAR_RATIO                  = new MechanismGearing(1); // FlyWheel Gear Ratio
+        public static final int MOTOR_ID = 15; // Spark Max CAN ID
+        public static final boolean MOTOR_INVERTED = true; // Inverts control direction.
+        public static final MechanismGearing GEAR_RATIO = new MechanismGearing(1); // FlyWheel Gear Ratio
 
         /// Motor Tuning Values
-        public static final PIDController               PID_CONTROLLER              = new PIDController( // Exponential Motion Profiling
-                                                                                    0.1, 0.01, 0.0); // PID - Proportional, Integral, Derivative.
+        public static final PIDController PID_CONTROLLER = new PIDController( // Exponential Motion Profiling
+                0.1, 0.01, 0.0); // PID - Proportional, Integral, Derivative.
+
         /// Trapezoidal Motion Profiling Constraints.
         public static final class Profiling {
-            public static final AngularVelocity         MAX_ANGULAR_VELOCITY        = RotationsPerSecond.of(200); // Max Angular Velocity
-            public static final AngularAcceleration     MAX_ANGULAR_ACCELERATION    = RotationsPerSecondPerSecond.of(1500); // Max Angular Acceleration
+            public static final AngularVelocity MAX_ANGULAR_VELOCITY = RotationsPerSecond.of(200); // Max Angular Velocity
+            public static final AngularAcceleration MAX_ANGULAR_ACCELERATION = RotationsPerSecondPerSecond.of(1500); // Max Angular Acceleration
         }
-        public static final Time                        RAMP_RATE                   = Seconds.of(0.0); // Time it takes to reach max speed from 0.
-        public static final SimpleMotorFeedforward      FEED_FORWARD                = new SimpleMotorFeedforward(0, .12, 0); // Feed Forwards.
-        public static final Current                     CURRENT_LIMIT               = Amp.of(65); // Current limit, Higher for faster control.
+
+        public static final Time RAMP_RATE = Seconds.of(0.0); // Time it takes to reach max speed from 0.
+        public static final SimpleMotorFeedforward FEED_FORWARD = new SimpleMotorFeedforward(0, .12, 0); // Feed Forwards.
+        public static final Current CURRENT_LIMIT = Amp.of(65); // Current limit, Higher for faster control.
         /// FlyWheel Constants
-        public static final Distance                    FLYWHEEL_DIAMETER           = Inches.of(4); // Diameter of the wheel, belt, whatever is spinning on the flywheel.
-        public static final Mass                        FLYWHEEL_MASS               = Pounds.of(1); // Weight of the flywheel, just what gets spun.
-        public static final double                      FLYWHEEL_EFFICIENCY         = .35; // Multiplicity factor used to determine how much speed was transferred,
+        public static final Distance FLYWHEEL_DIAMETER = Inches.of(4); // Diameter of the wheel, belt, whatever is spinning on the flywheel.
+        public static final Mass FLYWHEEL_MASS = Pounds.of(1); // Weight of the flywheel, just what gets spun.
+        public static final double FLYWHEEL_EFFICIENCY = .325; // Multiplicity factor used to determine how much speed was transferred,
     }
+
     /// Control Constants for the FlyWheel Mechanism
     public static class ControlConstants {
-        public static final AngularVelocity             VELOCITY_TOLERANCE          = RotationsPerSecond.of(2); // How accurate the velocity should be.
+        public static final AngularVelocity VELOCITY_TOLERANCE = RotationsPerSecond.of(2); // How accurate the velocity should be.
     }
+
     /// Initialize the FlyWheel
-    private final TalonFX                              indexerMotor                = new TalonFX(HardwareConstants.MOTOR_ID); /// The Normal Rev Vendor SparkMax Object.
-    private final SmartMotorControllerConfig            motorConfig                 = new SmartMotorControllerConfig(this) /// The Smart Motor Controller Configuration.
+    private final TalonFX indexerMotor = new TalonFX(HardwareConstants.MOTOR_ID);
+    /// The Normal Rev Vendor SparkMax Object.
+    private final SmartMotorControllerConfig motorConfig = new SmartMotorControllerConfig(this) /// The Smart Motor Controller Configuration.
             .withTrapezoidalProfile(MAX_ANGULAR_VELOCITY, Profiling.MAX_ANGULAR_ACCELERATION)
             .withVelocityTrapezoidalProfile(true)
             .withClosedLoopController(PID_CONTROLLER)
@@ -88,17 +86,20 @@ public class FlyWheelSubsystem extends SubsystemBase
             .withFeedforward(HardwareConstants.FEED_FORWARD)
             .withSimFeedforward(HardwareConstants.FEED_FORWARD)
             .withControlMode(ControlMode.CLOSED_LOOP);
-    private final SmartMotorController                  motor                       = new TalonFXWrapper(indexerMotor, DCMotor.getNEO(1), motorConfig); /// The new Smart Motor Controller
-    private final FlyWheelConfig                        flyWheelConfig              = new FlyWheelConfig(motor) /// The FlyWheel config.
+    private final SmartMotorController motor = new TalonFXWrapper(indexerMotor, DCMotor.getNEO(1), motorConfig);
+    /// The new Smart Motor Controller
+    private final FlyWheelConfig flyWheelConfig = new FlyWheelConfig(motor) /// The FlyWheel config.
             .withDiameter(HardwareConstants.FLYWHEEL_DIAMETER)
             .withMass(HardwareConstants.FLYWHEEL_MASS)
             .withTelemetry("FlyWheel", Telemetry.telemetryVerbosity.yamsVerbosity)
             .withSoftLimit(MAX_ANGULAR_VELOCITY.unaryMinus(), MAX_ANGULAR_VELOCITY)
             .withSpeedometerSimulation(MAX_ANGULAR_VELOCITY);
     @Getter
-    private final FlyWheel                              flyWheel                    = new FlyWheel(flyWheelConfig); /// The final FlyWheel Mechanism.
+    private final FlyWheel flyWheel = new FlyWheel(flyWheelConfig);
+    /// The final FlyWheel Mechanism.
 
-    @Getter @Setter
+    @Getter
+    @Setter
     private AngularVelocity flyWheelGoal = RotationsPerSecond.of(0);
 
     /// A trigger used to stop the motor when it is trying too hard.
@@ -117,8 +118,7 @@ public class FlyWheelSubsystem extends SubsystemBase
      * it can be used to home the absolute position.
      *
      * @param triggerCurrent how high the current draw should be before triggering.
-     * @param debounceTime how long the current should be above the threshold before triggering.
-     *
+     * @param debounceTime   how long the current should be above the threshold before triggering.
      * @return a new {@link Trigger} to sense current.
      */
     public Trigger currentSensorTrigger(Current triggerCurrent, Time debounceTime) {
@@ -135,7 +135,7 @@ public class FlyWheelSubsystem extends SubsystemBase
      * Runs the flywheel at the given speed.
      *
      * @param flywheelSpeed the DutyCycle speed to run at.
-     * @param isOut whether to spin out or in.
+     * @param isOut         whether to spin out or in.
      * @return a command.
      */
     public Command runFlyWheel(double flywheelSpeed, boolean isOut) {
@@ -148,7 +148,7 @@ public class FlyWheelSubsystem extends SubsystemBase
      * @return a command that stops the flywheel.
      */
     public Command stopFlyWheel() {
-        return flyWheel.set(0.0).beforeStarting(() -> flyWheelGoal =  RotationsPerSecond.of(0));
+        return flyWheel.set(0.0).beforeStarting(() -> flyWheelGoal = RotationsPerSecond.of(0));
     }
 
     /**
@@ -168,7 +168,7 @@ public class FlyWheelSubsystem extends SubsystemBase
      */
     public Command setGoal(Supplier<AngularVelocity> goal) {
         return flyWheel.setSpeed(goal)
-                .alongWith(Commands.run(() -> flyWheelGoal =  goal.get()));
+                .alongWith(Commands.run(() -> flyWheelGoal = goal.get()));
     }
 
     /**
@@ -178,15 +178,16 @@ public class FlyWheelSubsystem extends SubsystemBase
         return Commands.runOnce(() -> {
             if (RobotBase.isSimulation()) {
                 SimulatedArena.getInstance().addGamePieceProjectile(new RebuiltFuelOnFly(
-                    subsystems.swerve().getSwerveDrive().getSimulationDriveTrainPose().get().getTranslation(),
-                    new Translation2d(Inches.of(5), Inches.of(0)),
-                    subsystems.swerve().getSwerveDrive().getFieldVelocity(),
-                    subsystems.turret().getHeading(subsystems).rotateBy(Rotation2d.k180deg),
-                    Inches.of(23),
-                    MetersPerSecond.of(flyWheelSpeed.get().in(RadiansPerSecond) * (FLYWHEEL_DIAMETER.in(Meters) / 2) * FLYWHEEL_EFFICIENCY),
-                    subsystems.hood().getHood().getAngle().plus(Degrees.of(90)))
-                    .withProjectileTrajectoryDisplayCallBack((trajectory) -> Telemetry.Publishers.Robot.Mech3D.fuelTrajectory.accept(trajectory.toArray(Pose3d[]::new))));
-            }});
+                        subsystems.swerve().getSwerveDrive().getSimulationDriveTrainPose().get().getTranslation(),
+                        new Translation2d(Inches.of(5), Inches.of(0)),
+                        subsystems.swerve().getSwerveDrive().getFieldVelocity(),
+                        subsystems.turret().getHeading(subsystems).rotateBy(Rotation2d.k180deg),
+                        Inches.of(23),
+                        MetersPerSecond.of(flyWheelSpeed.get().in(RadiansPerSecond) * (FLYWHEEL_DIAMETER.in(Meters) / 2) * FLYWHEEL_EFFICIENCY),
+                        subsystems.hood().getHood().getAngle().plus(Degrees.of(90)))
+                        .withProjectileTrajectoryDisplayCallBack((trajectory) -> Telemetry.Publishers.Robot.Mech3D.fuelTrajectory.accept(trajectory.toArray(Pose3d[]::new))));
+            }
+        });
     }
 
     /**
@@ -204,17 +205,17 @@ public class FlyWheelSubsystem extends SubsystemBase
                         MetersPerSecond.of(7),
                         subsystems.hood().getHood().getAngle().plus(Degrees.of(90)))
                         .withProjectileTrajectoryDisplayCallBack((trajectory) -> Telemetry.Publishers.Robot.Mech3D.fuelTrajectory.accept(trajectory.toArray(Pose3d[]::new))));
-            }});
+            }
+        });
     }
 
     /**
      * FlyWheel is near a speed.
      *
-     * @param speed  {@link AngularVelocity} to be near.
+     * @param speed {@link AngularVelocity} to be near.
      * @return Trigger on when the FlyWheel is near another speed.
      */
-    public Trigger isNear(Supplier<AngularVelocity> speed)
-    {
+    public Trigger isNear(Supplier<AngularVelocity> speed) {
         return new Trigger(isNear(speed, VELOCITY_TOLERANCE));
     }
 
@@ -226,8 +227,7 @@ public class FlyWheelSubsystem extends SubsystemBase
      * @param within {@link AngularVelocity} within.
      * @return Trigger on when the FlyWheel is near another speed.
      */
-    public BooleanSupplier isNear(Supplier<AngularVelocity> speed, AngularVelocity within)
-    {
+    public BooleanSupplier isNear(Supplier<AngularVelocity> speed, AngularVelocity within) {
         return () -> flyWheel.getSpeed().isNear(speed.get(), within);
     }
 

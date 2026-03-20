@@ -1,6 +1,5 @@
 package frc.robot;
 
-import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.Pair;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -23,7 +22,7 @@ import frc.robot.systems.ScoringSystem;
 import frc.robot.util.ZoneTrigger;
 import frc.robot.util.borrowed.math.AllianceFlipUtil;
 import frc.robot.util.borrowed.math.FieldConstants;
-import lombok.*;
+import lombok.Setter;
 import lombok.experimental.Accessors;
 import swervelib.SwerveInputStream;
 import swervelib.simulation.ironmaple.simulation.SimulatedArena;
@@ -36,11 +35,10 @@ import java.util.function.Supplier;
 
 import static edu.wpi.first.units.Units.*;
 import static frc.robot.InputBuilder.InputSelections.*;
-import static frc.robot.Telemetry.Publishers.Robot.*;
+import static frc.robot.Telemetry.Publishers.Robot.inputOverride;
 
 @SuppressWarnings("unused")
-public class InputBuilder
-{
+public class InputBuilder {
     /// Our subsystems and systems to call to from RobotContainer
     private final Subsystems subsystems;
     private final ScoringSystem scoring;
@@ -102,7 +100,7 @@ public class InputBuilder
                 .back().FlyWheelBindings
                 .back();
         // Default Single Xbox Control
-        final InputStream singleStream =  new InputStream()
+        final InputStream singleStream = new InputStream()
                 .StartingMethods.defaultXboxDrive(SINGLE_XBOX.isMode, driverXbox)
                 .SmartBindings
                 .withToggleAutoScoreHub(driverXbox.b(), true, true)
@@ -144,7 +142,8 @@ public class InputBuilder
 
         /**
          * Constructor for BindingType
-         * @param name The name of the control type, used in publishing.
+         *
+         * @param name      The name of the control type, used in publishing.
          * @param isDefault whether to make this the default input. There can only be one. No extra handling is done.
          */
         InputSelections(String name, boolean isDefault) {
@@ -159,6 +158,7 @@ public class InputBuilder
 
         /**
          * Constructor for BindingType
+         *
          * @param name The name of the control type, used in publishing.
          */
         InputSelections(String name) {
@@ -168,7 +168,7 @@ public class InputBuilder
 
     /**
      *
-     *  A class that holds various triggers for control logic.
+     * A class that holds various triggers for control logic.
      *
      */
     public static class CustomTriggers {
@@ -185,7 +185,7 @@ public class InputBuilder
 
     /**
      *
-     *  Input Stream Class
+     * Input Stream Class
      *
      *
      */
@@ -194,7 +194,8 @@ public class InputBuilder
         /**
          * Trigger used to determine when this InputStream is in control.
          */
-        @Setter private Trigger isMode;
+        @Setter
+        private Trigger isMode;
         private Trigger onChange;
 
         /// Inner Config Namespaces
@@ -213,7 +214,8 @@ public class InputBuilder
         private SwerveInputStream swerveInputStream;
 
         /// Initialize our binding options only when the subsystem is not null.
-        InputStream() {}
+        InputStream() {
+        }
 
         /// Default Constructor with no drive.
         InputStream(Trigger isMode) {
@@ -227,7 +229,7 @@ public class InputBuilder
                     DoubleSupplier y) {
             this(isMode);
             this.swerveInputStream = SwerveInputStream.of(
-                    subsystems.swerve.getSwerveDrive(), x, y) // Make the input stream.
+                            subsystems.swerve.getSwerveDrive(), x, y) // Make the input stream.
                     .cubeTranslationControllerAxis(true)
                     .cubeRotationControllerAxis(true)
                     .scaleTranslation(SwerveBindings.normalTranslation)
@@ -246,7 +248,7 @@ public class InputBuilder
              * Default Xbox Drive Constructor with regular rotation.
              * WARNING: Creates a new stream, DO NOT use inline.
              *
-             * @param isMode The trigger telling the stream we are in the Input Selection.
+             * @param isMode     The trigger telling the stream we are in the Input Selection.
              * @param driverXbox the {@link CommandXboxController} to bind to.
              */
             public InputStream defaultXboxDrive(Trigger isMode, CommandXboxController driverXbox) {
@@ -264,7 +266,7 @@ public class InputBuilder
              * Default Xbox Drive Constructor with heading rotation.
              * WARNING: Creates a new stream, DO NOT use inline.
              *
-             * @param isMode The trigger telling the stream we are in the Input Selection.
+             * @param isMode     The trigger telling the stream we are in the Input Selection.
              * @param driverXbox the {@link CommandXboxController} to bind to.
              */
             public InputStream headingXboxDrive(Trigger isMode, CommandXboxController driverXbox) {
@@ -318,7 +320,7 @@ public class InputBuilder
 
             public SmartBindings withSOTMCalibration(Trigger indexIntoFlywheel, Trigger ballHasHitFloor, Current threshold) {
                 final Timer timeOfFlightTimer = new Timer();
-                final List<Double> dataLog =  new ArrayList<>();
+                final List<Double> dataLog = new ArrayList<>();
 
                 this.withIndexIntoFlyWheel(indexIntoFlywheel);
                 isMode.and(indexIntoFlywheel).and(subsystems.flywheel.currentSensorTrigger(threshold, Seconds.of(0)))
@@ -348,7 +350,9 @@ public class InputBuilder
              * @return this, for chaining.
              */
             public SmartBindings withToggleAutoHoardFuel(Trigger shootOnTheMoveWhile, boolean startEnabled) {
-                if (!TurretBindings.isPresent || !HoodBindings.isPresent || !FlyWheelBindings.isPresent) {return this;}
+                if (!TurretBindings.isPresent || !HoodBindings.isPresent || !FlyWheelBindings.isPresent) {
+                    return this;
+                }
                 final boolean[] isToggled = {startEnabled};
                 isMode.and(shootOnTheMoveWhile.toggleOnTrue(Commands.runOnce(() -> isToggled[0] = !isToggled[0])));
                 Trigger trigger = isMode.and(() -> isToggled[0]).and(CustomTriggers.neutralZone.getTrigger());
@@ -360,11 +364,13 @@ public class InputBuilder
              * Shoots while moving using double interpolating maps while calculating for ToF, Phase Delay, Velocity, ect.
              *
              * @param shootOnTheMoveWhile the button to map.
-             * @param withDrive whether to aim the drive as well.
+             * @param withDrive           whether to aim the drive as well.
              * @return this, for chaining.
              */
             public SmartBindings withToggleAutoScoreHub(Trigger shootOnTheMoveWhile, boolean withDrive, boolean startEnabled) {
-                if (!TurretBindings.isPresent || !HoodBindings.isPresent || !FlyWheelBindings.isPresent) {return this;}
+                if (!TurretBindings.isPresent || !HoodBindings.isPresent || !FlyWheelBindings.isPresent) {
+                    return this;
+                }
                 final boolean[] isToggled = {startEnabled};
                 isMode.and(shootOnTheMoveWhile.toggleOnTrue(Commands.runOnce(() -> isToggled[0] = !isToggled[0])));
                 Trigger trigger = isMode.and(() -> isToggled[0]).and(CustomTriggers.allianceZone.getTrigger());
@@ -377,9 +383,9 @@ public class InputBuilder
              * Runs all PID Subsystems to various goals.
              * Set any as null if you don't want it to move.
              *
-             * @param `runAll` the button to map.
-             * @param hoodAngle the hood angle to set.
-             * @param turretAngle the turret angle to set.
+             * @param `runAll`      the button to map.
+             * @param hoodAngle     the hood angle to set.
+             * @param turretAngle   the turret angle to set.
              * @param flyWheelSpeed the flywheel speed to run.
              * @return this, for chaining.
              */
@@ -388,7 +394,9 @@ public class InputBuilder
                     Supplier<Angle> hoodAngle,
                     Supplier<Angle> turretAngle,
                     Supplier<AngularVelocity> flyWheelSpeed) {
-                if (!TurretBindings.isPresent || !HoodBindings.isPresent || !FlyWheelBindings.isPresent) {return this;}
+                if (!TurretBindings.isPresent || !HoodBindings.isPresent || !FlyWheelBindings.isPresent) {
+                    return this;
+                }
                 isMode.and(runAll).whileTrue(
                         subsystems.hood.getHood().run(hoodAngle).onlyIf(() -> hoodAngle != null)
                                 .alongWith(subsystems.turret.getTurret().run(turretAngle).onlyIf(() -> turretAngle != null))
@@ -405,7 +413,9 @@ public class InputBuilder
              * @return this, for chaining.
              */
             public SmartBindings withBlockingIntakeIntoHopper(Trigger intake) {
-                if (!IndexerBindings.isPresent || !IntakeBindings.isPresent || !KickerBindings.isPresent) {return this;}
+                if (!IndexerBindings.isPresent || !IntakeBindings.isPresent || !KickerBindings.isPresent) {
+                    return this;
+                }
                 // Runs intake in while running the kicker and indexer in reverse. This should help fill the hopper up.
                 this.back().IndexerBindings
                         .withRunIndexer(intake, true)
@@ -427,7 +437,9 @@ public class InputBuilder
              * @return this, for chaining.
              */
             public SmartBindings withIndexIntoFlyWheel(Trigger index) {
-                if (!IndexerBindings.isPresent || !IntakeBindings.isPresent || !KickerBindings.isPresent) {return this;}
+                if (!IndexerBindings.isPresent || !IntakeBindings.isPresent || !KickerBindings.isPresent) {
+                    return this;
+                }
                 this.back().IndexerBindings
                         .withRunIndexer(index, true)
                         .back().AgitatorBindings.withRunAgitator(index, false)
@@ -457,7 +469,7 @@ public class InputBuilder
             /**
              * Spins up the kicker and flywheel at the same time.
              *
-             * @param spinUp the button to map.
+             * @param spinUp          the button to map.
              * @param angularVelocity flywheel velocity goal.
              * @return this, for chaining.
              */
@@ -480,13 +492,15 @@ public class InputBuilder
              * @return this, for chaining
              */
             public SmartBindings withDutyCycleAll(Trigger turnOnAll) {
-                if (!IntakeBindings.isPresent || !IndexerBindings.isPresent || !KickerBindings.isPresent || !FlyWheelBindings.isPresent) {return this;}
+                if (!IntakeBindings.isPresent || !IndexerBindings.isPresent || !KickerBindings.isPresent || !FlyWheelBindings.isPresent) {
+                    return this;
+                }
                 isMode.and(turnOnAll).whileTrue(
                         subsystems.flywheel.runFlyWheel(FlyWheelBindings.flyWheelSpeed, true)
-                                .alongWith(subsystems.kicker.runKicker(KickerBindings.kickerSpeed,  true))
+                                .alongWith(subsystems.kicker.runKicker(KickerBindings.kickerSpeed, true))
                                 .alongWith(
                                         Commands.waitSeconds(1)
-                                                .alongWith(subsystems.indexer.runIndexer(IndexerBindings.indexSpeed,  true))
+                                                .alongWith(subsystems.indexer.runIndexer(IndexerBindings.indexSpeed, true))
                                                 .alongWith(subsystems.intake.intake(IntakeBindings.intakeSpeed, true))));
                 return this;
             }
@@ -515,17 +529,20 @@ public class InputBuilder
             /**
              * The default duty cycle speed to run at.
              */
-            @Setter private double intakeSpeed = 0.5;
+            @Setter
+            private double intakeSpeed = 0.5;
 
             private IntakeBindings() {
                 this.isPresent = subsystems.intake != null;
             }
 
             public IntakeBindings withRunWithDelays(Trigger run, boolean isIn, Time onTime, Time offTime) {
-                if (!isPresent) {return this;}
+                if (!isPresent) {
+                    return this;
+                }
                 isMode.and(run).whileTrue(
-                        subsystems.intake.intake(intakeSpeed, isIn).withTimeout(onTime)
-                                .andThen(Commands.waitSeconds(offTime.in(Seconds))).repeatedly())
+                                subsystems.intake.intake(intakeSpeed, isIn).withTimeout(onTime)
+                                        .andThen(Commands.waitSeconds(offTime.in(Seconds))).repeatedly())
                         .onFalse(subsystems.intake.stopIntake());
                 return this;
             }
@@ -534,11 +551,13 @@ public class InputBuilder
              * Runs the intake at preset speed, stopping when finished.
              *
              * @param runIntake then button to map.
-             * @param isIn whether to spin in or out.
+             * @param isIn      whether to spin in or out.
              * @return this, for chaining.
              */
             public IntakeBindings withRunIntake(Trigger runIntake, boolean isIn) {
-                if (!isPresent) {return this;}
+                if (!isPresent) {
+                    return this;
+                }
                 isMode.and(runIntake).whileTrue(subsystems.intake.intake(intakeSpeed, isIn))
                         .onFalse(subsystems.intake.stopIntake());
                 return this;
@@ -551,7 +570,9 @@ public class InputBuilder
              * @return this, for chaining.
              */
             public IntakeBindings withDefaultCommand(Supplier<Command> defaultCommand) {
-                if (!isPresent) {return this;}
+                if (!isPresent) {
+                    return this;
+                }
                 isMode.and(DriverStation::isEnabled).onTrue(Commands.runOnce(() -> subsystems.intake.setDefaultCommand(defaultCommand.get())));
                 return this;
             }
@@ -575,7 +596,8 @@ public class InputBuilder
             /**
              * The default duty cycle speed to run at.
              */
-            @Setter private double indexSpeed = 0.5;
+            @Setter
+            private double indexSpeed = 0.5;
 
 
             private IndexerBindings() {
@@ -586,11 +608,13 @@ public class InputBuilder
              * Runs the indexer at preset speed, stopping when finished.
              *
              * @param runIndexer then button to map.
-             * @param isIn whether to spin in or out.
+             * @param isIn       whether to spin in or out.
              * @return this, for chaining.
              */
             public IndexerBindings withRunIndexer(Trigger runIndexer, boolean isIn) {
-                if (!isPresent) {return this;}
+                if (!isPresent) {
+                    return this;
+                }
                 isMode.and(runIndexer).whileTrue(subsystems.indexer.runIndexer(indexSpeed, isIn))
                         .onFalse(subsystems.indexer.stopIndexer());
                 return this;
@@ -603,7 +627,9 @@ public class InputBuilder
              * @return this, for chaining.
              */
             public IndexerBindings withDefaultCommand(Supplier<Command> defaultCommand) {
-                if (!isPresent) {return this;}
+                if (!isPresent) {
+                    return this;
+                }
                 isMode.and(DriverStation::isEnabled).onTrue(Commands.runOnce(() -> subsystems.indexer.setDefaultCommand(defaultCommand.get())));
                 return this;
             }
@@ -626,7 +652,8 @@ public class InputBuilder
             /**
              * The default duty cycle speed to run at.
              */
-            @Setter private double agitatorSpeed = 0.5;
+            @Setter
+            private double agitatorSpeed = 0.5;
 
 
             private AgitatorBindings() {
@@ -637,11 +664,13 @@ public class InputBuilder
              * Runs the agitator at preset speed, stopping when finished.
              *
              * @param runAgitator then button to map.
-             * @param isIn whether to spin in or out.
+             * @param isIn        whether to spin in or out.
              * @return this, for chaining.
              */
             public AgitatorBindings withRunAgitator(Trigger runAgitator, boolean isIn) {
-                if (!isPresent) {return this;}
+                if (!isPresent) {
+                    return this;
+                }
                 isMode.and(runAgitator).whileTrue(subsystems.agitator.runAgitator(agitatorSpeed, isIn))
                         .onFalse(subsystems.agitator.stopAgitator());
                 return this;
@@ -654,7 +683,9 @@ public class InputBuilder
              * @return this, for chaining.
              */
             public AgitatorBindings withDefaultCommand(Supplier<Command> defaultCommand) {
-                if (!isPresent) {return this;}
+                if (!isPresent) {
+                    return this;
+                }
                 isMode.and(DriverStation::isEnabled).onTrue(Commands.runOnce(() -> subsystems.agitator.setDefaultCommand(defaultCommand.get())));
                 return this;
             }
@@ -678,21 +709,25 @@ public class InputBuilder
             private KickerBindings() {
                 this.isPresent = subsystems.kicker != null;
             }
+
             /**
              * The default duty cycle speed to run at.
              */
-            @Setter private double kickerSpeed = 0.75;
+            @Setter
+            private double kickerSpeed = 0.75;
 
             /**
              * Runs the kicker at preset speed, stopping when finished.
              *
              * @param runkicker then button to map.
-             * @param isOut whether to spin out.
-             * @param speed duty cycle speed to run. [-1, 1]
+             * @param isOut     whether to spin out.
+             * @param speed     duty cycle speed to run. [-1, 1]
              * @return this, for chaining.
              */
             public KickerBindings withRunKicker(Trigger runkicker, boolean isOut, double speed) {
-                if (!isPresent) {return this;}
+                if (!isPresent) {
+                    return this;
+                }
                 isMode.and(runkicker).whileTrue(subsystems.kicker.runKicker(speed, isOut))
                         .onFalse(subsystems.kicker.stopKicker());
                 return this;
@@ -702,11 +737,13 @@ public class InputBuilder
              * Runs the kicker at preset speed, stopping when finished.
              *
              * @param runkicker then button to map.
-             * @param isOut whether to spin out.
+             * @param isOut     whether to spin out.
              * @return this, for chaining.
              */
             public KickerBindings withRunKicker(Trigger runkicker, boolean isOut) {
-                if (!isPresent) {return this;}
+                if (!isPresent) {
+                    return this;
+                }
                 this.withRunKicker(runkicker, isOut, kickerSpeed);
                 return this;
             }
@@ -718,7 +755,9 @@ public class InputBuilder
              * @return this, for chaining.
              */
             public KickerBindings withDefaultCommand(Supplier<Command> defaultCommand) {
-                if (!isPresent) {return this;}
+                if (!isPresent) {
+                    return this;
+                }
                 isMode.and(DriverStation::isEnabled).onTrue(Commands.runOnce(() -> subsystems.kicker.setDefaultCommand(defaultCommand.get())));
                 return this;
             }
@@ -746,7 +785,8 @@ public class InputBuilder
             /**
              * The default duty cycle speed to run at.
              */
-            @Setter private double flyWheelSpeed = 0.75;
+            @Setter
+            private double flyWheelSpeed = 0.75;
 
             private FlyWheelBindings() {
                 this.isPresent = subsystems.flywheel != null;
@@ -755,12 +795,14 @@ public class InputBuilder
             /**
              * Sets the flywheel velocity goal.
              *
-             * @param setVelocity the button to map.
+             * @param setVelocity      the button to map.
              * @param flywheelVelocity the velocity goal.
              * @return this, for chaining.
              */
             public FlyWheelBindings withSetVelocity(Trigger setVelocity, AngularVelocity flywheelVelocity) {
-                if (!isPresent) {return this;}
+                if (!isPresent) {
+                    return this;
+                }
                 isMode.and(setVelocity).whileTrue(subsystems.flywheel.getFlyWheel().run(flywheelVelocity))
                         .onFalse(subsystems.flywheel.stopFlyWheel());
                 return this;
@@ -770,11 +812,13 @@ public class InputBuilder
              * Runs the flywheel at preset speed, stopping when finished.
              *
              * @param runFlyWheel then button to map.
-             * @param isOut whether to spin out.
+             * @param isOut       whether to spin out.
              * @return this, for chaining.
              */
             public FlyWheelBindings withRunFlyWheel(Trigger runFlyWheel, boolean isOut) {
-                if (!isPresent) {return this;}
+                if (!isPresent) {
+                    return this;
+                }
                 isMode.and(runFlyWheel).whileTrue(subsystems.flywheel.runFlyWheel(flyWheelSpeed, isOut))
                         .onFalse(subsystems.flywheel.stopFlyWheel());
                 return this;
@@ -787,7 +831,9 @@ public class InputBuilder
              * @return this, for chaining.
              */
             public FlyWheelBindings withSimShoot(Trigger shoot) {
-                if (!isPresent) {return this;}
+                if (!isPresent) {
+                    return this;
+                }
                 isMode.and(shoot).whileTrue(subsystems.flywheel.simShoot(subsystems).andThen(Commands.waitSeconds(.25)).repeatedly());
                 return this;
             }
@@ -799,7 +845,9 @@ public class InputBuilder
              * @return this, for chaining.
              */
             public FlyWheelBindings withDefaultCommand(Supplier<Command> defaultCommand) {
-                if (!isPresent) {return this;}
+                if (!isPresent) {
+                    return this;
+                }
                 isMode.and(DriverStation::isEnabled).onTrue(Commands.runOnce(() -> subsystems.flywheel.setDefaultCommand(defaultCommand.get())));
                 return this;
             }
@@ -825,7 +873,8 @@ public class InputBuilder
             /**
              * The default duty cycle speed to run at.
              */
-            @Setter private double hoodSpeed = 0.25;
+            @Setter
+            private double hoodSpeed = 0.25;
 
             private HoodBindings() {
                 this.isPresent = subsystems.hood != null;
@@ -838,7 +887,9 @@ public class InputBuilder
              * @return this, for chaining.
              */
             public HoodBindings withAutoHome(Trigger home) {
-                if (!isPresent) {return this;}
+                if (!isPresent) {
+                    return this;
+                }
                 isMode.and(home).whileTrue(subsystems.hood.home());
                 return this;
             }
@@ -846,13 +897,16 @@ public class InputBuilder
             /**
              * Sets the hood angle to the given angle.
              * Horizontal to the floor is 0 degrees.
-             *w
-             * @param setAngle the button to map.
+             * w
+             *
+             * @param setAngle  the button to map.
              * @param hoodAngle the angle to move to.
              * @return this, for chaining.
              */
             public HoodBindings withSetAngle(Trigger setAngle, Angle hoodAngle) {
-                if (!isPresent) {return this;}
+                if (!isPresent) {
+                    return this;
+                }
                 isMode.and(setAngle).whileTrue(subsystems.hood.getHood().setAngle(hoodAngle));
                 return this;
             }
@@ -861,11 +915,13 @@ public class InputBuilder
              * Runs the hood at preset speed, stopping when finished.
              *
              * @param runHood the button to map.
-             * @param isUp whether to go up.
+             * @param isUp    whether to go up.
              * @return this, for chaining.
              */
             public HoodBindings withRunHood(Trigger runHood, boolean isUp) {
-                if (!isPresent) {return this;}
+                if (!isPresent) {
+                    return this;
+                }
                 isMode.and(runHood).whileTrue(subsystems.hood.runHood(hoodSpeed, isUp))
                         .onFalse(subsystems.hood.stopHood());
                 return this;
@@ -878,7 +934,9 @@ public class InputBuilder
              * @return this, for chaining.
              */
             public HoodBindings withDefaultCommand(Supplier<Command> defaultCommand) {
-                if (!isPresent) {return this;}
+                if (!isPresent) {
+                    return this;
+                }
                 isMode.and(DriverStation::isEnabled).onTrue(Commands.runOnce(() -> subsystems.hood.setDefaultCommand(defaultCommand.get())));
                 return this;
             }
@@ -904,7 +962,8 @@ public class InputBuilder
             /**
              * The default duty cycle speed to run at.
              */
-            @Setter private double turretSpeed = .25;
+            @Setter
+            private double turretSpeed = .25;
 
             private TurretBindings() {
                 this.isPresent = subsystems.turret != null;
@@ -917,7 +976,9 @@ public class InputBuilder
              * @return this, for chaining.
              */
             public TurretBindings withAutoHome(Trigger home) {
-                if (!isPresent) {return this;}
+                if (!isPresent) {
+                    return this;
+                }
                 isMode.and(home).whileTrue(subsystems.turret.home());
                 return this;
             }
@@ -925,13 +986,16 @@ public class InputBuilder
             /**
              * Sets the turret angle to the given angle.
              * Horizontal to the floor is 0 degrees.
-             *w
-             * @param setAngle the button to map.
+             * w
+             *
+             * @param setAngle    the button to map.
              * @param turretAngle the angle to move to.
              * @return this, for chaining.
              */
             public TurretBindings withSetAngle(Trigger setAngle, Angle turretAngle) {
-                if (!isPresent) {return this;}
+                if (!isPresent) {
+                    return this;
+                }
                 isMode.and(setAngle).whileTrue(subsystems.turret.getTurret().setAngle(turretAngle));
                 return this;
             }
@@ -940,11 +1004,13 @@ public class InputBuilder
              * Runs the turret at preset speed, stopping when finished.
              *
              * @param runTurret then button to map.
-             * @param isCCW whether to turn CCW, aka lefty loosey.
+             * @param isCCW     whether to turn CCW, aka lefty loosey.
              * @return this, for chaining.
              */
             public TurretBindings withRunTurret(Trigger runTurret, boolean isCCW) {
-                if (!isPresent) {return this;}
+                if (!isPresent) {
+                    return this;
+                }
                 isMode.and(runTurret).whileTrue(subsystems.turret.runTurret(turretSpeed, isCCW))
                         .onFalse(subsystems.turret.stopTurret());
                 return this;
@@ -957,7 +1023,9 @@ public class InputBuilder
              * @return this, for chaining.
              */
             public TurretBindings withDefaultCommand(Supplier<Command> defaultCommand) {
-                if (!isPresent) {return this;}
+                if (!isPresent) {
+                    return this;
+                }
                 isMode.and(DriverStation::isEnabled).onTrue(Commands.runOnce(() -> subsystems.turret.setDefaultCommand(defaultCommand.get())));
                 return this;
             }
@@ -979,41 +1047,52 @@ public class InputBuilder
             /**
              * Controller Dead Zone
              */
-            @Setter private double deadzone = 0.001;
+            @Setter
+            private double deadzone = 0.001;
             /**
              * Move Speed Scalar when slowing drive speed.
              */
-            @Setter private double slowTranslation = 0.3;
+            @Setter
+            private double slowTranslation = 0.3;
             /**
              * Rotation Speed Scalar when slowing drive speed.
              */
-            @Setter private double slowRotation = 0.4;
+            @Setter
+            private double slowRotation = 0.4;
             /**
              * Move Speed Scalar when driving normally.
              */
-            @Setter private double normalTranslation = .6;
+            @Setter
+            private double normalTranslation = .6;
             /**
              * Rotation Speed Scalar when driving normally.
              */
-            @Setter private double normalRotation = .6;
+            @Setter
+            private double normalRotation = .6;
             /**
              * Move Speed Scalar when boosting drive speed.
              */
-            @Setter private double boostTranslation = 0.8;
+            @Setter
+            private double boostTranslation = 0.8;
             /**
              * Rotation Speed Scalar when boosting drive speed.
              */
-            @Setter private double boostRotation = 0.85;
+            @Setter
+            private double boostRotation = 0.85;
 
             private final boolean isPresent;
+
             private SwerveBindings() {
                 this.isPresent = subsystems.swerve != null;
             }
+
             /**
              * Changes inputs to the given input selection.
              */
             public SwerveBindings withToggleCentricity(Trigger toggleCentricity, boolean fieldDefault) {
-                if (!isPresent) {return this;}
+                if (!isPresent) {
+                    return this;
+                }
                 // Set our default.
                 swerveInputStream.robotRelative(!fieldDefault).allianceRelativeControl(fieldDefault);
                 // Toggle when pressed.
@@ -1030,7 +1109,9 @@ public class InputBuilder
              * @return this, for chaining.
              */
             public SwerveBindings withToggleZones(Trigger toggleZones) {
-                if (!isPresent) {return this;}
+                if (!isPresent) {
+                    return this;
+                }
                 isMode.and(toggleZones).whileTrue(subsystems.swerve.toggleZones());
                 return this;
             }
@@ -1042,7 +1123,9 @@ public class InputBuilder
              * @return this for chaining.
              */
             public SwerveBindings withCollectFuel(Trigger collectFuel) {
-                if (!isPresent || !SwerveSubsystem.ControlConstants.RUN_VISION) {return this;}
+                if (!isPresent || !SwerveSubsystem.ControlConstants.RUN_VISION) {
+                    return this;
+                }
                 //isMode.and(collectFuel).whileTrue(subsystems.swerve.driveToNearestFuel());
                 return this;
             }
@@ -1054,7 +1137,9 @@ public class InputBuilder
              * @return this, for chaining.
              */
             public SwerveBindings withLookAtHub(Trigger autoAimDriveThenFireWhile) {
-                if (!isPresent || !FlyWheelBindings.isPresent) {return this;}
+                if (!isPresent || !FlyWheelBindings.isPresent) {
+                    return this;
+                }
                 // Aim at the hub with the drive
                 this.withAimWhile(autoAimDriveThenFireWhile,
                         new Pose2d(FieldConstants.Hub.topCenterPoint.toTranslation2d(), Rotation2d.kZero)); // Leave look ahead time alone.
@@ -1064,12 +1149,14 @@ public class InputBuilder
             /**
              * Aims at a pose while held.
              *
-             * @param aimWhile the button to map.
+             * @param aimWhile     the button to map.
              * @param aimWhilePose the pose to aim at.
              * @return this, for chaining.
              */
             public SwerveBindings withAimWhile(Trigger aimWhile, Pose2d aimWhilePose) {
-                if (!isPresent) {return this;}
+                if (!isPresent) {
+                    return this;
+                }
                 // Update Telemetry Continuously
                 isMode.and(DriverStation::isEnabled).whileTrue(Commands.run(() -> {
                     SmartDashboard.putBoolean("Telemetry/RobotTelemetry/Swerve/Drive is Aimed", swerveInputStream.aimLock(Degrees.of(1)).getAsBoolean());
@@ -1091,7 +1178,9 @@ public class InputBuilder
              * @return this, for chaining.
              */
             public SwerveBindings withSlowDrive(Trigger slowDrive) {
-                if (!isPresent) {return this;}
+                if (!isPresent) {
+                    return this;
+                }
                 isMode.and(slowDrive)
                         .onTrue(Commands.runOnce(() -> swerveInputStream.scaleTranslation(slowTranslation).scaleRotation(slowRotation)))
                         .onFalse(Commands.runOnce(() -> swerveInputStream.scaleTranslation(normalTranslation).scaleRotation(normalRotation)));
@@ -1105,7 +1194,9 @@ public class InputBuilder
              * @return this, for chaining.
              */
             public SwerveBindings withBoostDrive(Trigger boostDrive) {
-                if (!isPresent) {return this;}
+                if (!isPresent) {
+                    return this;
+                }
                 isMode.and(boostDrive)
                         .onTrue(Commands.runOnce(() -> swerveInputStream.scaleTranslation(boostTranslation).scaleRotation(boostRotation)))
                         .onFalse(Commands.runOnce(() -> swerveInputStream.scaleTranslation(normalTranslation).scaleRotation(normalRotation)));
@@ -1119,7 +1210,9 @@ public class InputBuilder
              * @return this, for chaining.
              */
             public SwerveBindings withResetSimOdometry(Trigger resetOdometry) {
-                if (!isPresent) {return this;}
+                if (!isPresent) {
+                    return this;
+                }
                 isMode.and(resetOdometry).onTrue(Commands.runOnce(() -> subsystems.swerve.getSwerveDrive().resetOdometry(subsystems.swerve.getSwerveDrive().getSimulationDriveTrainPose().get())));
                 return this;
             }
@@ -1131,7 +1224,9 @@ public class InputBuilder
              * @return this, for chaining.
              */
             public SwerveBindings withDefaultCommand(Supplier<Command> defaultCommand) {
-                if (!isPresent) {return this;}
+                if (!isPresent) {
+                    return this;
+                }
                 isMode.and(DriverStation::isEnabled).onTrue(Commands.runOnce(() -> subsystems.swerve.setDefaultCommand(defaultCommand.get())));
                 return this;
             }
@@ -1168,6 +1263,7 @@ public class InputBuilder
                         Commands.runOnce(() -> SimulatedArena.getInstance().resetFieldForAuto()));
                 return this;
             }
+
             /**
              * Changes inputs to the given input selection.
              *
@@ -1202,5 +1298,6 @@ public class InputBuilder
             IntakeSubsystem intake,
             AgitatorSubsystem agitator,
             KickerSubsystem kicker,
-            TurretSubsystem turret) {}
+            TurretSubsystem turret) {
+    }
 }

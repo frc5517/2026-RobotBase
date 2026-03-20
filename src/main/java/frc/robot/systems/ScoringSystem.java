@@ -1,34 +1,23 @@
 package frc.robot.systems;
 
-import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.geometry.Twist2d;
+import edu.wpi.first.math.geometry.*;
 import edu.wpi.first.math.interpolation.InterpolatingDoubleTreeMap;
+import edu.wpi.first.math.interpolation.InterpolatingTreeMap;
+import edu.wpi.first.math.interpolation.InverseInterpolator;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.units.measure.Time;
-import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.InputBuilder;
-import frc.robot.Robot;
-import frc.robot.subsystems.FlyWheelSubsystem;
-import frc.robot.subsystems.HoodSubsystem;
-import frc.robot.subsystems.TurretSubsystem;
 import frc.robot.systems.ScoringSystem.ControlConstants.DoubleInterpolatingMaps;
 import frc.robot.util.borrowed.math.AllianceFlipUtil;
 import frc.robot.util.borrowed.math.FieldConstants;
 import lombok.Getter;
-import lombok.Setter;
 
-import javax.swing.*;
-import java.util.Map;
-import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -38,25 +27,46 @@ public class ScoringSystem {
     public static class HardwareConstants {
         public static Angle HUB_ENTRY_ANGLE = Degrees.of(35);
     }
+
     public static final class ControlConstants {
 
         public static final class DoubleInterpolatingMaps {
-            // meters, seconds
-            public static final InterpolatingDoubleTreeMap TIME_OF_FLIGHT = InterpolatingDoubleTreeMap.ofEntries(
-                    Map.entry(1.0, .4),
-                    Map.entry(3.0, .55));
+            private static final InterpolatingTreeMap<Double, Rotation2d> hoodAngle =
+                    new InterpolatingTreeMap<>(InverseInterpolator.forDouble(), Rotation2d::interpolate);
+            private static final InterpolatingDoubleTreeMap flyWheelSpeed =
+                    new InterpolatingDoubleTreeMap();
+            private static final InterpolatingDoubleTreeMap timeOfFlight =
+                    new InterpolatingDoubleTreeMap();
 
-            // meters, RPM
-            public static final InterpolatingDoubleTreeMap SHOOT_SPEED = InterpolatingDoubleTreeMap.ofEntries(
-                    Map.entry(2.0, 2500.0),
-                    Map.entry(3.0, 2750.0),
-                    Map.entry(4.0, 3500.0));
+            static {
+                /// TODO : THESE ARE JUST STOLEN VALUES
+                hoodAngle.put(1.34, Rotation2d.fromDegrees(19.0));
+                hoodAngle.put(1.78, Rotation2d.fromDegrees(19.0));
+                hoodAngle.put(2.17, Rotation2d.fromDegrees(24.0));
+                hoodAngle.put(2.81, Rotation2d.fromDegrees(27.0));
+                hoodAngle.put(3.82, Rotation2d.fromDegrees(29.0));
+                hoodAngle.put(4.09, Rotation2d.fromDegrees(30.0));
+                hoodAngle.put(4.40, Rotation2d.fromDegrees(31.0));
+                hoodAngle.put(4.77, Rotation2d.fromDegrees(32.0));
+                hoodAngle.put(5.57, Rotation2d.fromDegrees(32.0));
+                hoodAngle.put(5.60, Rotation2d.fromDegrees(35.0));
 
-            // meters, degrees
-            public static final InterpolatingDoubleTreeMap HOOD_ANGLE = InterpolatingDoubleTreeMap.ofEntries(
-                    Map.entry(1.0, 8.0),
-                    Map.entry(2.0, 24.0),
-                    Map.entry(3.0, 35.0));
+                flyWheelSpeed.put(2.12923, 2725.0);
+                flyWheelSpeed.put(2.504222, 2800.0);
+                flyWheelSpeed.put(2.889, 2950.0);
+                flyWheelSpeed.put(3.254686, 3085.0);
+                flyWheelSpeed.put(3.695324, 3200.0);
+                flyWheelSpeed.put(3.983757, 3320.0);
+                flyWheelSpeed.put(4.498437, 3475.0);
+                flyWheelSpeed.put(4.986071, 3675.0);
+                flyWheelSpeed.put(5.410986, 4000.0);
+
+                timeOfFlight.put(5.68, 1.16);
+                timeOfFlight.put(4.55, 1.12);
+                timeOfFlight.put(3.15, 1.11);
+                timeOfFlight.put(1.88, 1.09);
+                timeOfFlight.put(1.38, 0.90);
+                }
         }
 
         public static final class SOTMTargets {
@@ -66,15 +76,15 @@ public class ScoringSystem {
 
     public static class SOTMLatestGoals {
         @Getter
-        private static Supplier<Angle> TurretGoal = () -> Degrees.of(0);
+        private static Angle TurretGoal = Degrees.of(0);
         @Getter
-        private static Supplier<Angle> HoodGoal = () -> Degrees.of(0);
+        private static Angle HoodGoal = Degrees.of(0);
         @Getter
-        private static Supplier<AngularVelocity> FlyWheelGoal = () -> RPM.of(0);
+        private static AngularVelocity FlyWheelGoal = RPM.of(0);
         @Getter
-        private static Supplier<Time> TimeOfFlight = () -> Seconds.of(0);
+        private static Time TimeOfFlight = Seconds.of(0);
         @Getter
-        private static Supplier<Distance> DistanceToTarget = () -> Meters.of(0);
+        private static Distance DistanceToTarget = Meters.of(0);
     }
 
     private final InputBuilder.Subsystems subsystems;
@@ -89,16 +99,16 @@ public class ScoringSystem {
         Angle[] hoodGoal = {subsystems.hood().getHood().getAngle()};
         AngularVelocity[] flyWheelGoal = {subsystems.flywheel().getFlyWheel().getSpeed()};
         return Commands.run(() -> calculateSOTMGoals(
-                // Calculate goals based on a flipped target
-                AllianceFlipUtil.ifShouldFlip(target.get()).getTranslation(),
-                (newAngle) -> turretGoal[0] = newAngle,
-                (newAngle) -> hoodGoal[0] = newAngle,
-                (newSpeed) -> flyWheelGoal[0] = newSpeed))
+                        // Calculate goals based on a flipped target
+                        AllianceFlipUtil.ifShouldFlip(target.get()).getTranslation(),
+                        (newAngle) -> turretGoal[0] = newAngle,
+                        (newAngle) -> hoodGoal[0] = newAngle,
+                        (newSpeed) -> flyWheelGoal[0] = newSpeed))
                 // Run goals
                 .alongWith(subsystems.turret().getTurret().run(() -> turretGoal[0]))
                 .alongWith(subsystems.hood().getHood().run(() -> hoodGoal[0]))
                 .alongWith(RobotBase.isSimulation()
-                ? subsystems.flywheel().simShoot(subsystems, () -> flyWheelGoal[0]).andThen(Commands.waitSeconds(.2)).repeatedly()
+                        ? subsystems.flywheel().simShoot(subsystems, () -> flyWheelGoal[0]).andThen(Commands.waitSeconds(.2)).repeatedly()
                         : subsystems.flywheel().setGoal(() -> flyWheelGoal[0]));
     }
 
@@ -107,41 +117,48 @@ public class ScoringSystem {
         double phaseDelay = 0.05;
         Pose2d rawPose = subsystems.swerve().getSwerveDrive().getPose();
         // 2d location of the shooter
-        Translation2d shooterOnGround = rawPose.getTranslation()
-                        .plus(subsystems.turret().getPose3D().toPose2d().getTranslation());
+        Pose2d turretPose = subsystems.turret().getPose3D().toPose2d().relativeTo(rawPose);
         // Distance to the target
-        Distance distanceToTarget = Meters.of(shooterOnGround.getDistance(target));
+        Distance distanceToTarget = Meters.of(turretPose.getTranslation().getDistance(target));
+        // Chassis speeds adjusted for phase delay
+        ChassisSpeeds robotSpeeds = subsystems.swerve().getSwerveDrive().getFieldVelocity().times(phaseDelay);
+        // Estimate the pose based on current speeds adjusted for phase delay
+        Pose2d estimatedPose = rawPose.exp(new Twist2d(robotSpeeds.vxMetersPerSecond, robotSpeeds.vyMetersPerSecond, robotSpeeds.omegaRadiansPerSecond));
+        // Chassis speeds of the turret
+        ChassisSpeeds turretSpeeds = subsystems.turret().getVelocity(robotSpeeds, estimatedPose.getRotation().getMeasure());
         // Time that the fuel is in the air.
-        double timeOfFlight = DoubleInterpolatingMaps.TIME_OF_FLIGHT.get(distanceToTarget.in(Meters));
-        // Chassis speeds times the time of flight.
-        ChassisSpeeds speedsAtTime = subsystems.swerve().getSwerveDrive().getFieldVelocity().times(timeOfFlight);
-        // Estimate the robot pose based on phase delay
-        Pose2d estimatedPose = rawPose.exp(new Twist2d(
-            speedsAtTime.vxMetersPerSecond * phaseDelay, 
-            speedsAtTime.vyMetersPerSecond * phaseDelay, 
-            speedsAtTime.omegaRadiansPerSecond * phaseDelay));
-        // Adjust the speeds to be turret relative
-        ChassisSpeeds turretSpeedsAtTime = subsystems.turret().getVelocity(speedsAtTime, estimatedPose.getRotation().getMeasure());
-        // Subtract the current speed times the time of flight. Adjusting our goal based on the chassis speeds. 
-        Translation2d targetAdjustedForSpeed = target.minus(new Translation2d(turretSpeedsAtTime.vxMetersPerSecond, turretSpeedsAtTime.vyMetersPerSecond));
-        // Distance from the updated target based on robot speeds.
-        Distance adjustedDistance = Meters.of(targetAdjustedForSpeed.getNorm());
+        double timeOfFlight = 100; // Set to 100 for the IDEs sake.
+        Pose2d lookAheadPose = turretPose;
+        // Distance from the shooter to the target based on no calculations
+        double lookAheadDistance = target.getDistance(lookAheadPose.getTranslation());
+        /// Iterate time of flight to converge on accurate distance value.
+        for (int i = 0; i < 10; i++) {
+            // Interpolate through our data map to estimate how long the fuel will fly for.
+            timeOfFlight = DoubleInterpolatingMaps.timeOfFlight.get(distanceToTarget.in(Meters));
+            // Velocity imparted on the ball from the chassis over time
+            double lookAheadOffsetX = turretSpeeds.vxMetersPerSecond * timeOfFlight;
+            double lookAheadOffsetY = turretSpeeds.vyMetersPerSecond * timeOfFlight;
+            // new target based on the calculated offset.
+            lookAheadPose = turretPose.plus(new Transform2d(lookAheadOffsetX, lookAheadOffsetY, Rotation2d.kZero));
+            // Distance from the shooter to the target based on the previous calculations.
+            lookAheadDistance = target.getDistance(lookAheadPose.getTranslation());
+        }
         /// Set Latest SOTMGoals
         /// Turret goal is straightforward, angle from origin from our translation with the robot as the origin.
-        SOTMLatestGoals.TurretGoal = () -> subsystems.turret().angleToPose(subsystems.swerve().getSwerveDrive().getPose(), targetAdjustedForSpeed).get();
+        SOTMLatestGoals.TurretGoal = subsystems.turret().angleToPose(estimatedPose, target);
         /// Hood and Flywheel use the Double Interpolating Maps.
-        SOTMLatestGoals.HoodGoal = () -> Degrees.of(DoubleInterpolatingMaps.HOOD_ANGLE.get(adjustedDistance.in(Meters)));
-        SOTMLatestGoals.FlyWheelGoal = () -> RPM.of(DoubleInterpolatingMaps.SHOOT_SPEED.get(adjustedDistance.in(Meters)));
+        SOTMLatestGoals.HoodGoal = DoubleInterpolatingMaps.hoodAngle.get(lookAheadDistance).getMeasure();
+        SOTMLatestGoals.FlyWheelGoal = RPM.of(DoubleInterpolatingMaps.flyWheelSpeed.get(lookAheadDistance));
         /// Add other good data
-        SOTMLatestGoals.TimeOfFlight = () -> Seconds.of(timeOfFlight);
-        SOTMLatestGoals.DistanceToTarget = () -> adjustedDistance;
+        SOTMLatestGoals.TimeOfFlight = Seconds.of(timeOfFlight);
+        SOTMLatestGoals.DistanceToTarget = Meters.of(lookAheadDistance);
         // They want consumers I guess.
-        turretGoal.accept(SOTMLatestGoals.getTurretGoal().get());
-        hoodGoal.accept(SOTMLatestGoals.getHoodGoal().get());
-        flyWheelGoal.accept(SOTMLatestGoals.getFlyWheelGoal().get());
+        turretGoal.accept(SOTMLatestGoals.getTurretGoal());
+        hoodGoal.accept(SOTMLatestGoals.getHoodGoal());
+        flyWheelGoal.accept(SOTMLatestGoals.getFlyWheelGoal());
     }
 
-    public Trigger isReadyToFire() {
-        return new Trigger(subsystems.turret().isNear(SOTMLatestGoals.getTurretGoal())).and(subsystems.hood().isNear(SOTMLatestGoals.getHoodGoal()));
-    }
+//    public Trigger isReadyToFire() {
+//        return new Trigger(subsystems.turret().isNear(SOTMLatestGoals.getTurretGoal())).and(subsystems.hood().isNear(SOTMLatestGoals.getHoodGoal()));
+//    }
 }

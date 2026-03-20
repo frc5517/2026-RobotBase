@@ -9,7 +9,6 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Telemetry;
 import frc.robot.util.BrushedSparkWrapper;
-import lombok.Getter;
 import yams.gearing.GearBox;
 import yams.gearing.MechanismGearing;
 import yams.motorcontrollers.SmartMotorControllerConfig;
@@ -23,33 +22,37 @@ public class IndexerSubsystem extends SubsystemBase {
     /// Hardware Constants for the Indexer Mechanism.
     public static class HardwareConstants {
         /// Motor Constants
-        public static final int                                 MOTOR_ID            = 12; // Spark Max CAN ID
-        public static final boolean                             MOTOR_INVERTED      = false; // Inverts control direction.
-        public static final MechanismGearing                    GEAR_RATIO          = new MechanismGearing(GearBox.fromReductionStages(5, 3)); // Indexer Gear Ratio
+        public static final int MOTOR_ID = 12; // Spark Max CAN ID
+        public static final boolean MOTOR_INVERTED = false; // Inverts control direction.
+        public static final MechanismGearing GEAR_RATIO = new MechanismGearing(GearBox.fromReductionStages(5, 3)); // Indexer Gear Ratio
         /// Motor Tuning Values
-        public static final PIDController PID_CONTROLLER              = new PIDController( // Exponential Motion Profiling
+        public static final PIDController PID_CONTROLLER = new PIDController( // Exponential Motion Profiling
                 20, 0, 0.01); // PID - Proportional, Integral, Derivative.
+
         /// Exponential Motion Profiling Constraints.
         public static final class Profiling {
-            public static final Voltage                         MAX_CONTROL_VOLTAGE         = Volts.of(12); // Max Control Voltage
-            public static final AngularVelocity                 MAX_ANGULAR_VELOCITY        = DegreesPerSecond.of(180); // Max Angular Velocity
-            public static final AngularAcceleration             MAX_ANGULAR_ACCELERATION    = DegreesPerSecondPerSecond.of(360); // Max Angular Acceleration
+            public static final Voltage MAX_CONTROL_VOLTAGE = Volts.of(12); // Max Control Voltage
+            public static final AngularVelocity MAX_ANGULAR_VELOCITY = DegreesPerSecond.of(180); // Max Angular Velocity
+            public static final AngularAcceleration MAX_ANGULAR_ACCELERATION = DegreesPerSecondPerSecond.of(360); // Max Angular Acceleration
         }
-        public static final Time                                RAMP_RATE           = Seconds.of(0.25); // Time it takes to reach max speed from 0.
-        public static final SimpleMotorFeedforward              FEED_FORWARD        = new SimpleMotorFeedforward(0, 0, 0); // Feed Forwards, likely to be left empty.
-        public static final Current                             CURRENT_LIMIT       = Amp.of(30); // Limits the current, this is a simple indexer. We want the limit low so we don't break things in the case of a jam.
+
+        public static final Time RAMP_RATE = Seconds.of(0.25); // Time it takes to reach max speed from 0.
+        public static final SimpleMotorFeedforward FEED_FORWARD = new SimpleMotorFeedforward(0, 0, 0); // Feed Forwards, likely to be left empty.
+        public static final Current CURRENT_LIMIT = Amp.of(30); // Limits the current, this is a simple indexer. We want the limit low so we don't break things in the case of a jam.
         /// Indexer Constants
-        public static final Distance                            INDEXER_DIAMETER    = Inches.of(3); // Diameter of the wheel, belt, whatever is spinning on the indexer.
-        public static final AngularVelocity                     INDEXER_MAX_SPEED   = RPM.of(120); // Max RPM soft limits
+        public static final Distance INDEXER_DIAMETER = Inches.of(3); // Diameter of the wheel, belt, whatever is spinning on the indexer.
+        public static final AngularVelocity INDEXER_MAX_SPEED = RPM.of(120); // Max RPM soft limits
     }
+
     /// Control Constants for the Indexer Mechanism.
     public static class ControlConstants {
-        public static final AngularVelocity                     VELOCITY_TOLERANCE  = DegreesPerSecond.of(1); // How accurate the velocity should be.
-        public static final AngularVelocity                     TARGET_VELOCITY     = DegreesPerSecond.of(60); // How fast the flywheel should spin.
+        public static final AngularVelocity VELOCITY_TOLERANCE = DegreesPerSecond.of(1); // How accurate the velocity should be.
+        public static final AngularVelocity TARGET_VELOCITY = DegreesPerSecond.of(60); // How fast the flywheel should spin.
     }
+
     /// Indexer uses a custom Brushed wrapper, brushless code is just commented out.
 //    private final SparkMax                                      indexerMotor    = new SparkMax(HardwareConstants.MOTOR_ID, MotorType.kBrushless); /// The Normal Rev Vendor SparkMax Object.
-    private final SmartMotorControllerConfig                    motorConfig     = new SmartMotorControllerConfig(this) /// The Smart Motor Controller Configuration.
+    private final SmartMotorControllerConfig motorConfig = new SmartMotorControllerConfig(this) /// The Smart Motor Controller Configuration.
             .withExponentialProfile(Profiling.MAX_CONTROL_VOLTAGE, Profiling.MAX_ANGULAR_VELOCITY, Profiling.MAX_ANGULAR_ACCELERATION)
             .withClosedLoopController(PID_CONTROLLER)
             .withGearing(HardwareConstants.GEAR_RATIO)
@@ -62,7 +65,7 @@ public class IndexerSubsystem extends SubsystemBase {
             //.withFeedforward(HardwareConstants.FEED_FORWARD)
             .withSimFeedforward(HardwareConstants.FEED_FORWARD)
             .withControlMode(ControlMode.CLOSED_LOOP);
-//    private final SmartMotorController                          motor           = new SparkWrapper(indexerMotor, DCMotor.getNEO(1), motorConfig); /// The new Smart Motor Controller
+    //    private final SmartMotorController                          motor           = new SparkWrapper(indexerMotor, DCMotor.getNEO(1), motorConfig); /// The new Smart Motor Controller
 //    private final FlyWheelConfig                                indexerConfig   = new FlyWheelConfig(motor) /// The FlyWheel config for the Indexer.
 //            .withDiameter(HardwareConstants.INDEXER_DIAMETER)
 //            .withMass(Pounds.of(1)) // Indexer Doesn't need to specify weight.
@@ -88,8 +91,7 @@ public class IndexerSubsystem extends SubsystemBase {
      * it can be used to home the absolute position.
      *
      * @param triggerCurrent how high the current draw should be before triggering.
-     * @param debounceTime how long the current should be above the threshold before triggering.
-     *
+     * @param debounceTime   how long the current should be above the threshold before triggering.
      * @return a new {@link Trigger} to sense current.
      */
     public Trigger currentSensorTrigger(Current triggerCurrent, Time debounceTime) {
@@ -105,7 +107,7 @@ public class IndexerSubsystem extends SubsystemBase {
      * Runs the indexer at the given speed.
      *
      * @param indexSpeed the DutyCycle speed to run at.
-     * @param isIn whether to spin in or out.
+     * @param isIn       whether to spin in or out.
      * @return a command.
      */
     public Command runIndexer(double indexSpeed, boolean isIn) {

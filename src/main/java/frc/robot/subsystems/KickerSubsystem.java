@@ -1,10 +1,7 @@
 package frc.robot.subsystems;
 
-import com.revrobotics.spark.SparkLowLevel.MotorType;
-import com.revrobotics.spark.SparkMax;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
-import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.units.measure.*;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -12,48 +9,45 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Telemetry;
 import frc.robot.util.BrushedSparkWrapper;
-import lombok.Getter;
 import yams.gearing.GearBox;
 import yams.gearing.MechanismGearing;
-import yams.mechanisms.config.FlyWheelConfig;
-import yams.mechanisms.velocity.FlyWheel;
-import yams.motorcontrollers.SmartMotorController;
 import yams.motorcontrollers.SmartMotorControllerConfig;
 import yams.motorcontrollers.SmartMotorControllerConfig.ControlMode;
 import yams.motorcontrollers.SmartMotorControllerConfig.MotorMode;
-import yams.motorcontrollers.local.SparkWrapper;
 
 import static edu.wpi.first.units.Units.*;
 import static frc.robot.subsystems.KickerSubsystem.HardwareConstants.MOTOR_ID;
 import static frc.robot.subsystems.KickerSubsystem.HardwareConstants.PID_CONTROLLER;
-import static frc.robot.subsystems.KickerSubsystem.HardwareConstants.*;
 
-public class KickerSubsystem extends SubsystemBase
-{
+public class KickerSubsystem extends SubsystemBase {
     /// Hardware Constants for the Kicker Mechanism.
     public static class HardwareConstants {
         /// Motor Constants
-        public static final int                                 MOTOR_ID            = 13; // Spark Max CAN ID
-        public static final boolean                             MOTOR_INVERTED      = false; // Inverts control direction.
-        public static final MechanismGearing                    GEAR_RATIO          = new MechanismGearing(GearBox.fromReductionStages(3, 3)); // Kicker Gear Ratio
+        public static final int MOTOR_ID = 13; // Spark Max CAN ID
+        public static final boolean MOTOR_INVERTED = false; // Inverts control direction.
+        public static final MechanismGearing GEAR_RATIO = new MechanismGearing(GearBox.fromReductionStages(3, 3)); // Kicker Gear Ratio
         /// Motor Tuning Values
-        public static final PIDController PID_CONTROLLER              = new PIDController( // Exponential Motion Profiling
+        public static final PIDController PID_CONTROLLER = new PIDController( // Exponential Motion Profiling
                 20, 0, 0.01); // PID - Proportional, Integral, Derivative.
+
         /// Exponential Motion Profiling Constraints.
         public static final class Profiling {
-            public static final Voltage                         MAX_CONTROL_VOLTAGE         = Volts.of(12); // Max Control Voltage
-            public static final AngularVelocity                 MAX_ANGULAR_VELOCITY        = DegreesPerSecond.of(180); // Max Angular Velocity
-            public static final AngularAcceleration             MAX_ANGULAR_ACCELERATION    = DegreesPerSecondPerSecond.of(360); // Max Angular Acceleration
+            public static final Voltage MAX_CONTROL_VOLTAGE = Volts.of(12); // Max Control Voltage
+            public static final AngularVelocity MAX_ANGULAR_VELOCITY = DegreesPerSecond.of(180); // Max Angular Velocity
+            public static final AngularAcceleration MAX_ANGULAR_ACCELERATION = DegreesPerSecondPerSecond.of(360); // Max Angular Acceleration
         }
-        public static final Time                                RAMP_RATE           = Seconds.of(0.25); // Time it takes to reach max speed from 0.
-        public static final SimpleMotorFeedforward              FEED_FORWARD        = new SimpleMotorFeedforward(0, 0, 0); // Feed Forwards, likely to be left empty.
-        public static final Current                             CURRENT_LIMIT       = Amp.of(40); // Limits the current, this is a simple kicker. We want the limit low so we don't break things in the case of a jam.
+
+        public static final Time RAMP_RATE = Seconds.of(0.25); // Time it takes to reach max speed from 0.
+        public static final SimpleMotorFeedforward FEED_FORWARD = new SimpleMotorFeedforward(0, 0, 0); // Feed Forwards, likely to be left empty.
+        public static final Current CURRENT_LIMIT = Amp.of(40); // Limits the current, this is a simple kicker. We want the limit low so we don't break things in the case of a jam.
     }
+
     /// Control Constants for the Kicker Mechanism.
     public static class ControlConstants {
     }
+
     //    private final SparkMax                                      kickerMotor    = new SparkMax(HardwareConstants.MOTOR_ID, MotorType.kBrushless); /// The Normal Rev Vendor SparkMax Object.
-    private final SmartMotorControllerConfig                    motorConfig     = new SmartMotorControllerConfig(this) /// The Smart Motor Controller Configuration.
+    private final SmartMotorControllerConfig motorConfig = new SmartMotorControllerConfig(this) /// The Smart Motor Controller Configuration.
             .withExponentialProfile(KickerSubsystem.HardwareConstants.Profiling.MAX_CONTROL_VOLTAGE, KickerSubsystem.HardwareConstants.Profiling.MAX_ANGULAR_VELOCITY, KickerSubsystem.HardwareConstants.Profiling.MAX_ANGULAR_ACCELERATION)
             .withClosedLoopController(PID_CONTROLLER)
             .withGearing(KickerSubsystem.HardwareConstants.GEAR_RATIO)
@@ -95,8 +89,7 @@ public class KickerSubsystem extends SubsystemBase
      * it can be used to home the absolute position.
      *
      * @param triggerCurrent how high the current draw should be before triggering.
-     * @param debounceTime how long the current should be above the threshold before triggering.
-     *
+     * @param debounceTime   how long the current should be above the threshold before triggering.
      * @return a new {@link Trigger} to sense current.
      */
     public Trigger currentSensorTrigger(Current triggerCurrent, Time debounceTime) {
@@ -113,7 +106,7 @@ public class KickerSubsystem extends SubsystemBase
      * Runs the kicker at the given speed.
      *
      * @param kickerSpeed the DutyCycle speed to run at.
-     * @param isIn whether to spin in or out.
+     * @param isIn        whether to spin in or out.
      * @return a command.
      */
     public Command runKicker(double kickerSpeed, boolean isIn) {

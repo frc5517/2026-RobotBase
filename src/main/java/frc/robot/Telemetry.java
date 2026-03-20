@@ -21,8 +21,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Supplier;
 
-public class Telemetry
-{
+public class Telemetry {
     /// Current Telemetry Setting
     public static TelemetryVerbosity telemetryVerbosity = TelemetryVerbosity.HIGH;
     /// Telemetry Defaults
@@ -32,8 +31,7 @@ public class Telemetry
     public static final String yamsMechPath = "Telemetry/Mechanisms/";
 
     /// Publishers
-    public static class Publishers
-    {
+    public static class Publishers {
 
         public static class Field {
             public static final NetworkTable fieldTable = telemetryTable.getSubTable("Field");
@@ -45,8 +43,7 @@ public class Telemetry
         }
 
         /// Robot Publishers
-        public static class Robot
-        {
+        public static class Robot {
             /// Telemetry Paths
             // Zones
             public static final NetworkTable zoneTable = telemetryTable.getSubTable("Zones");
@@ -56,8 +53,7 @@ public class Telemetry
             public static final StringPublisher inputOverride = zoneTable.getSubTable("Input Selector").getStringTopic("selected").publish();
 
             /// Mech3d Publishers
-            public static class Mech3D
-            {
+            public static class Mech3D {
                 public static final NetworkTable mechTable = zoneTable.getSubTable("Visualize Telemetry");
                 public static final StructPublisher<Pose2d> robotPose = mechTable.getStructTopic("Robot Pose", Pose2d.struct).publish();
                 public static final StructPublisher<Pose3d> hoodPose = mechTable.getStructTopic("Hood Pose", Pose3d.struct).publish();
@@ -75,9 +71,9 @@ public class Telemetry
             }
 
         }
+
         /// MapleSim Publishers
-        public static class MapleSim
-        {
+        public static class MapleSim {
             // Table for maple sim publishers.
             private static final NetworkTable mapleTable = NetworkTableInstance.getDefault().getTable("SmartDashboard/MapleSim");
             // Generic Game Piece Publisher.
@@ -95,8 +91,7 @@ public class Telemetry
     }
 
     /// Updates all of our custom telemetry
-    public static void updateTelemetry(InputBuilder.Subsystems subsystem)
-    {
+    public static void updateTelemetry(InputBuilder.Subsystems subsystem) {
         // Input
         Publishers.Robot.inputPublisher.update();
         Publishers.Robot.Mech3D.robotPose.set(subsystem.swerve().getSwerveDrive().getPose());
@@ -336,8 +331,7 @@ public class Telemetry
     /**
      * SmartDashboard wrapper to match NT4 Publishers.
      */
-    public static class SmartDashboardPublisher
-    {
+    public static class SmartDashboardPublisher {
         /**
          * The value published to the NT4.
          */
@@ -351,8 +345,7 @@ public class Telemetry
          *
          * @param path the telemetry path. Use smartDashboardPath + name.
          */
-        public SmartDashboardPublisher(String path)
-        {
+        public SmartDashboardPublisher(String path) {
             this.path = path;
         }
 
@@ -361,8 +354,7 @@ public class Telemetry
          *
          * @param value to publish.
          */
-        public void setValue(Sendable value)
-        {
+        public void setValue(Sendable value) {
             this.value = value;
             SmartDashboard.putData(path, value);
         }
@@ -373,8 +365,7 @@ public class Telemetry
          *
          * @param supplier the value supplier.
          */
-        public void accept(Supplier<Sendable> supplier)
-        {
+        public void accept(Supplier<Sendable> supplier) {
             this.supplier = supplier;
             setValue(supplier.get());
         }
@@ -382,8 +373,7 @@ public class Telemetry
         /**
          * Updates the published value from the current supplier.
          */
-        public void update()
-        {
+        public void update() {
             setValue(supplier.get());
         }
     }
@@ -401,7 +391,8 @@ public class Telemetry
         /// All telemetry data is sent to the dashboard.
         HIGH(
                 SmartMotorControllerConfig.TelemetryVerbosity.HIGH,
-                SwerveDriveTelemetry.TelemetryVerbosity.HIGH),;
+                SwerveDriveTelemetry.TelemetryVerbosity.HIGH),
+        ;
 
         // Telemetry verbosity for YAMS at this verbosity level.
         public final SmartMotorControllerConfig.TelemetryVerbosity yamsVerbosity;

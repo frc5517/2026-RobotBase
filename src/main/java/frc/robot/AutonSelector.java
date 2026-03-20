@@ -1,9 +1,7 @@
 package frc.robot;
 
-import com.pathplanner.lib.path.PathPlannerPath;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Transform2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -12,10 +10,6 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.systems.ScoringSystem;
 import frc.robot.util.borrowed.math.AllianceFlipUtil;
 import frc.robot.util.borrowed.math.FieldConstants;
-
-import static edu.wpi.first.units.Units.Inches;
-import static edu.wpi.first.units.Units.Seconds;
-import static frc.robot.subsystems.SwerveSubsystem.ControlConstants.INITIAL_SIM_POSE;
 
 public class AutonSelector {
     private final SendableChooser<Command> autonSelector;
@@ -52,12 +46,13 @@ public class AutonSelector {
     /**
      * Start in front of the right bump then transfer to collect.
      * Then to the outpost while scoring.
+     *
      * @return a Right side Auton.
      */
     public Command rightToLeftOutpost() {
         return Commands.runOnce(
-                // Update Odometry
-                () -> subsystems.swerve().getSwerveDrive().resetOdometry(AllianceFlipUtil.ifShouldFlip(StartingPoses.RIGHT_BUMP)))
+                        // Update Odometry
+                        () -> subsystems.swerve().getSwerveDrive().resetOdometry(AllianceFlipUtil.ifShouldFlip(StartingPoses.RIGHT_BUMP)))
                 // Cross bump
                 .andThen(subsystems.swerve().pathfindToPath("Right Bump Neutral"))
                 // Fast Collect
@@ -71,15 +66,17 @@ public class AutonSelector {
                 // Continue firing
                 .andThen(scoring.shootOnTheMove(() -> ScoringSystem.ControlConstants.SOTMTargets.HUB));
     }
+
     /**
      * Start in front of the left bump then transfer to collect.
      * Then to the outpost while scoring.
+     *
      * @return a Right side Auton.
      */
     public Command leftToRightOutpost() {
         return Commands.runOnce(
-                // Update Odometry
-                () -> subsystems.swerve().getSwerveDrive().resetOdometry(AllianceFlipUtil.ifShouldFlip(StartingPoses.LEFT_BUMP)))
+                        // Update Odometry
+                        () -> subsystems.swerve().getSwerveDrive().resetOdometry(AllianceFlipUtil.ifShouldFlip(StartingPoses.LEFT_BUMP)))
                 // Cross bump
                 .andThen(subsystems.swerve().pathfindToPath("Left Bump Neutral"))
                 // Fast Collect
