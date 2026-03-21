@@ -324,14 +324,14 @@ public class PhotonSubsystem {
         FRONT_RIGHT_CAM(
                 "Right Camera",
                 new Rotation3d(Math.toRadians(0), Math.toRadians(0), Math.toRadians(-35)),
-                new Translation3d(Inches.of(10), Inches.of(-10), Inches.of(16)),
+                new Translation3d(Inches.of(10), Inches.of(-10), Inches.of(15)),
                 VecBuilder.fill(4, 4, 8),
                 VecBuilder.fill(0.5, 0.5, 1)),
 
         LEFT_CAM(
                 "Left Camera",
-                new Rotation3d(Math.toRadians(0), Math.toRadians(0), Math.toRadians(35)),
-                new Translation3d(Inches.of(10), Inches.of(10), Inches.of(16)),
+                new Rotation3d(Math.toRadians(0), Math.toRadians(7), Math.toRadians(35)),
+                new Translation3d(Inches.of(10), Inches.of(10), Inches.of(15)),
                 VecBuilder.fill(4, 4, 8),
                 VecBuilder.fill(0.5, 0.5, 1));
 //        RIGHT_SIDE_CAM(

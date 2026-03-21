@@ -121,21 +121,72 @@ public class InputBuilder {
                 .setBoostRotation(1)
                 .withSlowDrive(             driverXbox.leftBumper())
                 .withBoostDrive(            driverXbox.rightBumper())
-                .withToggleCentricity(      driverXbox.start(), true)
+                .withToggleCentricity(      driverXbox.start(), false)
                 .withToggleZones(           CustomTriggers.enteringBumpZone.getTrigger())
                 .withToggleZones(           driverXbox.b())
                 .back().IntakeBindings
                 .withRunIntake(             driverXbox.leftTrigger(), true)
                 .back().MiscBindings
                 .back();
+
+
+
+        // Operator Simple shared Triggers
+        final Trigger intaking = operatorXbox.leftTrigger();
+        final Trigger outtakingIntake = operatorXbox.pov(180);
+        final Trigger outtakingTop = operatorXbox.pov(0);
+        final Trigger indexToShoot = operatorXbox.rightTrigger();
+        final InputStream operatorSimple = new InputStream(BASIC_DRnOP.isMode)
+                .HoodBindings
+                .withSetAngle(operatorXbox.a(), Degrees.of(13))
+                .withSetAngle(operatorXbox.b(), Degrees.of(15))
+                .withSetAngle(operatorXbox.x(), Degrees.of(18))
+                .withSetAngle(operatorXbox.y(), Degrees.of(20))
+                .back().FlyWheelBindings
+                .withSetVelocity(operatorXbox.a(), RotationsPerSecond.of(45))
+                .withSetVelocity(operatorXbox.b(), RotationsPerSecond.of(48))
+                .withSetVelocity(operatorXbox.x(), RotationsPerSecond.of(50))
+                .withSetVelocity(operatorXbox.y(), RotationsPerSecond.of(60))
+                .back().KickerBindings
+                .withRunKicker(operatorXbox.a().or(operatorXbox.b()).or(operatorXbox.x()).or(operatorXbox.y()), true)
+                .withRunKicker(outtakingIntake.or(outtakingTop), false)
+                .back().AgitatorBindings
+                .withRunAgitator(intaking.or(indexToShoot), false)
+                .withRunAgitator(outtakingIntake.or(outtakingTop), true)
+                .back().IndexerBindings
+                .withRunIndexer(intaking.or(indexToShoot), true)
+                .withRunIndexer(outtakingIntake.or(outtakingTop), false)
+                .back().IntakeBindings
+                .withRunIntake(intaking, true)
+                .withRunIntake(outtakingIntake, false)
+                .back();
+
+
+        // Default Single Xbox Control
+        final InputStream driverSimple = new InputStream()
+                .StartingMethods.defaultXboxDrive(BASIC_DRnOP.isMode, driverXbox)
+                .SwerveBindings
+                .setSlowTranslation(0.5)
+                .setSlowRotation(0.65)
+                .setNormalTranslation(0.8)
+                .setNormalRotation(1)
+                .setBoostTranslation(1)
+                .setBoostRotation(1)
+                .withSlowDrive(             driverXbox.leftBumper())
+                .withBoostDrive(            driverXbox.rightBumper())
+                .withToggleCentricity(      driverXbox.start(), false)
+                .withLookAtHub(driverXbox.rightTrigger())
+                .back();
+
     }
 
     // Control binding type enum
     public enum InputSelections {
         /// Default Input Schema
-        SINGLE_XBOX("Single Xbox", true),
+        SINGLE_XBOX("Single Xbox", false),
         TESTING("Testing", false),
         SOTM_CALIBRATION("SOTM Calibration", false),
+        BASIC_DRnOP("Basic Driver and Operator", true),
         MANUAL_CONTROL("Manual Control", false);
 
         // BindType Name
