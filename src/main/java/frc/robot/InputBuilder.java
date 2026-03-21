@@ -347,7 +347,7 @@ public class InputBuilder {
             public SmartBindings withBasicAim(Trigger basicAim) {
                 this.back().TurretBindings.withSetAngle(basicAim, Degrees.of(0))
                         .back().HoodBindings.withSetAngle(basicAim, Degrees.of(15))
-                        .back().FlyWheelBindings.withSetVelocity(basicAim, RotationsPerSecond.of(60))
+                        .back().FlyWheelBindings.withSetVelocity(basicAim, RotationsPerSecond.of(47))
                         .back().SwerveBindings.withLookAtHub(basicAim);
                 return this;
             }
@@ -363,7 +363,6 @@ public class InputBuilder {
             public SmartBindings withFuelControl(Trigger intake, Trigger index, Trigger spinUp) {
                 this.withBlockingIntakeIntoHopper(index.negate().and(intake)); // If not indexing, intake to hopper.
                 this.withIndexIntoFlyWheel(intake.negate()
-                        .and(subsystems.flywheel.isNear(ScoringSystem.SOTMLatestGoals::getFlyWheelGoal))
                         .and(index)); // If not intaking, index into flywheel.
                 this.back().KickerBindings.withRunKicker(spinUp, true);
                 return this;
@@ -418,6 +417,7 @@ public class InputBuilder {
                 isMode.and(shootOnTheMoveWhile.toggleOnTrue(Commands.runOnce(() -> isToggled[0] = !isToggled[0])));
                 Trigger trigger = isMode.and(() -> isToggled[0]).and(CustomTriggers.neutralZone.getTrigger());
                 trigger.whileTrue(scoring.shootOnTheMove(() -> subsystems.swerve().getHoardingTarget()));
+                shootOnTheMoveWhile.onFalse(subsystems.flywheel.stopFlyWheel());
                 return this;
             }
 
@@ -437,6 +437,7 @@ public class InputBuilder {
                 Trigger trigger = isMode.and(() -> isToggled[0]).and(CustomTriggers.allianceZone.getTrigger());
                 trigger.whileTrue(scoring.shootOnTheMove(() -> ScoringSystem.ControlConstants.SOTMTargets.HUB));
                 this.back().SwerveBindings.withLookAtHub(trigger.and(() -> withDrive));
+                shootOnTheMoveWhile.onFalse(subsystems.flywheel.stopFlyWheel());
                 return this;
             }
 
