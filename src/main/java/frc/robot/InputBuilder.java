@@ -166,14 +166,8 @@ public class InputBuilder {
         final InputStream driverSimple = new InputStream()
                 .StartingMethods.defaultXboxDrive(BASIC_DRnOP.isMode, driverXbox)
                 .SwerveBindings
-                .setSlowTranslation(0.5)
-                .setSlowRotation(0.65)
-                .setNormalTranslation(0.8)
+                .setNormalTranslation(1)
                 .setNormalRotation(1)
-                .setBoostTranslation(1)
-                .setBoostRotation(1)
-                .withSlowDrive(             driverXbox.leftBumper())
-                .withBoostDrive(            driverXbox.rightBumper())
                 .withToggleCentricity(      driverXbox.start(), false)
                 .withLookAtHub(driverXbox.rightTrigger())
                 .back();
@@ -592,7 +586,7 @@ public class InputBuilder {
              * The default duty cycle speed to run at.
              */
             @Setter
-            private double intakeSpeed = 0.5;
+            private double intakeSpeed = 1;
 
             private IntakeBindings() {
                 this.isPresent = subsystems.intake != null;
@@ -659,7 +653,7 @@ public class InputBuilder {
              * The default duty cycle speed to run at.
              */
             @Setter
-            private double indexSpeed = 0.5;
+            private double indexSpeed = 1;
 
 
             private IndexerBindings() {
@@ -715,7 +709,7 @@ public class InputBuilder {
              * The default duty cycle speed to run at.
              */
             @Setter
-            private double agitatorSpeed = 0.5;
+            private double agitatorSpeed = 1;
 
 
             private AgitatorBindings() {
@@ -776,7 +770,7 @@ public class InputBuilder {
              * The default duty cycle speed to run at.
              */
             @Setter
-            private double kickerSpeed = 0.75;
+            private double kickerSpeed = 1;
 
             /**
              * Runs the kicker at preset speed, stopping when finished.
