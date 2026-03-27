@@ -66,7 +66,7 @@ public class FlyWheelSubsystem extends SubsystemBase {
 
     /// Control Constants for the FlyWheel Mechanism
     public static class ControlConstants {
-        public static final AngularVelocity VELOCITY_TOLERANCE = RotationsPerSecond.of(2); // How accurate the velocity should be.
+        public static final AngularVelocity VELOCITY_TOLERANCE = RotationsPerSecond.of(10); // How accurate the velocity should be.
     }
 
     /// Initialize the FlyWheel

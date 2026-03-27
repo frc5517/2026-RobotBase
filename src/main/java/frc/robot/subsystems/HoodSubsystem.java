@@ -40,7 +40,7 @@ public class HoodSubsystem extends SubsystemBase {
         /// Motor Constants
         public static final int MOTOR_ID = 14; // Spark Max CAN ID
         public static final boolean MOTOR_INVERTED = false; // Inverts control direction.
-        public static final MechanismGearing GEAR_RATIO = new MechanismGearing(GearBox.fromReductionStages(5, 4, 4, 56 / 40.0)); // FlyWheel Gear Ratio
+        public static final MechanismGearing GEAR_RATIO = new MechanismGearing(GearBox.fromReductionStages(4, 4, 3, 56 / 40.0)); // FlyWheel Gear Ratio
         /// Motor Tuning Values
         public static final PIDController PID_CONTROLLER = new PIDController( // Exponential Motion Profiling
                 60, 0, 0.01); // PID - Proportional, Integral, Derivative.
@@ -155,10 +155,11 @@ public class HoodSubsystem extends SubsystemBase {
      */
     public Command home() {
         // Disable closed loop so we don't hit soft limits, then move backwards at a low power.
-        return Commands.startRun(() -> motor.setEncoderPosition(HardwareConstants.HARD_LIMIT_FORWARD),
-                        () -> motor.setVoltage(Volts.of(-2)))
+        return Commands.startRun(() -> motor.setEncoderPosition(HardwareConstants.HARD_LIMIT_FORWARD.times(2)),
+                        () -> motor.setVoltage(Volts.of(-1.5)))
                 // Until we hit something, the something should be our hard stop, but it shouldn't hurt to get your hand stuck.
-                .until(currentSensorTrigger(Amps.of(10), Seconds.of(0.1)))
+                .until(currentSensorTrigger(Amps.of(10), Seconds.of(0.05)))
+                .andThen(stopHood())
                 .finallyDo(() -> { // Then we set our new zero point and restart the closed loop.
                     motor.setEncoderPosition(PHYSICAL_STARTING_ANGLE);
                 });

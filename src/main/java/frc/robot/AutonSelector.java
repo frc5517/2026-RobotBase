@@ -1,5 +1,10 @@
 package frc.robot;
 
+import static edu.wpi.first.units.Units.Degrees;
+import static edu.wpi.first.units.Units.RotationsPerSecond;
+
+import java.security.PublicKey;
+
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
@@ -30,6 +35,8 @@ public class AutonSelector {
 
         autonSelector.setDefaultOption("Right to Left - Collect then Outpost", rightToLeftOutpost());
         autonSelector.addOption("Left to Right - Collect then Outpost", leftToRightOutpost());
+        autonSelector.addOption("Do Nothing", doNothing());
+        autonSelector.addOption("Other", other());
 
         SmartDashboard.putData("AutonSelector", autonSelector);
     }
@@ -41,6 +48,27 @@ public class AutonSelector {
      */
     public Command getSelected() {
         return autonSelector.getSelected();
+    }
+
+    public Command doNothing() {
+        return Commands.none();
+    }
+
+    public Command other() {
+        return Commands.runOnce(
+                        // Update Odometry
+                        () -> subsystems.swerve().getSwerveDrive().resetOdometry(AllianceFlipUtil.ifShouldFlip(StartingPoses.RIGHT_BUMP)))
+                // Then move to outpost while firing.
+                .andThen(subsystems.swerve().pathfindToPath("Left to Hub Front"))
+                // While firing
+                .alongWith(subsystems.flywheel().getFlyWheel().run(RotationsPerSecond.of(50)))
+                .alongWith(subsystems.hood().getHood().setAngle(Degrees.of(15)))
+                .alongWith(subsystems.kicker().runKicker(.75, true))
+                // Start feeding after a second
+                .alongWith(Commands.waitSeconds(1).andThen(
+                    subsystems.agitator().runAgitator(0.75, true)
+                    .alongWith(subsystems.indexer().runIndexer(.75, true))
+                    .alongWith(subsystems.intake().runIntake(.75, true))));
     }
 
     /**
@@ -60,11 +88,17 @@ public class AutonSelector {
                         // While intaking, stopping when path is over.
                         .deadlineFor(subsystems.intake().intake(0.75, true)))
                 // Then move to outpost while firing.
-                .andThen(subsystems.swerve().pathfindToPath("Left to Outpost Aiming"))
+                .andThen(subsystems.swerve().pathfindToPath("Left to Hub Front"))
                 // While firing
                 .alongWith(scoring.shootOnTheMove(() -> ScoringSystem.ControlConstants.SOTMTargets.HUB))
                 // Continue firing
-                .andThen(scoring.shootOnTheMove(() -> ScoringSystem.ControlConstants.SOTMTargets.HUB));
+                .andThen(scoring.shootOnTheMove(() -> ScoringSystem.ControlConstants.SOTMTargets.HUB)
+                .alongWith(subsystems.kicker().runKicker(.75, true))
+                // Start feeding after a second
+                .alongWith(Commands.waitSeconds(1).andThen(
+                    subsystems.agitator().runAgitator(0.75, true)
+                    .alongWith(subsystems.indexer().runIndexer(.75, true))
+                    .alongWith(subsystems.intake().runIntake(.75, true)))));
     }
 
     /**
@@ -84,10 +118,16 @@ public class AutonSelector {
                         // While intaking, stopping when path is over.
                         .deadlineFor(subsystems.intake().intake(0.75, true)))
                 // Then move to outpost while firing.
-                .andThen(subsystems.swerve().pathfindToPath("To Outpost Aiming"))
+                .andThen(subsystems.swerve().pathfindToPath("Right to Hub Front"))
                 // While firing
                 .alongWith(scoring.shootOnTheMove(() -> ScoringSystem.ControlConstants.SOTMTargets.HUB))
                 // Continue firing
-                .andThen(scoring.shootOnTheMove(() -> ScoringSystem.ControlConstants.SOTMTargets.HUB));
+                .andThen(scoring.shootOnTheMove(() -> ScoringSystem.ControlConstants.SOTMTargets.HUB)
+                .alongWith(subsystems.kicker().runKicker(.75, true))
+                // Start feeding after a second
+                .alongWith(Commands.waitSeconds(1).andThen(
+                    subsystems.agitator().runAgitator(0.75, true)
+                    .alongWith(subsystems.indexer().runIndexer(.75, true))
+                    .alongWith(subsystems.intake().runIntake(.75, true)))));
     }
 }

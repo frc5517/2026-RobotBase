@@ -126,6 +126,13 @@ public class SwerveSubsystem extends SubsystemBase {
         SwerveState.setSwerveDrive(this::getSwerveDrive);
     }
 
+    public boolean isMoving(double tolerance) {
+        return
+                (swerveDrive.getRobotVelocity().omegaRadiansPerSecond +
+                       swerveDrive.getRobotVelocity().vyMetersPerSecond +
+                        swerveDrive.getRobotVelocity().vxMetersPerSecond) / 3 > tolerance;
+    }
+
     /**
      * Setup the photon vision class.
      */

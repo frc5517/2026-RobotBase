@@ -121,21 +121,66 @@ public class InputBuilder {
                 .setBoostRotation(1)
                 .withSlowDrive(             driverXbox.leftBumper())
                 .withBoostDrive(            driverXbox.rightBumper())
-                .withToggleCentricity(      driverXbox.start(), true)
+                .withToggleCentricity(      driverXbox.start(), false)
                 .withToggleZones(           CustomTriggers.enteringBumpZone.getTrigger())
                 .withToggleZones(           driverXbox.b())
                 .back().IntakeBindings
                 .withRunIntake(             driverXbox.leftTrigger(), true)
                 .back().MiscBindings
                 .back();
+
+
+
+        // Operator Simple shared Triggers
+        final Trigger intaking = operatorXbox.leftTrigger();
+        final Trigger outtakingIntake = operatorXbox.pov(180);
+        final Trigger outtakingTop = operatorXbox.pov(0);
+        final Trigger indexToShoot = operatorXbox.rightTrigger();
+        final InputStream operatorSimple = new InputStream(BASIC_DRnOP.isMode)
+                .HoodBindings
+                .withSetAngle(operatorXbox.a(), Degrees.of(13))
+                .withSetAngle(operatorXbox.b(), Degrees.of(15))
+                .withSetAngle(operatorXbox.x(), Degrees.of(18))
+                .withSetAngle(operatorXbox.y(), Degrees.of(20))
+                .back().FlyWheelBindings
+                .withSetVelocity(operatorXbox.a(), RotationsPerSecond.of(45))
+                .withSetVelocity(operatorXbox.b(), RotationsPerSecond.of(48))
+                .withSetVelocity(operatorXbox.x(), RotationsPerSecond.of(50))
+                .withSetVelocity(operatorXbox.y(), RotationsPerSecond.of(60))
+                .back().KickerBindings
+                .withRunKicker(operatorXbox.a().or(operatorXbox.b()).or(operatorXbox.x()).or(operatorXbox.y()), true)
+                .withRunKicker(outtakingIntake.or(outtakingTop), false)
+                .back().AgitatorBindings
+                .withRunAgitator(intaking.or(indexToShoot), false)
+                .withRunAgitator(outtakingIntake.or(outtakingTop), true)
+                .back().IndexerBindings
+                .withRunIndexer(intaking.or(indexToShoot), true)
+                .withRunIndexer(outtakingIntake.or(outtakingTop), false)
+                .back().IntakeBindings
+                .withRunIntake(intaking, true)
+                .withRunIntake(outtakingIntake, false)
+                .back();
+
+
+        // Default Single Xbox Control
+        final InputStream driverSimple = new InputStream()
+                .StartingMethods.defaultXboxDrive(BASIC_DRnOP.isMode, driverXbox)
+                .SwerveBindings
+                .setNormalTranslation(1)
+                .setNormalRotation(1)
+                .withToggleCentricity(      driverXbox.start(), false)
+                .withLookAtHub(driverXbox.rightTrigger())
+                .back();
+
     }
 
     // Control binding type enum
     public enum InputSelections {
         /// Default Input Schema
-        SINGLE_XBOX("Single Xbox", true),
+        SINGLE_XBOX("Single Xbox", false),
         TESTING("Testing", false),
         SOTM_CALIBRATION("SOTM Calibration", false),
+        BASIC_DRnOP("Basic Driver and Operator", true),
         MANUAL_CONTROL("Manual Control", false);
 
         // BindType Name
@@ -296,7 +341,7 @@ public class InputBuilder {
             public SmartBindings withBasicAim(Trigger basicAim) {
                 this.back().TurretBindings.withSetAngle(basicAim, Degrees.of(0))
                         .back().HoodBindings.withSetAngle(basicAim, Degrees.of(15))
-                        .back().FlyWheelBindings.withSetVelocity(basicAim, RotationsPerSecond.of(60))
+                        .back().FlyWheelBindings.withSetVelocity(basicAim, RotationsPerSecond.of(47))
                         .back().SwerveBindings.withLookAtHub(basicAim);
                 return this;
             }
@@ -312,7 +357,6 @@ public class InputBuilder {
             public SmartBindings withFuelControl(Trigger intake, Trigger index, Trigger spinUp) {
                 this.withBlockingIntakeIntoHopper(index.negate().and(intake)); // If not indexing, intake to hopper.
                 this.withIndexIntoFlyWheel(intake.negate()
-                        .and(subsystems.flywheel.isNear(ScoringSystem.SOTMLatestGoals::getFlyWheelGoal))
                         .and(index)); // If not intaking, index into flywheel.
                 this.back().KickerBindings.withRunKicker(spinUp, true);
                 return this;
@@ -367,6 +411,7 @@ public class InputBuilder {
                 isMode.and(shootOnTheMoveWhile.toggleOnTrue(Commands.runOnce(() -> isToggled[0] = !isToggled[0])));
                 Trigger trigger = isMode.and(() -> isToggled[0]).and(CustomTriggers.neutralZone.getTrigger());
                 trigger.whileTrue(scoring.shootOnTheMove(() -> subsystems.swerve().getHoardingTarget()));
+                shootOnTheMoveWhile.onFalse(subsystems.flywheel.stopFlyWheel());
                 return this;
             }
 
@@ -386,6 +431,7 @@ public class InputBuilder {
                 Trigger trigger = isMode.and(() -> isToggled[0]).and(CustomTriggers.allianceZone.getTrigger());
                 trigger.whileTrue(scoring.shootOnTheMove(() -> ScoringSystem.ControlConstants.SOTMTargets.HUB));
                 this.back().SwerveBindings.withLookAtHub(trigger.and(() -> withDrive));
+                shootOnTheMoveWhile.onFalse(subsystems.flywheel.stopFlyWheel());
                 return this;
             }
 
@@ -540,7 +586,7 @@ public class InputBuilder {
              * The default duty cycle speed to run at.
              */
             @Setter
-            private double intakeSpeed = 0.5;
+            private double intakeSpeed = 1;
 
             private IntakeBindings() {
                 this.isPresent = subsystems.intake != null;
@@ -607,7 +653,7 @@ public class InputBuilder {
              * The default duty cycle speed to run at.
              */
             @Setter
-            private double indexSpeed = 0.5;
+            private double indexSpeed = 1;
 
 
             private IndexerBindings() {
@@ -663,7 +709,7 @@ public class InputBuilder {
              * The default duty cycle speed to run at.
              */
             @Setter
-            private double agitatorSpeed = 0.5;
+            private double agitatorSpeed = 1;
 
 
             private AgitatorBindings() {
@@ -724,7 +770,7 @@ public class InputBuilder {
              * The default duty cycle speed to run at.
              */
             @Setter
-            private double kickerSpeed = 0.75;
+            private double kickerSpeed = 1;
 
             /**
              * Runs the kicker at preset speed, stopping when finished.
