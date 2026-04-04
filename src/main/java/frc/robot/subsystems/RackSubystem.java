@@ -34,7 +34,7 @@ import static frc.robot.subsystems.HoodSubsystem.ControlConstants.PHYSICAL_START
 import static frc.robot.subsystems.HoodSubsystem.HardwareConstants.*;
 import static frc.robot.subsystems.TurretSubsystem.HardwareConstants.TURRET_POSITION;
 
-public class HoodSubsystem extends SubsystemBase {
+public class RackSubystem extends SubsystemBase {
     /// The Hardware Constants for the Hood Mechanism.
     public static final class HardwareConstants {
         /// Motor Constants
@@ -123,7 +123,7 @@ public class HoodSubsystem extends SubsystemBase {
     /// A trigger used to stop the motor when it is trying too hard.
     private final Trigger jammedTrigger = currentSensorTrigger(Amps.of(20), Seconds.of(0.25));
 
-    public HoodSubsystem(TurretSubsystem turretSubsystem) {
+    public RackSubystem(TurretSubsystem turretSubsystem) {
         this.turret = turretSubsystem;
         /// A safety to automatically stop the motor if it starts trying too hard.
         jammedTrigger.whileTrue(stopHood());

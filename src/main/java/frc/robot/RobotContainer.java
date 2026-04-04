@@ -13,8 +13,17 @@ import swervelib.simulation.ironmaple.simulation.SimulatedArena;
 import swervelib.simulation.ironmaple.simulation.opponents.EmptyOpponent;
 
 public class RobotContainer {
+    private static final TurretSubsystem turretSubsystem = new TurretSubsystem();
     /// Bite-sized Subsystems record class for easy packaging of all the subsystems.
-    private final InputBuilder.Subsystems subsystems;
+    public static final InputBuilder.Subsystems subsystems = new InputBuilder.Subsystems(
+            new SwerveSubsystem(),
+            new FlyWheelSubsystem(),
+            new HoodSubsystem(turretSubsystem),
+            new IndexerSubsystem(),
+            new IntakeSubsystem(),
+            null,
+            new KickerSubsystem(),
+            null); // Used to dynamically disable not used systems.
     /// Our Systems
     private final ScoringSystem scoring;
     /// Input Builder
@@ -28,10 +37,6 @@ public class RobotContainer {
      * This allows creation, manipulation, selection, and layered complexity of bindings with ease.
      */
     public RobotContainer() {
-        /// Disable not hardware finished subsystems unless it is sim.
-        final var turretSubsystem = new TurretSubsystem();
-        subsystems = new InputBuilder.Subsystems(new SwerveSubsystem(), new FlyWheelSubsystem(), new HoodSubsystem(turretSubsystem), new IndexerSubsystem(), new IntakeSubsystem(), new AgitatorSubsystem(), new KickerSubsystem(), turretSubsystem);
-
         scoring = new ScoringSystem(subsystems);
         inputBuilder = new InputBuilder(subsystems, scoring);
         autonSelector = new AutonSelector(subsystems, scoring);

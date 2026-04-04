@@ -3,8 +3,6 @@ package frc.robot;
 import static edu.wpi.first.units.Units.Degrees;
 import static edu.wpi.first.units.Units.RotationsPerSecond;
 
-import java.security.PublicKey;
-
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
@@ -66,8 +64,8 @@ public class AutonSelector {
                 .alongWith(subsystems.kicker().runKicker(.75, true))
                 // Start feeding after a second
                 .alongWith(Commands.waitSeconds(1).andThen(
-                    subsystems.agitator().runAgitator(0.75, true)
-                    .alongWith(subsystems.indexer().runIndexer(.75, true))
+                    //subsystems.agitator().runAgitator(0.75, true)
+                    subsystems.indexer().runIndexer(.75, true)
                     .alongWith(subsystems.intake().runIntake(.75, true))));
     }
 
@@ -96,8 +94,8 @@ public class AutonSelector {
                 .alongWith(subsystems.kicker().runKicker(.75, true))
                 // Start feeding after a second
                 .alongWith(Commands.waitSeconds(1).andThen(
-                    subsystems.agitator().runAgitator(0.75, true)
-                    .alongWith(subsystems.indexer().runIndexer(.75, true))
+                    //subsystems.agitator().runAgitator(0.75, true)
+                    subsystems.indexer().runIndexer(.75, true)
                     .alongWith(subsystems.intake().runIntake(.75, true)))));
     }
 
@@ -126,8 +124,8 @@ public class AutonSelector {
                 .alongWith(subsystems.kicker().runKicker(.75, true))
                 // Start feeding after a second
                 .alongWith(Commands.waitSeconds(1).andThen(
-                    subsystems.agitator().runAgitator(0.75, true)
-                    .alongWith(subsystems.indexer().runIndexer(.75, true))
+                    //subsystems.agitator().runAgitator(0.75, true)
+                    subsystems.indexer().runIndexer(.75, true)
                     .alongWith(subsystems.intake().runIntake(.75, true)))));
     }
 }

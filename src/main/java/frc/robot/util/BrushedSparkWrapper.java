@@ -1,12 +1,17 @@
 package frc.robot.util;
 
+import com.revrobotics.PersistMode;
+import com.revrobotics.ResetMode;
 import com.revrobotics.sim.SparkMaxSim;
 import com.revrobotics.spark.SparkLowLevel;
 import com.revrobotics.spark.SparkMax;
+import com.revrobotics.spark.config.SparkBaseConfig;
+import com.revrobotics.spark.config.SparkMaxConfig;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.system.plant.LinearSystemId;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.measure.Current;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.simulation.BatterySim;
 import edu.wpi.first.wpilibj.simulation.DCMotorSim;
@@ -34,9 +39,10 @@ public class BrushedSparkWrapper {
         // SparkMax Instance
         this.motor = new SparkMax(canID, SparkLowLevel.MotorType.kBrushed);
         // Motor Physics Characteristics
-        this.dcMotor = DCMotor.getVex775Pro(1);
+        this.dcMotor = DCMotor.getVex775Pro(1); // We typically only use Vex775s
         // YAMS SMC
         this.config = config;
+        configureMotor();
         // Cached sim bool
         this.isSim = RobotBase.isSimulation();
         // If sim, setup sim.
@@ -57,6 +63,19 @@ public class BrushedSparkWrapper {
         }
         // Publish our one timers.
         publishStaticTelemetry();
+    }
+
+    private void configureMotor() {
+        SparkBaseConfig config = new SparkMaxConfig();
+        config.idleMode(this.config.getIdleMode().get() == SmartMotorControllerConfig.MotorMode.BRAKE
+                ? SparkBaseConfig.IdleMode.kBrake
+                : SparkBaseConfig.IdleMode.kCoast)
+                        .inverted(this.config.getMotorInverted().get());
+        motor.configure(config,
+                ResetMode.kNoResetSafeParameters,
+                DriverStation.isEnabled()
+                        ? PersistMode.kNoPersistParameters
+                        : PersistMode.kPersistParameters);
     }
 
     /**

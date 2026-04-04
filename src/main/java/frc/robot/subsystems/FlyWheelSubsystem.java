@@ -60,7 +60,7 @@ public class FlyWheelSubsystem extends SubsystemBase {
         public static final Current CURRENT_LIMIT = Amp.of(65); // Current limit, Higher for faster control.
         /// FlyWheel Constants
         public static final Distance FLYWHEEL_DIAMETER = Inches.of(4); // Diameter of the wheel, belt, whatever is spinning on the flywheel.
-        public static final Mass FLYWHEEL_MASS = Pounds.of(1); // Weight of the flywheel, just what gets spun.
+        public static final Mass FLYWHEEL_MASS = Pounds.of(2); // Weight of the flywheel, just what gets spun.
         public static final double FLYWHEEL_EFFICIENCY = .325; // Multiplicity factor used to determine how much speed was transferred,
     }
 

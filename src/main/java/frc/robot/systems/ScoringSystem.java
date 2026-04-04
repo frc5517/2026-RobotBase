@@ -95,24 +95,24 @@ public class ScoringSystem {
 
     public Command shootOnTheMove(Supplier<Pose2d> target) {
         // Goal values
-        Angle[] turretGoal = {subsystems.turret().getTurret().getAngle()};
+        //Angle[] turretGoal = {subsystems.turret().getTurret().getAngle()};
         Angle[] hoodGoal = {subsystems.hood().getHood().getAngle()};
         AngularVelocity[] flyWheelGoal = {subsystems.flywheel().getFlyWheel().getSpeed()};
         return Commands.run(() -> calculateSOTMGoals(
                         // Calculate goals based on a flipped target
                         AllianceFlipUtil.ifShouldFlip(target.get()).getTranslation(),
-                        (newAngle) -> turretGoal[0] = newAngle,
+                        //(newAngle) -> newAngle,
                         (newAngle) -> hoodGoal[0] = newAngle,
                         (newSpeed) -> flyWheelGoal[0] = newSpeed))
                 // Run goals
-                .alongWith(subsystems.turret().getTurret().run(() -> turretGoal[0]))
+                //.alongWith(subsystems.turret().getTurret().run(() -> turretGoal[0]))
                 .alongWith(subsystems.hood().getHood().run(() -> hoodGoal[0]))
                 .alongWith(RobotBase.isSimulation()
                         ? subsystems.flywheel().simShoot(subsystems, () -> flyWheelGoal[0]).andThen(Commands.waitSeconds(.2)).repeatedly()
                         : subsystems.flywheel().setGoal(() -> flyWheelGoal[0]));
     }
 
-    public void calculateSOTMGoals(Translation2d target, Consumer<Angle> turretGoal, Consumer<Angle> hoodGoal, Consumer<AngularVelocity> flyWheelGoal) {
+    public void calculateSOTMGoals(Translation2d target, Consumer<Angle> hoodGoal, Consumer<AngularVelocity> flyWheelGoal) {
         // Velocity measurement delay that affects precise calculations.
         double phaseDelay = 0.05;
         Pose2d rawPose = subsystems.swerve().getSwerveDrive().getPose();
@@ -153,7 +153,7 @@ public class ScoringSystem {
         SOTMLatestGoals.TimeOfFlight = Seconds.of(timeOfFlight);
         SOTMLatestGoals.DistanceToTarget = Meters.of(lookAheadDistance);
         // They want consumers I guess.
-        turretGoal.accept(SOTMLatestGoals.getTurretGoal());
+        //turretGoal.accept(SOTMLatestGoals.getTurretGoal());
         hoodGoal.accept(SOTMLatestGoals.getHoodGoal());
         flyWheelGoal.accept(SOTMLatestGoals.getFlyWheelGoal());
     }
