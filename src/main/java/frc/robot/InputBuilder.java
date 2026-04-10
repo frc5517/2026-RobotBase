@@ -4,10 +4,7 @@ import edu.wpi.first.math.Pair;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.units.measure.Angle;
-import edu.wpi.first.units.measure.AngularVelocity;
-import edu.wpi.first.units.measure.Current;
-import edu.wpi.first.units.measure.Time;
+import edu.wpi.first.units.measure.*;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.Timer;
@@ -129,7 +126,18 @@ public class InputBuilder {
                 .back().MiscBindings
                 .back();
 
-
+        final InputStream hopperTest = new InputStream(HOPPER_TESTING.isMode)
+                .RackBindings
+                .withRunRack(driverXbox.b(), true)
+                .withRunRack(driverXbox.a(), false)
+                .withSetExtension(driverXbox.y(), Inches.of(6))
+                .withEfficientSetExtension(driverXbox.pov(0), true)
+                .withEfficientSetExtension(driverXbox.pov(180), false)
+                .back()
+                .IntakeBindings
+                .withRunIntake(driverXbox.leftTrigger(), true)
+                .withRunIntake(driverXbox.rightTrigger(), false)
+                .back();
 
         // Operator Simple shared Triggers
         final Trigger intaking = operatorXbox.leftTrigger();
@@ -170,6 +178,9 @@ public class InputBuilder {
                 .setNormalRotation(1)
                 .withToggleCentricity(      driverXbox.start(), false)
                 .withLookAtHub(driverXbox.rightTrigger())
+                .back()
+                .RackBindings
+                .withToggleExtension(driverXbox.leftTrigger())
                 .back();
 
     }
@@ -179,6 +190,7 @@ public class InputBuilder {
         /// Default Input Schema
         SINGLE_XBOX("Single Xbox", false),
         TESTING("Testing", false),
+        HOPPER_TESTING("Hopper Test", false),
         SOTM_CALIBRATION("SOTM Calibration", false),
         BASIC_DRnOP("Basic Driver and Operator", true),
         MANUAL_CONTROL("Manual Control", false);
@@ -249,6 +261,7 @@ public class InputBuilder {
         public final StartingMethods StartingMethods = new StartingMethods();
         public final SmartBindings SmartBindings = new SmartBindings();
         public final IntakeBindings IntakeBindings = new IntakeBindings();
+        public final RackBindings RackBindings = new RackBindings();
         public final IndexerBindings IndexerBindings = new IndexerBindings();
         public final AgitatorBindings AgitatorBindings = new AgitatorBindings();
         public final KickerBindings KickerBindings = new KickerBindings();
@@ -635,6 +648,132 @@ public class InputBuilder {
 
             /**
              * Leaves IntakeBindings going back to the InputStream.
+             *
+             * @return this InputStream.
+             */
+            public InputStream back() {
+                return InputStream.this;
+            }
+        }
+
+        /**
+         * Rack Button Bindings
+         */
+        private class RackBindings {
+            /**
+             * Checks if this subsystem is present, if not, don't bind anything.
+             */
+            private final boolean isPresent;
+            /**
+             * The default duty cycle speed to run at.
+             */
+            @Setter
+            private double rackSpeed = 0.25;
+
+            private RackBindings() {
+                this.isPresent = subsystems.rack != null;
+            }
+
+            /**
+             * Homes the mechanism using current sensing.
+             *
+             * @param home the button to map.
+             * @return this, for chaining.
+             */
+            public RackBindings withAutoHome(Trigger home) {
+                if (!isPresent) {
+                    return this;
+                }
+                isMode.and(home).whileTrue(subsystems.rack.home());
+                return this;
+            }
+
+            /**
+             * Runs the rack to a goal stopping when at the goal.
+             * Toggles between in and out extensions.
+             *
+             * @param toggleExtension the button to toggle with.
+             * @return this, for chaining.
+             */
+            public RackBindings withToggleExtension(Trigger toggleExtension) {
+                if (!isPresent) {return this;}
+                isMode.and(toggleExtension)
+                    .toggleOnTrue(
+                            subsystems.rack.runToRack(true) // runTo Goal stopping control.
+                                    .onlyIf(subsystems.rack.atGoal(true).negate()) // Only if out of goal
+                                    .repeatedly()) // Repeat
+                        .negate().whileTrue( // Toggle reverse
+                                subsystems.rack.runToRack(false) // runTo Goal stopping control.
+                                        .onlyIf(subsystems.rack.atGoal(false).negate()) // Only if out of goal
+                                        .repeatedly()); // Repeat
+                return this;
+            }
+
+            /**
+             * Runs the rack to a goal stopping when at the goal.
+             *
+             * @param efficientSetExtension the button to toggle with.
+             * @param isOut whether to extend or retract
+             * @return this, for chaining.
+             */
+            public RackBindings withEfficientSetExtension(Trigger efficientSetExtension, boolean isOut) {
+                if (!isPresent) {return this;}
+
+                isMode.and(efficientSetExtension)
+                        .toggleOnTrue(
+                                subsystems.rack.runToRack(isOut) // runTo Goal stopping control.
+                                        .onlyIf(subsystems.rack.atGoal(isOut).negate()) // Only if out of goal
+                                        .repeatedly()); // Repeat
+                return this;
+            }
+
+            /**
+             * Sets the rack to the given extension
+             *
+             * @param setDistance  the button to map.
+             * @param distance the distance to move to.
+             * @return this, for chaining.
+             */
+            public RackBindings withSetExtension(Trigger setDistance, Distance distance) {
+                if (!isPresent) {
+                    return this;
+                }
+                isMode.and(setDistance).whileTrue(subsystems.rack.getRack().run(distance));
+                return this;
+            }
+
+            /**
+             * Runs the rack at preset speed, stopping when finished.
+             *
+             * @param runHood the button to map.
+             * @param isOut whether to extend or retract.
+             * @return this, for chaining.
+             */
+            public RackBindings withRunRack(Trigger runHood, boolean isOut) {
+                if (!isPresent) {
+                    return this;
+                }
+                isMode.and(runHood).whileTrue(subsystems.rack.runRack(rackSpeed, isOut))
+                        .onFalse(subsystems.rack.stopRack());
+                return this;
+            }
+
+            /**
+             * Sets a default command for this subsystem.
+             *
+             * @param defaultCommand the default command to set.
+             * @return this, for chaining.
+             */
+            public RackBindings withDefaultCommand(Supplier<Command> defaultCommand) {
+                if (!isPresent) {
+                    return this;
+                }
+                isMode.and(DriverStation::isEnabled).onTrue(Commands.runOnce(() -> subsystems.rack.setDefaultCommand(defaultCommand.get())));
+                return this;
+            }
+
+            /**
+             * Leaves RackBindings going back to the InputStream.
              *
              * @return this InputStream.
              */
@@ -1352,6 +1491,7 @@ public class InputBuilder {
             HoodSubsystem hood,
             IndexerSubsystem indexer,
             IntakeSubsystem intake,
+            RackSubystem rack,
             AgitatorSubsystem agitator,
             KickerSubsystem kicker,
             TurretSubsystem turret) {

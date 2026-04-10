@@ -21,6 +21,7 @@ public class RobotContainer {
             new HoodSubsystem(turretSubsystem),
             new IndexerSubsystem(),
             new IntakeSubsystem(),
+            new RackSubystem(),
             null,
             new KickerSubsystem(),
             null); // Used to dynamically disable not used systems.
