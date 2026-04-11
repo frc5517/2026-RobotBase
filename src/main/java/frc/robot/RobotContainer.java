@@ -13,12 +13,12 @@ import swervelib.simulation.ironmaple.simulation.SimulatedArena;
 import swervelib.simulation.ironmaple.simulation.opponents.EmptyOpponent;
 
 public class RobotContainer {
-    private static final TurretSubsystem turretSubsystem = new TurretSubsystem();
+    //private static final TurretSubsystem turretSubsystem = new TurretSubsystem();
     /// Bite-sized Subsystems record class for easy packaging of all the subsystems.
     public static final InputBuilder.Subsystems subsystems = new InputBuilder.Subsystems(
             new SwerveSubsystem(),
             new FlyWheelSubsystem(),
-            new HoodSubsystem(turretSubsystem),
+            new HoodSubsystem(),
             new IndexerSubsystem(),
             new IntakeSubsystem(),
             new RackSubystem(),
