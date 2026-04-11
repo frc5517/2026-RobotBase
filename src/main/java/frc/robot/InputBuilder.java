@@ -183,6 +183,8 @@ public class InputBuilder {
                 .withDefaultCommand(() -> subsystems.hood.getHood().setAngle(Degrees.of(.5)))
                 .back()
                 .RackBindings
+                .withRunRack(driverXbox.pov(0), true)
+                .withRunRack(driverXbox.pov(180), false)
                 //.withToggleExtension(driverXbox.leftTrigger())
                 .back();
 
@@ -1300,6 +1302,11 @@ public class InputBuilder {
                 return this;
             }
 
+            public SwerveBindings zeroGyro(Trigger zero) {
+                if (!isPresent) {return this;}
+                isMode.and(zero).onTrue(Commands.runOnce(subsystems.swerve::zeroGyro));
+                return this;
+            }
             /**
              * Automatically swap between the Neutral and Alliance zone crossing tbe bump.
              *

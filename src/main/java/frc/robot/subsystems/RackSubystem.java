@@ -74,7 +74,25 @@ public class RackSubystem extends SubsystemBase {
     private final SparkMax rackMotor = new SparkMax(MOTOR_ID, SparkLowLevel.MotorType.kBrushless);
     private final SparkMax followerMotor = new SparkMax(FOLLOWER_ID, SparkLowLevel.MotorType.kBrushless);
     /// The Normal Rev Vendor SparkMax Object.
-    private final SmartMotorControllerConfig motorConfig = new SmartMotorControllerConfig(this) /// The Smart Motor Controller Configuration.
+    private final SmartMotorControllerConfig followerConfig = new SmartMotorControllerConfig(this) /// The Smart Motor Controller Configuration.
+            .withExponentialProfile(Profiling.MAX_CONTROL_VOLTAGE, Profiling.MAX_ANGULAR_VELOCITY, Profiling.MAX_ANGULAR_ACCELERATION)
+            .withClosedLoopController(PID_CONTROLLER)
+            .withGearing(GEAR_RATIO)
+            .withMechanismCircumference(PINION_CIRCUMFERENCE)
+            .withIdleMode(SmartMotorControllerConfig.MotorMode.BRAKE)
+            .withTelemetry("Rack Follower Motor", Telemetry.telemetryVerbosity.yamsVerbosity)
+            .withStatorCurrentLimit(CURRENT_LIMIT)
+            .withMotorInverted(!MOTOR_INVERTED)
+            .withClosedLoopRampRate(RAMP_RATE)
+            .withOpenLoopRampRate(RAMP_RATE)
+            .withFeedforward(FEED_FORWARD)
+            //.withSimFeedforward(FEED_FORWARD)
+            .withControlMode(SmartMotorControllerConfig.ControlMode.CLOSED_LOOP);
+
+    //private final SmartMotorController followerSMC = new SparkWrapper(followerMotor, DCMotor.getNEO(1), followerConfig);
+
+    /// The Normal Rev Vendor SparkMax Object.
+    private final SmartMotorControllerConfig leaderConfig = new SmartMotorControllerConfig(this) /// The Smart Motor Controller Configuration.
             .withExponentialProfile(Profiling.MAX_CONTROL_VOLTAGE, Profiling.MAX_ANGULAR_VELOCITY, Profiling.MAX_ANGULAR_ACCELERATION)
             .withClosedLoopController(PID_CONTROLLER)
             .withGearing(GEAR_RATIO)
@@ -85,16 +103,11 @@ public class RackSubystem extends SubsystemBase {
             .withMotorInverted(MOTOR_INVERTED)
             .withClosedLoopRampRate(RAMP_RATE)
             .withOpenLoopRampRate(RAMP_RATE)
-            //.withFeedforward(FEED_FORWARD)
-            .withSimFeedforward(FEED_FORWARD)
-            .withControlMode(SmartMotorControllerConfig.ControlMode.CLOSED_LOOP);
-
-    private final SmartMotorControllerConfig followerConfig = motorConfig.clone()
-            .withMotorInverted(!MOTOR_INVERTED); // Follower is reverse of leader.
-    private final SmartMotorController followerSMC = new SparkWrapper(followerMotor, DCMotor.getNEO(1), followerConfig);
-
-    private final SmartMotorControllerConfig leaderConfig = motorConfig.clone()
-            .withLooselyCoupledFollowers(followerSMC);
+            .withFeedforward(FEED_FORWARD)
+            //.withSimFeedforward(FEED_FORWARD)
+            .withControlMode(SmartMotorControllerConfig.ControlMode.CLOSED_LOOP)
+            .withFollowers(Pair.of(followerMotor, MOTOR_INVERTED));
+            //.withLooselyCoupledFollowers(followerSMC);
 
     private final SmartMotorController motor = new SparkWrapper(rackMotor, DCMotor.getNEO(1), leaderConfig);
     /// The new Smart Motor Controller

@@ -5,15 +5,15 @@
     "data": {
       "commands": [
         {
-          "type": "named",
-          "data": {
-            "name": "Shoot Average"
-          }
-        },
-        {
           "type": "path",
           "data": {
             "pathName": "Score then Outpost"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Shoot Average"
           }
         }
       ]
