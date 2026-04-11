@@ -93,6 +93,15 @@ public class ScoringSystem {
         this.subsystems = subsystems;
     }
 
+    public Command shootAverage() {
+        return subsystems.hood().getHood().setAngle(Degrees.of(15))
+                .alongWith(subsystems.flywheel().getFlyWheel().run(RotationsPerSecond.of(48)))
+                .alongWith(subsystems.indexer().runIndexer(1, true))
+                .alongWith(subsystems.intake().intake(1, true))
+                .alongWith(subsystems.kicker().runKicker(1, true))
+                .withTimeout(7);
+    }
+
     public Command shootOnTheMove(Supplier<Pose2d> target) {
         // Goal values
         //Angle[] turretGoal = {subsystems.turret().getTurret().getAngle()};

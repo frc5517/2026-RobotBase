@@ -24,7 +24,7 @@ public class KickerSubsystem extends SubsystemBase {
     public static class HardwareConstants {
         /// Motor Constants
         public static final int MOTOR_ID = 13; // Spark Max CAN ID
-        public static final boolean MOTOR_INVERTED = false; // Inverts control direction.
+        public static final boolean MOTOR_INVERTED = true; // Inverts control direction.
         public static final MechanismGearing GEAR_RATIO = new MechanismGearing(GearBox.fromReductionStages(3, 3)); // Kicker Gear Ratio
         /// Motor Tuning Values
         public static final PIDController PID_CONTROLLER = new PIDController( // Exponential Motion Profiling

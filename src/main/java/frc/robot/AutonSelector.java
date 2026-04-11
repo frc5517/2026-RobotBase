@@ -3,6 +3,8 @@ package frc.robot;
 import static edu.wpi.first.units.Units.Degrees;
 import static edu.wpi.first.units.Units.RotationsPerSecond;
 
+import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.auto.NamedCommands;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
@@ -27,7 +29,8 @@ public class AutonSelector {
     }
 
     AutonSelector(InputBuilder.Subsystems subsystems, ScoringSystem scoring) {
-        this.autonSelector = new SendableChooser<>();
+        NamedCommands.registerCommand("Shoot Average", scoring.shootAverage());
+        this.autonSelector = AutoBuilder.buildAutoChooser();
         this.subsystems = subsystems;
         this.scoring = scoring;
 

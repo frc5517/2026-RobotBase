@@ -176,11 +176,14 @@ public class InputBuilder {
                 .SwerveBindings
                 .setNormalTranslation(1)
                 .setNormalRotation(1)
-                .withToggleCentricity(      driverXbox.start(), false)
+                .withToggleCentricity(      driverXbox.start(), true)
                 .withLookAtHub(driverXbox.rightTrigger())
                 .back()
+                .HoodBindings
+                .withDefaultCommand(() -> subsystems.hood.getHood().setAngle(Degrees.of(.5)))
+                .back()
                 .RackBindings
-                .withToggleExtension(driverXbox.leftTrigger())
+                //.withToggleExtension(driverXbox.leftTrigger())
                 .back();
 
     }

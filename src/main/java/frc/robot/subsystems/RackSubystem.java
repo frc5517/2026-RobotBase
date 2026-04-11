@@ -2,6 +2,7 @@ package frc.robot.subsystems;
 
 import com.revrobotics.spark.SparkLowLevel;
 import com.revrobotics.spark.SparkMax;
+import edu.wpi.first.math.Pair;
 import edu.wpi.first.math.controller.ArmFeedforward;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.system.plant.DCMotor;
@@ -32,7 +33,7 @@ public class RackSubystem extends SubsystemBase {
         /// Motor Constants
         public static final int MOTOR_ID = 17; // Spark Max CAN ID
         public static final int FOLLOWER_ID = 16;
-        public static final boolean MOTOR_INVERTED = false; // Inverts control direction.
+        public static final boolean MOTOR_INVERTED = true; // Inverts control direction.
         public static final MechanismGearing GEAR_RATIO = new MechanismGearing(GearBox.fromReductionStages(3, 5)); // FlyWheel Gear Ratio
         /// Motor Tuning Values
         public static final PIDController PID_CONTROLLER = new PIDController( // Exponential Motion Profiling
@@ -46,8 +47,8 @@ public class RackSubystem extends SubsystemBase {
         }
 
         public static final Time RAMP_RATE = Seconds.of(0.15); // Time it takes to reach max speed from 0.
-        public static final ArmFeedforward FEED_FORWARD = new ArmFeedforward(0.1, 0.2, 0.0); // Feed Forwards.
-        public static final Current CURRENT_LIMIT = Amp.of(25); // Current limit, Higher for faster control.
+        public static final ArmFeedforward FEED_FORWARD = new ArmFeedforward(0.1, 0.1, 0.0); // Feed Forwards.
+        public static final Current CURRENT_LIMIT = Amp.of(30); // Current limit, Higher for faster control.
         /// Rack Constants
         public static final Distance PINION_CIRCUMFERENCE = Inches.of(6.66432);
         public static final Mass INTAKE_WEIGHT = Pounds.of(10); // Weight of the rack mechanism.
@@ -71,6 +72,7 @@ public class RackSubystem extends SubsystemBase {
 
     /// Finally, we can initialize our mechanism.
     private final SparkMax rackMotor = new SparkMax(MOTOR_ID, SparkLowLevel.MotorType.kBrushless);
+    private final SparkMax followerMotor = new SparkMax(FOLLOWER_ID, SparkLowLevel.MotorType.kBrushless);
     /// The Normal Rev Vendor SparkMax Object.
     private final SmartMotorControllerConfig motorConfig = new SmartMotorControllerConfig(this) /// The Smart Motor Controller Configuration.
             .withExponentialProfile(Profiling.MAX_CONTROL_VOLTAGE, Profiling.MAX_ANGULAR_VELOCITY, Profiling.MAX_ANGULAR_ACCELERATION)
@@ -86,7 +88,15 @@ public class RackSubystem extends SubsystemBase {
             //.withFeedforward(FEED_FORWARD)
             .withSimFeedforward(FEED_FORWARD)
             .withControlMode(SmartMotorControllerConfig.ControlMode.CLOSED_LOOP);
-    private final SmartMotorController motor = new SparkWrapper(rackMotor, DCMotor.getNEO(1), motorConfig);
+
+    private final SmartMotorControllerConfig followerConfig = motorConfig.clone()
+            .withMotorInverted(!MOTOR_INVERTED); // Follower is reverse of leader.
+    private final SmartMotorController followerSMC = new SparkWrapper(followerMotor, DCMotor.getNEO(1), followerConfig);
+
+    private final SmartMotorControllerConfig leaderConfig = motorConfig.clone()
+            .withLooselyCoupledFollowers(followerSMC);
+
+    private final SmartMotorController motor = new SparkWrapper(rackMotor, DCMotor.getNEO(1), leaderConfig);
     /// The new Smart Motor Controller
     private final MechanismPositionConfig robotToMechanism = new MechanismPositionConfig() /// The Turret Position Config
             .withMaxRobotHeight(MAX_ROBOT_HEIGHT)
