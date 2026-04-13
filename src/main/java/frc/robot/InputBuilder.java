@@ -140,29 +140,23 @@ public class InputBuilder {
                 .back();
 
         // Operator Simple shared Triggers
+        // B - Shoot
+        // Dpad Up - outtake into robot
         final Trigger intaking = operatorXbox.leftTrigger();
         final Trigger outtakingIntake = operatorXbox.pov(180);
         final Trigger outtakingTop = operatorXbox.pov(0);
-        final Trigger indexToShoot = operatorXbox.rightTrigger();
         final InputStream operatorSimple = new InputStream(BASIC_DRnOP.isMode)
-                .HoodBindings
-                .withSetAngle(operatorXbox.a(), Degrees.of(13))
-                .withSetAngle(operatorXbox.b(), Degrees.of(15))
-                .withSetAngle(operatorXbox.x(), Degrees.of(18))
-                .withSetAngle(operatorXbox.y(), Degrees.of(20))
-                .back().FlyWheelBindings
-                .withSetVelocity(operatorXbox.a(), RotationsPerSecond.of(45))
-                .withSetVelocity(operatorXbox.b(), RotationsPerSecond.of(48))
-                .withSetVelocity(operatorXbox.x(), RotationsPerSecond.of(50))
-                .withSetVelocity(operatorXbox.y(), RotationsPerSecond.of(60))
-                .back().KickerBindings
-                .withRunKicker(operatorXbox.a().or(operatorXbox.b()).or(operatorXbox.x()).or(operatorXbox.y()), true)
+                .SmartBindings
+                .withAverageShoot(operatorXbox.rightTrigger())
+                .withCycleToHopper(operatorXbox.y())
+                .back()
+                .KickerBindings
                 .withRunKicker(outtakingIntake.or(outtakingTop), false)
                 .back().AgitatorBindings
-                .withRunAgitator(intaking.or(indexToShoot), false)
+                .withRunAgitator(intaking, false)
                 .withRunAgitator(outtakingIntake.or(outtakingTop), true)
                 .back().IndexerBindings
-                .withRunIndexer(intaking.or(indexToShoot), true)
+                .withRunIndexer(intaking, true)
                 .withRunIndexer(outtakingIntake.or(outtakingTop), false)
                 .back().IntakeBindings
                 .withRunIntake(intaking, true)
@@ -355,6 +349,52 @@ public class InputBuilder {
          * Smart controls that make use of automatic sequencing controls.
          */
         public class SmartBindings {
+
+            public SmartBindings withAverageShoot(Trigger score) {
+                isMode.and(score).whileTrue(
+                        subsystems.hood().getHood().setAngle(Degrees.of(15))
+                                .alongWith(subsystems.flywheel().getFlyWheel().run(RotationsPerSecond.of(48)))
+                                .alongWith(subsystems.kicker().runKicker(this.back().KickerBindings.kickerSpeed, true))
+                                .alongWith(
+                                        Commands.waitSeconds(1)
+                                                .andThen(
+                                                        subsystems.indexer().runIndexer(this.back().IndexerBindings.indexSpeed, true))
+                                                .alongWith(subsystems.intake().intake(this.back().IntakeBindings.intakeSpeed, true))))
+                        .onFalse(
+                                subsystems.hood.stopHood()
+                                        .alongWith(subsystems.flywheel.stopFlyWheel())
+                                        .alongWith(subsystems.kicker.stopKicker())
+                                        .alongWith(subsystems.indexer.stopIndexer())
+                                        .alongWith(subsystems.intake.stopIntake()));
+                return this;
+            }
+
+            public SmartBindings withCycleToHopper(Trigger score) {
+                isMode.and(score).whileTrue(
+                                subsystems.hood().getHood().setAngle(Degrees.of(2))
+                                        .alongWith(subsystems.flywheel().getFlyWheel().run(RotationsPerSecond.of(20)))
+                                        .alongWith(subsystems.kicker().runKicker(this.back().KickerBindings.kickerSpeed, true))
+                                        .alongWith(
+                                                Commands.waitSeconds(1)
+                                                        .andThen(
+                                                                subsystems.indexer().runIndexer(this.back().IndexerBindings.indexSpeed, true))
+                                                        .alongWith(subsystems.intake().intake(this.back().IntakeBindings.intakeSpeed, true))))
+                        .onFalse(
+                                subsystems.hood.stopHood()
+                                        .alongWith(subsystems.flywheel.stopFlyWheel())
+                                        .alongWith(subsystems.kicker.stopKicker())
+                                        .alongWith(subsystems.indexer.stopIndexer())
+                                        .alongWith(subsystems.intake.stopIntake()));
+                return this;
+            }
+
+            public SmartBindings withSemiOuttake(Trigger score) {
+                this.back()
+                        .IndexerBindings.withRunIndexer(score, false).back()
+                        .KickerBindings.withRunKicker(score, false).back()
+                        .FlyWheelBindings.withRunFlyWheel(score, false);
+                return this;
+            }
 
             public SmartBindings withBasicAim(Trigger basicAim) {
                 this.back().TurretBindings.withSetAngle(basicAim, Degrees.of(0))
@@ -604,7 +644,7 @@ public class InputBuilder {
              * The default duty cycle speed to run at.
              */
             @Setter
-            private double intakeSpeed = 1;
+            private double intakeSpeed = .75;
 
             private IntakeBindings() {
                 this.isPresent = subsystems.intake != null;
@@ -673,7 +713,7 @@ public class InputBuilder {
              * The default duty cycle speed to run at.
              */
             @Setter
-            private double rackSpeed = 0.25;
+            private double rackSpeed = 0.30;
 
             private RackBindings() {
                 this.isPresent = subsystems.rack != null;
@@ -797,7 +837,7 @@ public class InputBuilder {
              * The default duty cycle speed to run at.
              */
             @Setter
-            private double indexSpeed = 1;
+            private double indexSpeed = .65;
 
 
             private IndexerBindings() {
@@ -914,7 +954,7 @@ public class InputBuilder {
              * The default duty cycle speed to run at.
              */
             @Setter
-            private double kickerSpeed = 1;
+            private double kickerSpeed = .75;
 
             /**
              * Runs the kicker at preset speed, stopping when finished.
@@ -1369,6 +1409,8 @@ public class InputBuilder {
                 // Aim while held
                 isMode.and(aimWhile).onTrue(Commands.runOnce(() -> {
                     // Update our pose and aim supplier when isMode and aimWhile.
+                    swerveInputStream.aimLookahead(Seconds.of(.15));
+
                     swerveInputStream.aim(AllianceFlipUtil.ifShouldFlip(aimWhilePose));
                     swerveInputStream.aimWhile(isMode.and(aimWhile));
                 }));

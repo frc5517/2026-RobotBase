@@ -48,7 +48,7 @@ public class RackSubystem extends SubsystemBase {
 
         public static final Time RAMP_RATE = Seconds.of(0.15); // Time it takes to reach max speed from 0.
         public static final ArmFeedforward FEED_FORWARD = new ArmFeedforward(0.1, 0.1, 0.0); // Feed Forwards.
-        public static final Current CURRENT_LIMIT = Amp.of(30); // Current limit, Higher for faster control.
+        public static final Current CURRENT_LIMIT = Amp.of(20); // Current limit, Higher for faster control.
         /// Rack Constants
         public static final Distance PINION_CIRCUMFERENCE = Inches.of(6.66432);
         public static final Mass INTAKE_WEIGHT = Pounds.of(10); // Weight of the rack mechanism.
@@ -65,9 +65,10 @@ public class RackSubystem extends SubsystemBase {
 
     /// The Control Constants for the Rack Mechanism.
     public static final class ControlConstants {
+        public static final double MAX_FAUX_EXTENSION = 1.829;
         public static final Distance PHYSICAL_STARTING_EXTENSION = Inches.of(0);
         public static final Distance DISTANCE_TOLERANCE = Inches.of(0.5); // How accurate the angle should be.
-        public static final Distance GOAL_FOR_INTAKE = Inches.of(11);
+        public static final Distance GOAL_FOR_INTAKE = Inches.of(11 * MAX_FAUX_EXTENSION);
     }
 
     /// Finally, we can initialize our mechanism.
@@ -75,7 +76,7 @@ public class RackSubystem extends SubsystemBase {
     private final SparkMax followerMotor = new SparkMax(FOLLOWER_ID, SparkLowLevel.MotorType.kBrushless);
     /// The Normal Rev Vendor SparkMax Object.
     private final SmartMotorControllerConfig followerConfig = new SmartMotorControllerConfig(this) /// The Smart Motor Controller Configuration.
-            .withExponentialProfile(Profiling.MAX_CONTROL_VOLTAGE, Profiling.MAX_ANGULAR_VELOCITY, Profiling.MAX_ANGULAR_ACCELERATION)
+            .withTrapezoidalProfile(Profiling.MAX_ANGULAR_VELOCITY, Profiling.MAX_ANGULAR_ACCELERATION)
             .withClosedLoopController(PID_CONTROLLER)
             .withGearing(GEAR_RATIO)
             .withMechanismCircumference(PINION_CIRCUMFERENCE)
@@ -93,7 +94,7 @@ public class RackSubystem extends SubsystemBase {
 
     /// The Normal Rev Vendor SparkMax Object.
     private final SmartMotorControllerConfig leaderConfig = new SmartMotorControllerConfig(this) /// The Smart Motor Controller Configuration.
-            .withExponentialProfile(Profiling.MAX_CONTROL_VOLTAGE, Profiling.MAX_ANGULAR_VELOCITY, Profiling.MAX_ANGULAR_ACCELERATION)
+            .withTrapezoidalProfile(Profiling.MAX_ANGULAR_VELOCITY, Profiling.MAX_ANGULAR_ACCELERATION)
             .withClosedLoopController(PID_CONTROLLER)
             .withGearing(GEAR_RATIO)
             .withMechanismCircumference(PINION_CIRCUMFERENCE)
@@ -220,7 +221,8 @@ public class RackSubystem extends SubsystemBase {
     public void periodic() {
         // Updates the rack mechanism's telemetry data to the network tables.
         rack.updateTelemetry();
-        SmartDashboard.putBoolean("Telemetry/Jammed Triggers/FlyWheel", jammedTrigger.getAsBoolean());
+        //followerSMC.updateTelemetry();
+        SmartDashboard.putBoolean("Telemetry/Jammed Triggers/Rack", jammedTrigger.getAsBoolean());
     }
 
     /**
@@ -230,5 +232,6 @@ public class RackSubystem extends SubsystemBase {
     public void simulationPeriodic() {
         // Iterates the sim so that the sim actually works and the data sent to the network tables can be updated.
         rack.simIterate();
+        //followerSMC.simIterate();
     }
 }

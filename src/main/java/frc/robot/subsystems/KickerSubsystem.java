@@ -37,9 +37,9 @@ public class KickerSubsystem extends SubsystemBase {
             public static final AngularAcceleration MAX_ANGULAR_ACCELERATION = DegreesPerSecondPerSecond.of(360); // Max Angular Acceleration
         }
 
-        public static final Time RAMP_RATE = Seconds.of(0.25); // Time it takes to reach max speed from 0.
+        public static final Time RAMP_RATE = Seconds.of(0.2); // Time it takes to reach max speed from 0.
         public static final SimpleMotorFeedforward FEED_FORWARD = new SimpleMotorFeedforward(0, 0, 0); // Feed Forwards, likely to be left empty.
-        public static final Current CURRENT_LIMIT = Amp.of(40); // Limits the current, this is a simple kicker. We want the limit low so we don't break things in the case of a jam.
+        public static final Current CURRENT_LIMIT = Amp.of(35); // Limits the current, this is a simple kicker. We want the limit low so we don't break things in the case of a jam.
     }
 
     /// Control Constants for the Kicker Mechanism.

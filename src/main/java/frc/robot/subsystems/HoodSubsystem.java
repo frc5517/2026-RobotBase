@@ -54,7 +54,7 @@ public class HoodSubsystem extends SubsystemBase {
 
         public static final Time RAMP_RATE = Seconds.of(0.15); // Time it takes to reach max speed from 0.
         public static final ArmFeedforward FEED_FORWARD = new ArmFeedforward(0.1, 0.2, 0.0); // Feed Forwards.
-        public static final Current CURRENT_LIMIT = Amp.of(30); // Current limit, Higher for faster control.
+        public static final Current CURRENT_LIMIT = Amp.of(25); // Current limit, Higher for faster control.
         /// Hood Constants
         public static final Mass HOOD_MASS = Pounds.of(2); // Weight of the hood mechanism.
         public static final Distance HOOD_LENGTH = Inches.of(8); // Hood Length, used in calculations and to visualize in sim.
