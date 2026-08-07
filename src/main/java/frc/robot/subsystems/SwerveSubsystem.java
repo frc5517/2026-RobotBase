@@ -85,6 +85,9 @@ public class SwerveSubsystem extends SubsystemBase {
 
     public static class SwerveState {
         @Setter
+        @Getter
+        public static Pose2d MaplePose = Pose2d.kZero;
+        @Setter
         public static Supplier<SwerveDrive> swerveDrive = () -> null;
         @Setter
         @Getter
@@ -153,6 +156,7 @@ public class SwerveSubsystem extends SubsystemBase {
 
     @Override
     public void simulationPeriodic() {
+        SwerveState.setMaplePose(swerveDrive.getSimulationDriveTrainPose().get());
         if (RUN_VISION) {
             Telemetry.updateCameraPoses(new Pose3d(swerveDrive.getPose()));
         }

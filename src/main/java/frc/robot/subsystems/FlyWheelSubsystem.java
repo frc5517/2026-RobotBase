@@ -33,9 +33,9 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
 import static edu.wpi.first.units.Units.*;
-import static frc.robot.subsystems.FlyWheelSubsystem.ControlConstants.VELOCITY_TOLERANCE;
+import static frc.robot.subsystems.FlyWheelSubsystem.ControlConstants.*;
 import static frc.robot.subsystems.FlyWheelSubsystem.HardwareConstants.*;
-import static frc.robot.subsystems.FlyWheelSubsystem.HardwareConstants.Profiling.MAX_ANGULAR_VELOCITY;
+import static frc.robot.subsystems.FlyWheelSubsystem.HardwareConstants.Profiling.*;
 
 public class FlyWheelSubsystem extends SubsystemBase {
     /// Hardware Constants for the FlyWheel Mechanism.
@@ -70,32 +70,31 @@ public class FlyWheelSubsystem extends SubsystemBase {
     }
 
     /// Initialize the FlyWheel
-    private final TalonFX indexerMotor = new TalonFX(HardwareConstants.MOTOR_ID);
+    private final TalonFX indexerMotor = new TalonFX(MOTOR_ID);
     /// The Normal Rev Vendor SparkMax Object.
     private final SmartMotorControllerConfig motorConfig = new SmartMotorControllerConfig(this) /// The Smart Motor Controller Configuration.
-            .withTrapezoidalProfile(MAX_ANGULAR_VELOCITY, Profiling.MAX_ANGULAR_ACCELERATION)
+            .withTrapezoidalProfile(MAX_ANGULAR_VELOCITY, MAX_ANGULAR_ACCELERATION)
             .withVelocityTrapezoidalProfile(true)
             .withClosedLoopController(PID_CONTROLLER)
-            .withGearing(HardwareConstants.GEAR_RATIO)
+            .withGearing(GEAR_RATIO)
             .withIdleMode(MotorMode.BRAKE)
+            .withMomentOfInertia(FLYWHEEL_DIAMETER, FLYWHEEL_MASS)
             .withTelemetry("FlyWheel Motor", Telemetry.telemetryVerbosity.yamsVerbosity)
-            .withStatorCurrentLimit(HardwareConstants.CURRENT_LIMIT)
-            .withMotorInverted(HardwareConstants.MOTOR_INVERTED)
-            .withClosedLoopRampRate(HardwareConstants.RAMP_RATE)
-            .withOpenLoopRampRate(HardwareConstants.RAMP_RATE)
-            .withFeedforward(HardwareConstants.FEED_FORWARD)
-            .withSimFeedforward(HardwareConstants.FEED_FORWARD)
+            .withStatorCurrentLimit(CURRENT_LIMIT)
+            .withMotorInverted(MOTOR_INVERTED)
+            .withClosedLoopRampRate(RAMP_RATE)
+            .withOpenLoopRampRate(RAMP_RATE)
+            .withFeedforward(FEED_FORWARD)
+            .withSimFeedforward(FEED_FORWARD)
             .withControlMode(ControlMode.CLOSED_LOOP);
     private final SmartMotorController motor = new TalonFXWrapper(indexerMotor, DCMotor.getNEO(1), motorConfig);
     /// The new Smart Motor Controller
-    private final FlyWheelConfig flyWheelConfig = new FlyWheelConfig(motor) /// The FlyWheel config.
-            .withDiameter(HardwareConstants.FLYWHEEL_DIAMETER)
-            .withMass(HardwareConstants.FLYWHEEL_MASS)
+    private final FlyWheelConfig flyWheelConfig = new FlyWheelConfig() /// The FlyWheel config.
+            .withDiameter(FLYWHEEL_DIAMETER)
             .withTelemetry("FlyWheel", Telemetry.telemetryVerbosity.yamsVerbosity)
-            .withSoftLimit(MAX_ANGULAR_VELOCITY.unaryMinus(), MAX_ANGULAR_VELOCITY)
             .withSpeedometerSimulation(MAX_ANGULAR_VELOCITY);
     @Getter
-    private final FlyWheel flyWheel = new FlyWheel(flyWheelConfig);
+    private final FlyWheel flyWheel = new FlyWheel(flyWheelConfig, motor);
     /// The final FlyWheel Mechanism.
 
     @Getter
@@ -167,7 +166,7 @@ public class FlyWheelSubsystem extends SubsystemBase {
      * @return
      */
     public Command setGoal(Supplier<AngularVelocity> goal) {
-        return flyWheel.setSpeed(goal)
+        return flyWheel.run(goal)
                 .alongWith(Commands.run(() -> flyWheelGoal = goal.get()));
     }
 
@@ -200,7 +199,7 @@ public class FlyWheelSubsystem extends SubsystemBase {
                         subsystems.swerve().getSwerveDrive().getSimulationDriveTrainPose().get().getTranslation(),
                         new Translation2d(Inches.of(5), Inches.of(0)),
                         subsystems.swerve().getSwerveDrive().getFieldVelocity(),
-                        subsystems.turret().getHeading(subsystems).rotateBy(Rotation2d.k180deg),
+                        subsystems.swerve().getSwerveDrive().getOdometryHeading().rotateBy(Rotation2d.k180deg),
                         Inches.of(23),
                         MetersPerSecond.of(7),
                         subsystems.hood().getHood().getAngle().plus(Degrees.of(90)))

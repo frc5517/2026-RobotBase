@@ -104,17 +104,12 @@ public class TurretSubsystem extends SubsystemBase {
             .withMaxRobotLength(MAX_ROBOT_WIDTH)
             .withRelativePosition(TURRET_POSITION);
     /// The Pivot Config for the Turret
-    private final PivotConfig config = new PivotConfig(motor)
-            .withStartingPosition(ControlConstants.PHYSICAL_STARTING_ANGLE)
-            .withHardLimit(HARD_LIMIT_REVERSE, HARD_LIMIT_FORWARD)
-            .withSoftLimits(SOFT_LIMIT_REVERSE, SOFT_LIMIT_FORWARD)
+    private final PivotConfig config = new PivotConfig()
             .withTelemetry(Telemetry.yamsMechPath + "Turret", Telemetry.telemetryVerbosity.yamsVerbosity)
-            .withStartingPosition(SIM_STARTING_ANGLE)
-            .withMechanismPositionConfig(robotToMechanism)
-            .withMOI(KilogramSquareMeters.of(0.001));
+            .withMechanismPositionConfig(robotToMechanism);
     /// The final Pivot Mechanism to use as the turret.
     @Getter
-    private final Pivot turret = new Pivot(config);
+    private final Pivot turret = new Pivot(config, motor);
 
     /// A trigger used to stop the motor when it is trying too hard.
     private final Trigger jammedTrigger = currentSensorTrigger(Amps.of(32), Seconds.of(0.25));

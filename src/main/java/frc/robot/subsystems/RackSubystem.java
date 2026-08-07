@@ -5,6 +5,10 @@ import com.revrobotics.spark.SparkMax;
 import edu.wpi.first.math.Pair;
 import edu.wpi.first.math.controller.ArmFeedforward;
 import edu.wpi.first.math.controller.PIDController;
+import edu.wpi.first.math.geometry.Pose3d;
+import edu.wpi.first.math.geometry.Rotation3d;
+import edu.wpi.first.math.geometry.Transform3d;
+import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.units.measure.*;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -24,8 +28,10 @@ import yams.motorcontrollers.SmartMotorControllerConfig;
 import yams.motorcontrollers.local.SparkWrapper;
 
 import static edu.wpi.first.units.Units.*;
+import static frc.robot.subsystems.HoodSubsystem.HardwareConstants.HOOD_POSITION;
 import static frc.robot.subsystems.RackSubystem.ControlConstants.*;
 import static frc.robot.subsystems.RackSubystem.HardwareConstants.*;
+import static frc.robot.subsystems.TurretSubsystem.HardwareConstants.TURRET_POSITION;
 
 public class RackSubystem extends SubsystemBase {
     /// The Hardware Constants for the Rack Mechanism.
@@ -103,8 +109,10 @@ public class RackSubystem extends SubsystemBase {
             .withStatorCurrentLimit(CURRENT_LIMIT)
             .withMotorInverted(MOTOR_INVERTED)
             .withClosedLoopRampRate(RAMP_RATE)
+            .withSoftLimits(SOFT_LIMIT_REVERSE, SOFT_LIMIT_FORWARD)
             .withOpenLoopRampRate(RAMP_RATE)
             .withFeedforward(FEED_FORWARD)
+            .withSimStartingPosition(SIM_STARTING_HEIGHT)
             //.withSimFeedforward(FEED_FORWARD)
             .withControlMode(SmartMotorControllerConfig.ControlMode.CLOSED_LOOP)
             .withFollowers(Pair.of(followerMotor, MOTOR_INVERTED));
@@ -115,17 +123,15 @@ public class RackSubystem extends SubsystemBase {
     private final MechanismPositionConfig robotToMechanism = new MechanismPositionConfig() /// The Turret Position Config
             .withMaxRobotHeight(MAX_ROBOT_HEIGHT)
             .withMaxRobotLength(MAX_ROBOT_WIDTH);
-    private final ElevatorConfig m_config = new ElevatorConfig(motor) /// The Arm Config for the Rack Mechanism.
+    private final ElevatorConfig m_config = new ElevatorConfig() /// The Arm Config for the Rack Mechanism.
             .withHorizontalElevator()
             .withAngle(ANGLE_FROM_FLOOR)
             .withHardLimits(HARD_LIMIT_REVERSE, HARD_LIMIT_FORWARD)
-            .withSoftLimits(SOFT_LIMIT_REVERSE, SOFT_LIMIT_FORWARD)
             .withTelemetry("Rack", Telemetry.telemetryVerbosity.yamsVerbosity)
-            .withMass(INTAKE_WEIGHT)
-            .withSimStartingHeight(SIM_STARTING_HEIGHT)
+            .withCarriageWeight(INTAKE_WEIGHT)
             .withMechanismPositionConfig(robotToMechanism);
     @Getter
-    private final Elevator rack = new Elevator(m_config);
+    private final Elevator rack = new Elevator(m_config, motor);
 
     /// A trigger used to stop the motor when it is trying too hard.
     private final Trigger jammedTrigger = currentSensorTrigger(Amps.of(20), Seconds.of(0.25));
@@ -226,6 +232,18 @@ public class RackSubystem extends SubsystemBase {
     }
 
     /**
+     * Creates a new Pose3D built from defined position and current angle.
+     *
+     * @return the hopper current 3D pose.
+     */
+    public Pose3d getPose3D() {
+        Distance height = rack.getHeight();
+        return new Pose3d(
+                new Translation3d(height, Inches.of(0), Meters.of((height.in(Meters) / (MAX_FAUX_EXTENSION + 1.25)) * Math.sin(10))),
+                new Rotation3d(Degrees.of(0), Degrees.of(0), Degrees.of(0)));
+    }
+
+    /**
      * Ran continuously when the robot is in simulation.
      */
     @Override
@@ -233,5 +251,8 @@ public class RackSubystem extends SubsystemBase {
         // Iterates the sim so that the sim actually works and the data sent to the network tables can be updated.
         rack.simIterate();
         //followerSMC.simIterate();
+
+        // Update our Mech3d Pose.
+        Telemetry.Publishers.Robot.Mech3D.hopperPose.accept(getPose3D());
     }
 }

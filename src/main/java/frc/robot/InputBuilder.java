@@ -101,13 +101,16 @@ public class InputBuilder {
                 .StartingMethods.defaultXboxDrive(SINGLE_XBOX.isMode, driverXbox)
                 .SmartBindings
                 .withToggleAutoScoreHub(    driverXbox.leftStick(), true, true)
-                .withToggleAutoScoreHub(    driverXbox.rightStick(), false, false)
                 .withToggleAutoHoardFuel(   driverXbox.x(), true)
                 .withFuelControl(           driverXbox.leftTrigger(),
                                             driverXbox.a(),
                                             driverXbox.rightTrigger())
                 .withBasicAim(              driverXbox.y())
                 .withHomeAll(               driverXbox.back())
+                .back()
+                .RackBindings
+                .withRunRack(driverXbox.pov(0), true)
+                .withRunRack(driverXbox.pov(180), false)
                 .back()
                 .SwerveBindings
                 .setSlowTranslation(0.5)
@@ -413,6 +416,9 @@ public class InputBuilder {
             }
 
             public SmartBindings withFuelControl(Trigger intake, Trigger index, Trigger spinUp) {
+                if (RobotBase.isSimulation()) {
+                    this.back().FlyWheelBindings.withSimShoot(index.and(spinUp));
+                }
                 this.withBlockingIntakeIntoHopper(index.negate().and(intake)); // If not indexing, intake to hopper.
                 this.withIndexIntoFlyWheel(intake.negate()
                         .and(index)); // If not intaking, index into flywheel.
@@ -798,8 +804,7 @@ public class InputBuilder {
                 if (!isPresent) {
                     return this;
                 }
-                isMode.and(runHood).whileTrue(subsystems.rack.runRack(rackSpeed, isOut))
-                        .onFalse(subsystems.rack.stopRack());
+                isMode.and(runHood).onTrue(subsystems.rack.runRack(rackSpeed, isOut));
                 return this;
             }
 
@@ -1074,7 +1079,10 @@ public class InputBuilder {
                 if (!isPresent) {
                     return this;
                 }
-                isMode.and(shoot).whileTrue(subsystems.flywheel.simShoot(subsystems).andThen(Commands.waitSeconds(.25)).repeatedly());
+                isMode.and(shoot).whileTrue(
+                        subsystems.flywheel.simShoot(subsystems).onlyIf(subsystems.intake::simHasFuel)
+                                .alongWith(Commands.runOnce(() -> subsystems.intake.subtractFromHopper(1)))
+                        .andThen(Commands.waitSeconds(.25)).repeatedly());
                 return this;
             }
 

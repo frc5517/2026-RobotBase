@@ -57,6 +57,7 @@ public class Telemetry {
                 public static final NetworkTable mechTable = zoneTable.getSubTable("Visualize Telemetry");
                 public static final StructPublisher<Pose2d> robotPose = mechTable.getStructTopic("Robot Pose", Pose2d.struct).publish();
                 public static final StructPublisher<Pose3d> hoodPose = mechTable.getStructTopic("Hood Pose", Pose3d.struct).publish();
+                public static final StructPublisher<Pose3d> hopperPose = mechTable.getStructTopic("Hopper Pose", Pose3d.struct).publish();
                 public static final StructPublisher<Pose3d> turretPose = mechTable.getStructTopic("Turret Pose", Pose3d.struct).publish();
                 public static final StructArrayPublisher<Pose3d> fuelTrajectory = mechTable.getStructArrayTopic("Shot Trajectory", Pose3d.struct).publish();
             }
@@ -78,6 +79,8 @@ public class Telemetry {
             private static final NetworkTable mapleTable = NetworkTableInstance.getDefault().getTable("SmartDashboard/MapleSim");
             // Generic Game Piece Publisher.
             public static final StructArrayPublisher<Pose3d> elementPublisher = mapleTable.getStructArrayTopic("Fuel", Pose3d.struct).publish();
+            // Generic Game Piece Publisher.
+            public static final StructArrayPublisher<Pose3d> elementInRobotPublisher = mapleTable.getStructArrayTopic("Fuel in Robot", Pose3d.struct).publish();
         }
     }
 

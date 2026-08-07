@@ -1,14 +1,10 @@
 //package frc.robot.inputstream;
 //
-//
-//import edu.wpi.first.math.geometry.Pose2d;
-//import edu.wpi.first.math.geometry.Rotation2d;
 //import edu.wpi.first.units.measure.Angle;
 //import edu.wpi.first.units.measure.AngularVelocity;
 //import edu.wpi.first.units.measure.Current;
 //import edu.wpi.first.units.measure.Time;
 //import edu.wpi.first.wpilibj.DriverStation;
-//import edu.wpi.first.wpilibj.RobotBase;
 //import edu.wpi.first.wpilibj.Timer;
 //import edu.wpi.first.wpilibj2.command.Command;
 //import edu.wpi.first.wpilibj2.command.Commands;
@@ -21,7 +17,6 @@
 //import lombok.Setter;
 //import lombok.experimental.Accessors;
 //import swervelib.SwerveInputStream;
-//import swervelib.simulation.ironmaple.simulation.SimulatedArena;
 //
 //import java.util.ArrayList;
 //import java.util.List;
@@ -33,7 +28,6 @@
 //import static edu.wpi.first.units.Units.RPM;
 //import static edu.wpi.first.units.Units.Seconds;
 //import static frc.robot.RobotContainer.subsystems;
-//import static frc.robot.Telemetry.Publishers.Robot.inputOverride;
 //
 ///**
 // *

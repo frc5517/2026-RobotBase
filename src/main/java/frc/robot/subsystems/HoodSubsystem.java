@@ -93,8 +93,12 @@ public class HoodSubsystem extends SubsystemBase {
             .withTelemetry("Hood Motor", Telemetry.telemetryVerbosity.yamsVerbosity)
             .withStatorCurrentLimit(CURRENT_LIMIT)
             .withMotorInverted(MOTOR_INVERTED)
+            .withStartingPosition(PHYSICAL_STARTING_ANGLE)
+            .withSimStartingPosition(SIM_STARTING_ANGLE)
+            .withSoftLimits(SOFT_LIMIT_REVERSE, SOFT_LIMIT_FORWARD)
             .withClosedLoopRampRate(RAMP_RATE)
             .withOpenLoopRampRate(RAMP_RATE)
+            .withMomentOfInertia(HOOD_LENGTH, HOOD_MASS)
             //.withFeedforward(FEED_FORWARD)
             .withSimFeedforward(FEED_FORWARD)
             .withControlMode(SmartMotorControllerConfig.ControlMode.CLOSED_LOOP);
@@ -104,18 +108,14 @@ public class HoodSubsystem extends SubsystemBase {
             .withMaxRobotHeight(MAX_ROBOT_HEIGHT)
             .withMaxRobotLength(MAX_ROBOT_WIDTH)
             .withRelativePosition(HOOD_POSITION);
-    private final ArmConfig m_config = new ArmConfig(motor) /// The Arm Config for the Hood Mechanism.
-            .withStartingPosition(PHYSICAL_STARTING_ANGLE)
+    private final ArmConfig m_config = new ArmConfig() /// The Arm Config for the Hood Mechanism.
             .withLength(HOOD_LENGTH)
-            .withHardLimit(HARD_LIMIT_REVERSE, HARD_LIMIT_FORWARD)
-            .withSoftLimits(SOFT_LIMIT_REVERSE, SOFT_LIMIT_FORWARD)
+            .withHardLimits(HARD_LIMIT_REVERSE, HARD_LIMIT_FORWARD)
             .withTelemetry("Hood", Telemetry.telemetryVerbosity.yamsVerbosity)
-            .withMass(HOOD_MASS)
-            .withStartingPosition(SIM_STARTING_ANGLE)
             //.withHorizontalZero(HardwareConstants.HORIZONTAL_OFFSET)
             .withMechanismPositionConfig(robotToMechanism);
     @Getter
-    private final Arm hood = new Arm(m_config);
+    private final Arm hood = new Arm(m_config, motor);
     /// The final Arm Mechanism to use as the hood.
 
     private final TurretSubsystem turret;
@@ -190,24 +190,15 @@ public class HoodSubsystem extends SubsystemBase {
      *
      * @return the hood current 3D pose.
      */
-    public Pose3d getPose3D(TurretSubsystem turret) {
-        Angle turretRotation; // Null safe turretRotation
-        if (turret == null) {
-            turretRotation = Degrees.of(0);
-        } else {
-            turretRotation = turret.getTurret().getAngle();
-        }
+    public Pose3d getPose3D() {
         return new Pose3d(
                 // Rotate Hood around turret
-                HOOD_POSITION.rotateAround(TURRET_POSITION, new Rotation3d(
-                        Degrees.of(0),
-                        Degrees.of(0),
-                        turretRotation)),
+                HOOD_POSITION,
                 // Then Rotate the hood based on turret rotation.
                 new Rotation3d(
                         Degrees.of(0),
                         hood.getAngle(), // Hood Rotation is Pitch, looking up and down.
-                        turretRotation));
+                        Degrees.of(0)));
 
     }
 
@@ -251,6 +242,6 @@ public class HoodSubsystem extends SubsystemBase {
         hood.simIterate();
 
         // Update our Mech3d Pose.
-        Telemetry.Publishers.Robot.Mech3D.hoodPose.accept(getPose3D(turret));
+        Telemetry.Publishers.Robot.Mech3D.hoodPose.accept(getPose3D());
     }
 }

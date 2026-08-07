@@ -4,6 +4,9 @@ import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
+import edu.wpi.first.math.geometry.Pose3d;
+import edu.wpi.first.math.geometry.Rotation3d;
+import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.units.measure.*;
 import edu.wpi.first.wpilibj.RobotBase;
@@ -51,14 +54,14 @@ public class IntakeSubsystem extends SubsystemBase {
         public static final SimpleMotorFeedforward FEED_FORWARD = new SimpleMotorFeedforward(0, 0, 0); // Feed Forwards, likely to be left empty.
         public static final Current CURRENT_LIMIT = Amp.of(35); // Limits the current, this is a simple intake. We want the limit low so we don't break things in the case of a jam.
         /// Intake Constants
-        public static final int MAX_FUEL_CAPACITY = 50;
+        public static final int MAX_FUEL_CAPACITY = 25;
         public static final Distance INDEXER_DIAMETER = Inches.of(3); // Diameter of the wheel, belt, whatever is spinning on the intake.
         public static final AngularVelocity INDEXER_MAX_SPEED = RPM.of(200); // Max RPM soft limits
     }
 
     /// Control Constants for the Intake Mechanism.
     public static class ControlConstants {
-        public static final boolean INFINITE_SIM_INTAKE = true; // Makes it so you can intake more than the max capacity.
+        public static final boolean INFINITE_SIM_INTAKE = false; // Makes it so you can intake more than the max capacity.
         public static final AngularVelocity VELOCITY_TOLERANCE = DegreesPerSecond.of(1); // How accurate the velocity should be.
         public static final AngularVelocity TARGET_VELOCITY = DegreesPerSecond.of(60); // How fast the flywheel should spin.
     }
@@ -75,19 +78,18 @@ public class IntakeSubsystem extends SubsystemBase {
             .withMotorInverted(MOTOR_INVERTED)
             .withClosedLoopRampRate(RAMP_RATE)
             .withOpenLoopRampRate(RAMP_RATE)
+            .withMomentOfInertia(INDEXER_DIAMETER, Pounds.of(3))
             //.withFeedforward(FEED_FORWARD)
             .withSimFeedforward(FEED_FORWARD)
             .withControlMode(ControlMode.CLOSED_LOOP);
     private final SmartMotorController motor = new SparkWrapper(intakeMotor, DCMotor.getNEO(1), motorConfig);
     /// The new Smart Motor Controller
-    private final FlyWheelConfig intakeConfig = new FlyWheelConfig(motor) /// The FlyWheel config for the Intake.
+    private final FlyWheelConfig intakeConfig = new FlyWheelConfig() /// The FlyWheel config for the Intake.
             .withDiameter(INDEXER_DIAMETER)
-            .withMass(Pounds.of(1)) // Intake Doesn't need to specify weight.
             .withTelemetry(Telemetry.yamsMechPath + "Intake", Telemetry.telemetryVerbosity.yamsVerbosity)
-            .withSoftLimit(INDEXER_MAX_SPEED.unaryMinus(), INDEXER_MAX_SPEED)
             .withSpeedometerSimulation(INDEXER_MAX_SPEED);
     @Getter
-    private final FlyWheel intake = new FlyWheel(intakeConfig);
+    private final FlyWheel intake = new FlyWheel(intakeConfig, motor);
     /// The final FlyWheel Mechanism to use as the smart Intake.
 
     @Getter
@@ -106,9 +108,10 @@ public class IntakeSubsystem extends SubsystemBase {
         // If in sim
         if (RobotBase.isSimulation()) {
             // Create our intake at runtime.
-            intakeSim = IntakeSimulation.InTheFrameIntake( /// The MapleSim Intake Simulation.
+            intakeSim = IntakeSimulation.OverTheBumperIntake( /// The MapleSim Intake Simulation.
                     "Fuel",
                     SwerveSubsystem.SwerveState.swerveDrive.get().getMapleSimDrive().get(), // We know the driveSim exists.
+                    Inches.of(12),
                     Inches.of(12),
                     IntakeSimulation.IntakeSide.FRONT,
                     MAX_FUEL_CAPACITY);
@@ -159,7 +162,7 @@ public class IntakeSubsystem extends SubsystemBase {
     }
 
     public Command runSimIntake() {
-        return Commands.run(intakeSim::startIntake).alongWith(Commands.run(() -> intakeSim.setGamePiecesCount(MAX_FUEL_CAPACITY - 10))).finallyDo(intakeSim::stopIntake);
+        return Commands.run(intakeSim::startIntake).finallyDo(intakeSim::stopIntake);
     }
 
     /**
@@ -185,6 +188,23 @@ public class IntakeSubsystem extends SubsystemBase {
         return intake;
     }
 
+    public void subtractFromHopper(int count) {
+        intakeSim.setGamePiecesCount(intakeSim.getGamePiecesAmount() - count);
+    }
+
+    public boolean simHasFuel() {
+        return intakeSim.getGamePiecesAmount() > 0;
+    }
+
+    public Pose3d getInitialFuelInHopperPose() {
+        return new Pose3d(SwerveSubsystem.SwerveState.MaplePose)
+                .transformBy(new Transform3d(
+                        Inches.of(1),
+                        Inches.of(-7),
+                        Inches.of(6),
+                        Rotation3d.kZero));
+    }
+
     /**
      * Ran continuously while the robot is on.
      */
@@ -202,5 +222,24 @@ public class IntakeSubsystem extends SubsystemBase {
     public void simulationPeriodic() {
         // Iterates the sim so that the sim actually works and the data sent to the network tables can be updated.
         intake.simIterate();
+
+        Pose3d initialPose = getInitialFuelInHopperPose();
+        int fuelCount = intakeSim.getGamePiecesAmount();
+        Pose3d[] fuelInRobot = new Pose3d[fuelCount];
+        for (int i = 0; i < fuelCount; i++) {
+            if (i < 5) {
+                fuelInRobot[i] = initialPose.transformBy(new Transform3d(0, i * 0.1, 0, Rotation3d.kZero));
+            } else if (i < 10) {
+                fuelInRobot[i] = initialPose.transformBy(new Transform3d(0.1, (i - 5) * 0.1, 0, Rotation3d.kZero));
+            } else if (i < 15) {
+                fuelInRobot[i] = initialPose.transformBy(new Transform3d(0.2, (i - 10) * 0.1, 0, Rotation3d.kZero));
+            } else if (i < 20) {
+                fuelInRobot[i] = initialPose.transformBy(new Transform3d(0.1, (i - 15) * 0.1, 0.1, Rotation3d.kZero));
+            } else if (i < 25) {
+                fuelInRobot[i] = initialPose.transformBy(new Transform3d(0.2, (i - 20) * 0.1, 0.1, Rotation3d.kZero));
+            }
+
+        }
+        Telemetry.Publishers.MapleSim.elementInRobotPublisher.accept(fuelInRobot);
     }
 }
