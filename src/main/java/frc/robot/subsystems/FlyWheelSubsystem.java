@@ -47,7 +47,7 @@ public class FlyWheelSubsystem extends SubsystemBase {
 
         /// Motor Tuning Values
         public static final PIDController PID_CONTROLLER = new PIDController( // Exponential Motion Profiling
-                0.1, 0.01, 0.0); // PID - Proportional, Integral, Derivative.
+                60, 0.01, 0.0); // PID - Proportional, Integral, Derivative.
 
         /// Trapezoidal Motion Profiling Constraints.
         public static final class Profiling {
@@ -56,7 +56,7 @@ public class FlyWheelSubsystem extends SubsystemBase {
         }
 
         public static final Time RAMP_RATE = Seconds.of(0.0); // Time it takes to reach max speed from 0.
-        public static final SimpleMotorFeedforward FEED_FORWARD = new SimpleMotorFeedforward(0, .12, 0); // Feed Forwards.
+        public static final SimpleMotorFeedforward FEED_FORWARD = new SimpleMotorFeedforward(0, .125, 0); // Feed Forwards.
         public static final Current CURRENT_LIMIT = Amp.of(60); // Current limit, Higher for faster control.
         /// FlyWheel Constants
         public static final Distance FLYWHEEL_DIAMETER = Inches.of(4); // Diameter of the wheel, belt, whatever is spinning on the flywheel.
@@ -180,9 +180,9 @@ public class FlyWheelSubsystem extends SubsystemBase {
                         subsystems.swerve().getSwerveDrive().getSimulationDriveTrainPose().get().getTranslation(),
                         new Translation2d(Inches.of(5), Inches.of(0)),
                         subsystems.swerve().getSwerveDrive().getFieldVelocity(),
-                        subsystems.turret().getHeading(subsystems).rotateBy(Rotation2d.k180deg),
+                        subsystems.swerve().getSwerveDrive().getOdometryHeading().rotateBy(Rotation2d.k180deg),
                         Inches.of(23),
-                        MetersPerSecond.of(flyWheelSpeed.get().in(RadiansPerSecond) * (FLYWHEEL_DIAMETER.in(Meters) / 2) * FLYWHEEL_EFFICIENCY),
+                        MetersPerSecond.of(flyWheel.getSpeed().div(6).in(RotationsPerSecond)),
                         subsystems.hood().getHood().getAngle().plus(Degrees.of(90)))
                         .withProjectileTrajectoryDisplayCallBack((trajectory) -> Telemetry.Publishers.Robot.Mech3D.fuelTrajectory.accept(trajectory.toArray(Pose3d[]::new))));
             }
@@ -192,19 +192,28 @@ public class FlyWheelSubsystem extends SubsystemBase {
     /**
      * @return a {@link Command} that launches sim fuel.
      */
-    public Command simShoot(InputBuilder.Subsystems subsystems) {
-        return runOnce(() -> {
-            if (RobotBase.isSimulation()) {
+    public void simShoot(InputBuilder.Subsystems subsystems) {
+            if (RobotBase.isSimulation() && subsystems.intake().simHasFuel()) {
                 SimulatedArena.getInstance().addGamePieceProjectile(new RebuiltFuelOnFly(
                         subsystems.swerve().getSwerveDrive().getSimulationDriveTrainPose().get().getTranslation(),
                         new Translation2d(Inches.of(5), Inches.of(0)),
                         subsystems.swerve().getSwerveDrive().getFieldVelocity(),
                         subsystems.swerve().getSwerveDrive().getOdometryHeading().rotateBy(Rotation2d.k180deg),
                         Inches.of(23),
-                        MetersPerSecond.of(7),
+                        MetersPerSecond.of(flyWheel.getSpeed().div(7).in(RotationsPerSecond)),
                         subsystems.hood().getHood().getAngle().plus(Degrees.of(90)))
                         .withProjectileTrajectoryDisplayCallBack((trajectory) -> Telemetry.Publishers.Robot.Mech3D.fuelTrajectory.accept(trajectory.toArray(Pose3d[]::new))));
+                subsystems.intake().getIntakeSim().obtainGamePieceFromIntake();
+                motor.setEncoderVelocity(motor.getRotorVelocity().minus(RPM.of(150)));
             }
+    }
+
+    /**
+     * @return a {@link Command} that launches sim fuel.
+     */
+    public Command simShootCommand(InputBuilder.Subsystems subsystems) {
+        return runOnce(() -> {
+            simShoot(subsystems);
         });
     }
 

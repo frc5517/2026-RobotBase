@@ -90,16 +90,12 @@ public class AutonSelector {
                         .deadlineFor(subsystems.intake().intake(0.75, true)))
                 // Then move to outpost while firing.
                 .andThen(subsystems.swerve().pathfindToPath("Left to Hub Front"))
-                // While firing
-                .alongWith(scoring.shootOnTheMove(() -> ScoringSystem.ControlConstants.SOTMTargets.HUB))
-                // Continue firing
-                .andThen(scoring.shootOnTheMove(() -> ScoringSystem.ControlConstants.SOTMTargets.HUB)
                 .alongWith(subsystems.kicker().runKicker(.75, true))
                 // Start feeding after a second
                 .alongWith(Commands.waitSeconds(1).andThen(
                     //subsystems.agitator().runAgitator(0.75, true)
                     subsystems.indexer().runIndexer(.75, true)
-                    .alongWith(subsystems.intake().runIntake(.75, true)))));
+                    .alongWith(subsystems.intake().runIntake(.75, true))));
     }
 
     /**
@@ -120,15 +116,11 @@ public class AutonSelector {
                         .deadlineFor(subsystems.intake().intake(0.75, true)))
                 // Then move to outpost while firing.
                 .andThen(subsystems.swerve().pathfindToPath("Right to Hub Front"))
-                // While firing
-                .alongWith(scoring.shootOnTheMove(() -> ScoringSystem.ControlConstants.SOTMTargets.HUB))
-                // Continue firing
-                .andThen(scoring.shootOnTheMove(() -> ScoringSystem.ControlConstants.SOTMTargets.HUB)
                 .alongWith(subsystems.kicker().runKicker(.75, true))
                 // Start feeding after a second
                 .alongWith(Commands.waitSeconds(1).andThen(
                     //subsystems.agitator().runAgitator(0.75, true)
                     subsystems.indexer().runIndexer(.75, true)
-                    .alongWith(subsystems.intake().runIntake(.75, true)))));
+                    .alongWith(subsystems.intake().runIntake(.75, true))));
     }
 }

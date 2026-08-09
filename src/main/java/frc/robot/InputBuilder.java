@@ -100,17 +100,10 @@ public class InputBuilder {
         final InputStream singleStream = new InputStream()
                 .StartingMethods.defaultXboxDrive(SINGLE_XBOX.isMode, driverXbox)
                 .SmartBindings
-                .withToggleAutoScoreHub(    driverXbox.leftStick(), true, true)
-                .withToggleAutoHoardFuel(   driverXbox.x(), true)
-                .withFuelControl(           driverXbox.leftTrigger(),
-                                            driverXbox.a(),
-                                            driverXbox.rightTrigger())
-                .withBasicAim(              driverXbox.y())
-                .withHomeAll(               driverXbox.back())
+                .withSmartIntake(driverXbox.leftTrigger())
+                .withSmartScore(driverXbox.rightTrigger())
                 .back()
                 .RackBindings
-                .withRunRack(driverXbox.pov(0), true)
-                .withRunRack(driverXbox.pov(180), false)
                 .back()
                 .SwerveBindings
                 .setSlowTranslation(0.5)
@@ -121,12 +114,13 @@ public class InputBuilder {
                 .setBoostRotation(1)
                 .withSlowDrive(             driverXbox.leftBumper())
                 .withBoostDrive(            driverXbox.rightBumper())
-                .withToggleCentricity(      driverXbox.start(), false)
+                .withToggleCentricity(      driverXbox.start(), true)
                 .withToggleZones(           CustomTriggers.enteringBumpZone.getTrigger())
                 .withToggleZones(           driverXbox.b())
                 .back().IntakeBindings
-                .withRunIntake(             driverXbox.leftTrigger(), true)
+
                 .back().MiscBindings
+                .resetField(driverXbox.back())
                 .back();
 
         final InputStream hopperTest = new InputStream(HOPPER_TESTING.isMode)
@@ -353,6 +347,28 @@ public class InputBuilder {
          */
         public class SmartBindings {
 
+            /**
+             * Extends the hopper while intaking, retracting when done.
+             *
+             * @param intake
+             * @return
+             */
+            public SmartBindings withSmartIntake(Trigger intake) {
+                isMode.and(intake).debounce(.1).whileTrue(
+                        subsystems.rack.runToRack(true)
+                                .alongWith(subsystems.intake.intake(
+                                        this.back().IntakeBindings.intakeSpeed, true)))
+                        .onFalse(subsystems.rack.runToRack(false));
+                return this;
+            }
+
+            public SmartBindings withSmartScore(Trigger score) {
+                this.back().SwerveBindings.withLookAtHub(score);
+                isMode.and(score).debounce(.1).whileTrue(scoring.shootOnTheMove(this.back().swerveInputStream))
+                        .onFalse(subsystems.flywheel.stopFlyWheel());
+                return this;
+            }
+
             public SmartBindings withAverageShoot(Trigger score) {
                 isMode.and(score).whileTrue(
                         subsystems.hood().getHood().setAngle(Degrees.of(15))
@@ -474,7 +490,6 @@ public class InputBuilder {
                 final boolean[] isToggled = {startEnabled};
                 isMode.and(shootOnTheMoveWhile.toggleOnTrue(Commands.runOnce(() -> isToggled[0] = !isToggled[0])));
                 Trigger trigger = isMode.and(() -> isToggled[0]).and(CustomTriggers.neutralZone.getTrigger());
-                trigger.whileTrue(scoring.shootOnTheMove(() -> subsystems.swerve().getHoardingTarget()));
                 shootOnTheMoveWhile.onFalse(subsystems.flywheel.stopFlyWheel());
                 return this;
             }
@@ -493,7 +508,6 @@ public class InputBuilder {
                 final boolean[] isToggled = {startEnabled};
                 isMode.and(shootOnTheMoveWhile.toggleOnTrue(Commands.runOnce(() -> isToggled[0] = !isToggled[0])));
                 Trigger trigger = isMode.and(() -> isToggled[0]).and(CustomTriggers.allianceZone.getTrigger());
-                trigger.whileTrue(scoring.shootOnTheMove(() -> ScoringSystem.ControlConstants.SOTMTargets.HUB));
                 this.back().SwerveBindings.withLookAtHub(trigger.and(() -> withDrive));
                 shootOnTheMoveWhile.onFalse(subsystems.flywheel.stopFlyWheel());
                 return this;
@@ -1080,7 +1094,7 @@ public class InputBuilder {
                     return this;
                 }
                 isMode.and(shoot).whileTrue(
-                        subsystems.flywheel.simShoot(subsystems).onlyIf(subsystems.intake::simHasFuel)
+                        subsystems.flywheel.simShootCommand(subsystems).onlyIf(subsystems.intake::simHasFuel)
                                 .alongWith(Commands.runOnce(() -> subsystems.intake.subtractFromHopper(1)))
                         .andThen(Commands.waitSeconds(.25)).repeatedly());
                 return this;
@@ -1365,7 +1379,7 @@ public class InputBuilder {
                 if (!isPresent) {
                     return this;
                 }
-                isMode.and(toggleZones).whileTrue(subsystems.swerve.toggleZones());
+                isMode.and(toggleZones).onTrue(subsystems.swerve.toggleZones());
                 return this;
             }
 

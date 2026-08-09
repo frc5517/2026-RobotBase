@@ -48,8 +48,8 @@ public class RackSubystem extends SubsystemBase {
         /// Exponential Motion Profiling Constraints.
         public static final class Profiling {
             public static final Voltage MAX_CONTROL_VOLTAGE = Volts.of(12); // Max Control Voltage
-            public static final AngularVelocity MAX_ANGULAR_VELOCITY = RotationsPerSecond.of(10); // Max Angular Velocity
-            public static final AngularAcceleration MAX_ANGULAR_ACCELERATION = RotationsPerSecondPerSecond.of(50); // Max Angular Acceleration
+            public static final AngularVelocity MAX_ANGULAR_VELOCITY = RotationsPerSecond.of(20); // Max Angular Velocity
+            public static final AngularAcceleration MAX_ANGULAR_ACCELERATION = RotationsPerSecondPerSecond.of(80); // Max Angular Acceleration
         }
 
         public static final Time RAMP_RATE = Seconds.of(0.15); // Time it takes to reach max speed from 0.

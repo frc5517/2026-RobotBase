@@ -196,10 +196,7 @@ public class TurretSubsystem extends SubsystemBase {
      */
     public Pose3d getPose3D() {
         return new Pose3d(
-                TURRET_POSITION,
-                new Rotation3d(0.0,
-                        0.0,
-                        turret.getAngle().in(Radians))); // Turret Rotation is Yaw, looking left and right.
+                TURRET_POSITION, Rotation3d.kZero); // Turret Rotation is Yaw, looking left and right.
     }
 
     /**
