@@ -48,7 +48,7 @@ public class ScoringSystem {
 
             static {
                 /// TODO : THESE ARE JUST STOLEN VALUES
-                hoodAngle.put(1.34, Rotation2d.fromDegrees(10.0));
+                hoodAngle.put(1.34, Rotation2d.fromDegrees(11.0));
                 hoodAngle.put(1.78, Rotation2d.fromDegrees(12.0));
                 hoodAngle.put(2.17, Rotation2d.fromDegrees(22.0));
                 hoodAngle.put(2.81, Rotation2d.fromDegrees(23.0));
@@ -59,7 +59,7 @@ public class ScoringSystem {
                 hoodAngle.put(5.57, Rotation2d.fromDegrees(28.0));
                 hoodAngle.put(5.60, Rotation2d.fromDegrees(30.0));
 
-                flyWheelSpeed.put(2.12923, 2725.0);
+                flyWheelSpeed.put(1.5, 2725.0);
                 flyWheelSpeed.put(2.504222, 2800.0);
                 flyWheelSpeed.put(2.889, 2950.0);
                 flyWheelSpeed.put(3.254686, 3100.0);
@@ -69,14 +69,14 @@ public class ScoringSystem {
                 flyWheelSpeed.put(4.986071, 3500.0);
                 flyWheelSpeed.put(5.410986, 3700.0);
 
-                timeOfFlight.put(1.50, 0.784);
-                timeOfFlight.put(2.00, 0.831);
-                timeOfFlight.put(2.50, 0.883);
-                timeOfFlight.put(3.50, 0.992);
-                timeOfFlight.put(4.00, 1.030);
-                timeOfFlight.put(4.50, 1.085);
-                timeOfFlight.put(5.00, 1.134);
-                timeOfFlight.put(5.50, 1.177);
+                timeOfFlight.put(1.50, 0.8);
+                timeOfFlight.put(2.00, 0.8);
+                timeOfFlight.put(2.50, 0.85);
+                timeOfFlight.put(3.50, 0.9);
+                timeOfFlight.put(4.00, 0.9);
+                timeOfFlight.put(4.50, 1.0);
+                timeOfFlight.put(5.00, 1.0);
+                timeOfFlight.put(5.50, 1.1);
                 }
         }
 
@@ -120,7 +120,7 @@ public class ScoringSystem {
         double[] goals = new double[4];
         return Commands.run(() -> calculateSOTMGoals(FieldConstants.Hub.topCenterPoint.toTranslation2d(), goals))
                 // Run goals
-                .alongWith(Commands.run(() -> stream.aimLookahead(Seconds.of(goals[0]))))
+                .alongWith(Commands.run(() -> stream.aimLookahead(Seconds.of(goals[0]).unaryMinus())))
                 .alongWith(subsystems.hood().getHood().run(() -> Degrees.of(goals[1])))
                 .alongWith(subsystems.flywheel().getFlyWheel().run(() -> RPM.of(goals[2])))
                 .alongWith((Commands.waitUntil(() ->
@@ -150,8 +150,8 @@ public class ScoringSystem {
         // Velocity of the shooter point: chassis translation plus omega x r.
         double omega = fieldVel.omegaRadiansPerSecond;
         Translation2d shooterVel = new Translation2d(
-                fieldVel.vxMetersPerSecond - omega * shooterOffset.getY(),
-                fieldVel.vyMetersPerSecond + omega * shooterOffset.getX());
+                fieldVel.vxMetersPerSecond + (-omega * shooterOffset.getY()),
+                fieldVel.vyMetersPerSecond + (omega * shooterOffset.getX()));
 
         // Where the shooter will actually be once the measurement delay is paid off.
         Pose2d estimatedPose = new Pose2d(
@@ -160,7 +160,7 @@ public class ScoringSystem {
 
         double timeOfFlight = 0;
         Pose2d lookAheadPose = estimatedPose;
-        double lookAheadDistance = target.getDistance(estimatedPose.getTranslation());
+        double lookAheadDistance = target.getDistance(lookAheadPose.getTranslation());
 
         // Iterate time of flight to converge on an accurate distance value.
         for (int i = 0; i < 5; i++) {

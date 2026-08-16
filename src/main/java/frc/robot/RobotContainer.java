@@ -6,11 +6,15 @@ package frc.robot;
 
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.RobotBase;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.subsystems.*;
 import frc.robot.systems.ScoringSystem;
 import swervelib.simulation.ironmaple.simulation.SimulatedArena;
 import swervelib.simulation.ironmaple.simulation.opponents.EmptyOpponent;
+import swervelib.simulation.ironmaple.simulation.seasonspecific.rebuilt2026.Arena2026Rebuilt;
+import swervelib.simulation.ironmaple.simulation.seasonspecific.rebuilt2026.RebuiltFuelOnFly;
+import swervelib.simulation.ironmaple.simulation.seasonspecific.rebuilt2026.RebuiltHub;
 
 public class RobotContainer {
     //private static final TurretSubsystem turretSubsystem = new TurretSubsystem();
